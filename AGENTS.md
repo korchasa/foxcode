@@ -48,7 +48,7 @@ Firefox WebExtension providing browser UI for active Claude Code sessions. Real-
 foxcode/
 ├── .claude-plugin/       # CC Plugin Marketplace manifest
 │   └── marketplace.json
-├── plugins/foxcode/      # CC Plugin (installed via /plugin install)
+├── foxcode/              # CC Plugin (installed via /plugin install)
 │   ├── .claude-plugin/
 │   │   └── plugin.json   #   Plugin manifest (name, version, author)
 │   ├── commands/
