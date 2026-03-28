@@ -78,6 +78,10 @@ foxcode/
 - Manifest V2: broader Firefox compatibility
 - Sidebar UI: non-intrusive, persistent panel alongside browsing
 - CC Plugin Marketplace for distribution: native install/update/versioning, auto-loads MCP server
+- Channel inside plugin dir (`foxcode/channel/`): bundled with plugin, no npm package. MCP server auto-installs deps on first run via `sh -c "npm install && node server.mjs"`
+- CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported
+- Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy — only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
+- Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
 - Channels in research preview: third-party plugins not in Anthropic allowlist → `--dangerously-load-development-channels server:foxcode` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools).
 
 ## Planning Rules
@@ -92,6 +96,8 @@ foxcode/
 - **Plan Persistence**: After variant selection, save the detailed plan to `documents/whiteboards/<YYYY-MM-DD>-<slug>.md` using GODS format. Chat-only plans are lost between sessions.
 - **Proactive Resolution**: Before asking user, exhaust available resources (codebase, docs, web) to find the answer autonomously.
 - **Verify Before Claiming Risk**: During critique/review, check verifiable facts (npm registry, GitHub releases, file existence, API docs) with tools before listing them as risks or open questions.
+- **Verify Config Syntax**: Before using placeholders/variables in config files — check tool documentation for supported syntax. Do NOT write unverified syntax to files.
+- **Distribution Audit**: When changing packaging/distribution — inspect target environment contents (plugin cache, Docker image, npm package) BEFORE implementing.
 
 ## CODE DOCS
 
