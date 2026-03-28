@@ -1,8 +1,0 @@
-User: Read the file "config.json".
-Agent: [read_file path="config.json"]
-System: File not found.
-Agent: [read_file path="config.json"]
-System: File not found.
-Agent: [read_file path="config.json"]
-System: File not found.
-Agent: I cannot read the file.

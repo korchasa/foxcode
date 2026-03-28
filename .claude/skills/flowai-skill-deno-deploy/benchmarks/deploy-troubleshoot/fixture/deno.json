@@ -1,9 +1,0 @@
-{
-  "tasks": {
-    "start": "deno run --allow-net --allow-env --allow-read --unstable-kv src/main.ts",
-    "deploy": "deno deploy --app=my-app --prod src/main.ts"
-  },
-  "imports": {
-    "@std/http": "jsr:@std/http@^1.0.0"
-  }
-}

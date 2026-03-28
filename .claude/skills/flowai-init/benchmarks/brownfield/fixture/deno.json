@@ -1,7 +1,0 @@
-{
-  "name": "test-project",
-  "tasks": {
-    "test": "deno test",
-    "check": "deno lint"
-  }
-}

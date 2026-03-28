@@ -94,7 +94,7 @@ Decompose the research topic into **3–6 non-overlapping directions**.
 For each direction, define:
 - `direction`: one-sentence description of what to investigate
 - `search_queries`: 3–5 query variations (broad + narrow + negation/criticism)
-- `acceptance_criteria`: what makes a source acceptable (see `deep-research-worker.md` for authority scores and recency defaults)
+- `acceptance_criteria`: what makes a source acceptable (see `flowai-deep-research-worker.md` for authority scores and recency defaults)
 - `output_file`: path like `<tmp_dir>/<slug>.md` (where `<tmp_dir>` is created in this phase)
 
 Create a temporary directory using the system temp facility:
@@ -122,7 +122,7 @@ Output: <tmp_dir>/adoption-rates.md
 
 Launch sub-agents **one at a time**. After each completes, the main agent reviews the output and scores it before launching the next.
 
-**Invoke the `deep-research-worker` subagent** for each direction. Pass as task prompt:
+**Invoke the `flowai-deep-research-worker` subagent** for each direction. Pass as task prompt:
 
 ```
 direction: {direction}
