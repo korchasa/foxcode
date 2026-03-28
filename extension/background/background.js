@@ -38,19 +38,7 @@ function getBrowserApi() {
   return browserApi
 }
 
-// --- Result serializer ---
-
-function serializeResult(value) {
-  try {
-    return JSON.stringify(value, (_key, val) => {
-      if (typeof val === 'function') return '[Function]'
-      if (val === undefined) return '[undefined]'
-      return val
-    })
-  } catch {
-    return String(value)
-  }
-}
+// serializeResult is loaded from serialize.js via manifest.json
 
 // --- WebSocket connection ---
 
