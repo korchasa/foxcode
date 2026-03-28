@@ -1,5 +1,5 @@
 /**
- * Fire Claude — Channel plugin shared logic.
+ * FoxCode — Channel plugin shared logic.
  * Pure functions and protocol definitions, testable without MCP/WebSocket.
  */
 

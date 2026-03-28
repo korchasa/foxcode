@@ -6,7 +6,7 @@ if [[ "${CLAUDECODE:-}" == "1" ]] || [[ "${NO_COLOR:-}" == "1" ]]; then
   export NO_COLOR=1
 fi
 
-echo "=== Fire Claude: check ==="
+echo "=== FoxCode: check ==="
 
 # Comment scan
 echo "--- Comment scan ---"

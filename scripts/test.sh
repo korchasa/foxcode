@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== Fire Claude: test ==="
+echo "=== FoxCode: test ==="
 
 echo "--- Channel lib tests ---"
 node --test channel/lib.test.mjs

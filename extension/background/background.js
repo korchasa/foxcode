@@ -1,5 +1,5 @@
 /**
- * Fire Claude — Background script.
+ * FoxCode — Background script.
  * Manages WebSocket connection to channel server and routes messages
  * between sidebar, content script, and channel.
  *

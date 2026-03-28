@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fire Claude — Channel plugin for Firefox extension.
+ * FoxCode — Channel plugin for Firefox extension.
  *
  * MCP server that bridges Claude Code ↔ Firefox extension via WebSocket.
  * - Declares claude/channel capability for bidirectional messaging
@@ -22,7 +22,7 @@ import {
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 
-const PORT = Number(process.env.FIRE_CLAUDE_PORT ?? 8787)
+const PORT = Number(process.env.FOXCODE_PORT ?? 8787)
 
 // --- WebSocket server for extension connection ---
 

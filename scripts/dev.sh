@@ -5,7 +5,7 @@ if [[ "${CLAUDECODE:-}" == "1" ]] || [[ "${NO_COLOR:-}" == "1" ]]; then
   export NO_COLOR=1
 fi
 
-echo "=== Fire Claude: dev ==="
+echo "=== FoxCode: dev ==="
 
 if command -v web-ext &>/dev/null; then
   web-ext run --source-dir extension/

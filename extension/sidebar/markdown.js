@@ -1,5 +1,5 @@
 /**
- * Fire Claude — Markdown renderer for sidebar messages.
+ * FoxCode — Markdown renderer for sidebar messages.
  * Converts a subset of markdown to HTML. Pure function, no DOM dependencies.
  */
 

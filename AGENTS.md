@@ -23,7 +23,7 @@
 ---
 
 ## Project Information
-- Project Name: Fire Claude (firefox-agent)
+- Project Name: FoxCode
 
 ## Project Vision
 Firefox WebExtension providing browser UI for active Claude Code sessions. Real-time bidirectional messaging, page context injection, and browser context tools — via MCP Channel Plugin communicating over WebSocket.

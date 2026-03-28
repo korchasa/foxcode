@@ -1,5 +1,5 @@
 /**
- * Fire Claude — Content script.
+ * FoxCode — Content script.
  * Handles EVAL_IN_PAGE requests from background script.
  * Uses Firefox wrappedJSObject for page main world access.
  */
