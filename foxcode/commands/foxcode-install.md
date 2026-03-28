@@ -35,6 +35,7 @@ If missing or too old:
 Check Firefox is installed:
 - **macOS**: check `/Applications/Firefox.app` exists
 - **Linux**: run `which firefox`
+- **Windows**: check `C:\Program Files\Mozilla Firefox\firefox.exe` exists
 
 If not found:
 > Firefox is required. Install from https://www.mozilla.org/firefox/
@@ -43,13 +44,12 @@ If not found:
 
 ## Step 2: Locate extension source
 
-Resolve the `extension/` directory using the shared script:
+Find the `extension/` directory. Check in order, use the first match:
 
-```bash
-EXT_DIR="$(bash scripts/resolve-extension-dir.sh 2>/dev/null || bash ~/.claude/plugins/marketplaces/korchasa/scripts/resolve-extension-dir.sh 2>/dev/null)"
-```
+1. `./extension/` in current working directory
+2. Marketplace clone: read `~/.claude/plugins/known_marketplaces.json`, find entry where `source.repo` equals `korchasa/foxcode`, use its `installLocation` + `/extension/`
 
-If empty/failed:
+If not found:
 > Extension source not found. Clone the repo: `git clone https://github.com/korchasa/foxcode.git && cd foxcode`
 
 ---

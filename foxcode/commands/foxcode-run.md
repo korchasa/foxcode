@@ -8,11 +8,12 @@ You are running the FoxCode run command. Launch Firefox with FoxCode extension u
 
 ## Step 1: Locate extension source
 
-```bash
-EXT_DIR="$(bash scripts/resolve-extension-dir.sh 2>/dev/null || bash ~/.claude/plugins/marketplaces/korchasa/scripts/resolve-extension-dir.sh 2>/dev/null)"
-```
+Find the `extension/` directory. Check in order, use the first match:
 
-If empty/failed:
+1. `./extension/` in current working directory
+2. Marketplace clone: read `~/.claude/plugins/known_marketplaces.json`, find entry where `source.repo` equals `korchasa/foxcode`, use its `installLocation` + `/extension/`
+
+If not found:
 > Extension source not found. Run `/foxcode:foxcode-install` first.
 
 ---
