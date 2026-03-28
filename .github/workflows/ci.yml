@@ -31,6 +31,68 @@ jobs:
         run: node --test background/browser-api.test.js background/dom-helpers.test.js sidebar/markdown.test.js
         working-directory: extension
 
+  auto-release:
+    needs: test
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      !contains(github.event.head_commit.message, 'chore(release):')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for releasable commits
+        id: check
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            echo "releasable=true" >> "$GITHUB_OUTPUT"
+            echo "bump=minor" >> "$GITHUB_OUTPUT"
+          else
+            HAS_FEAT=$(git log --oneline "${LATEST_TAG}..HEAD" | grep -cE "^[0-9a-f]+ feat" || true)
+            HAS_FIX=$(git log --oneline "${LATEST_TAG}..HEAD" | grep -cE "^[0-9a-f]+ (fix|perf|refactor|build)" || true)
+            if [ "$HAS_FEAT" -gt 0 ]; then
+              echo "releasable=true" >> "$GITHUB_OUTPUT"
+              echo "bump=minor" >> "$GITHUB_OUTPUT"
+            elif [ "$HAS_FIX" -gt 0 ]; then
+              echo "releasable=true" >> "$GITHUB_OUTPUT"
+              echo "bump=patch" >> "$GITHUB_OUTPUT"
+            else
+              echo "releasable=false" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Bump version and tag
+        if: steps.check.outputs.releasable == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          CURRENT="${LATEST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          if [ "${{ steps.check.outputs.bump }}" = "minor" ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+
+          jq --arg v "$NEW_VERSION" '.version = $v' extension/manifest.json > tmp.json && mv tmp.json extension/manifest.json
+          jq --arg v "$NEW_VERSION" '.version = $v' channel/package.json > tmp.json && mv tmp.json channel/package.json
+
+          git add extension/manifest.json channel/package.json
+          git commit -m "chore(release): v${NEW_VERSION}"
+          git tag "v${NEW_VERSION}"
+          git push --follow-tags origin main
+
   build:
     needs: test
     runs-on: ubuntu-latest
