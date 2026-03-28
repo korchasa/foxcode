@@ -44,13 +44,12 @@ If not found:
 
 ## Step 2: Locate extension source
 
-Find the `extension/` directory. Check in order, use the first match:
+Find the `extension/` directory in the marketplace clone:
 
-1. `./extension/` in current working directory
-2. Marketplace clone: read `~/.claude/plugins/known_marketplaces.json`, find entry where `source.repo` equals `korchasa/foxcode`, use its `installLocation` + `/extension/`
+Read `~/.claude/plugins/known_marketplaces.json`, find entry where `source.repo` equals `korchasa/foxcode`, use its `installLocation` + `/extension/`.
 
 If not found:
-> Extension source not found. Clone the repo: `git clone https://github.com/korchasa/foxcode.git && cd foxcode`
+> Extension source not found. Install the plugin first: `/plugin install korchasa/foxcode`
 
 ---
 
