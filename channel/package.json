@@ -1,6 +1,6 @@
 {
   "name": "foxcode-channel",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "MCP channel plugin bridging Claude Code and FoxCode Firefox extension via WebSocket",
   "type": "module",
   "main": "server.mjs",
