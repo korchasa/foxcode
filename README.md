@@ -39,5 +39,4 @@ The install command checks prerequisites, downloads the extension, and guides yo
 ### Tools available to Claude Code
 
 - `reply(text)` — send a message to the browser sidebar
-- `edit_message(message_id, text)` — edit a previously sent message
 - `evalInBrowser(code)` — execute JS with browser automation API (click, fill, navigate, snapshot, screenshot, cookies, tabs, etc.)

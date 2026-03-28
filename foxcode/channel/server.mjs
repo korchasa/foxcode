@@ -4,7 +4,7 @@
  *
  * MCP server that bridges Claude Code ↔ Firefox extension via WebSocket.
  * - Declares claude/channel capability for bidirectional messaging
- * - Exposes reply/edit_message tools for CC → browser responses
+ * - Exposes reply tool for CC → browser responses
  * - Exposes evalInBrowser tool for CC → browser automation (JS execution with ~30 API helpers)
  * - WebSocket server on localhost for extension connection
  */
@@ -17,7 +17,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { WebSocketServer } from 'ws'
 import {
-  nextId, buildChannelMeta, buildReplyMessage, buildEditMessage,
+  nextId, buildChannelMeta, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
   buildPongMessage, CHANNEL_TEST_MARKER,
 } from './lib.mjs'
@@ -185,10 +185,6 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         const replyMsg = buildReplyMessage(args.text, args.reply_to)
         broadcast(replyMsg)
         return { content: [{ type: 'text', text: `sent (${replyMsg.id})` }] }
-      }
-      case 'edit_message': {
-        broadcast(buildEditMessage(args.message_id, args.text))
-        return { content: [{ type: 'text', text: 'ok' }] }
       }
       case 'evalInBrowser': {
         const { valid, error } = validateCode(args.code)

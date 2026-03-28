@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   state, nextId, buildChannelMeta, buildReplyMessage,
-  buildEditMessage, buildToolUseMessage, buildToolResultMessage,
+  buildToolUseMessage, buildToolResultMessage,
   TOOL_DEFINITIONS, assertChannelCapability, hasChannelCapability,
   buildPongMessage,
 } from './lib.mjs'
@@ -73,13 +73,6 @@ describe('buildReplyMessage', () => {
   it('allows undefined replyTo', () => {
     const msg = buildReplyMessage('No ref')
     assert.equal(msg.replyTo, undefined)
-  })
-})
-
-describe('buildEditMessage', () => {
-  it('builds edit with correct structure', () => {
-    const msg = buildEditMessage('msg-1', 'updated text')
-    assert.deepEqual(msg, { type: 'edit', id: 'msg-1', text: 'updated text' })
   })
 })
 
@@ -189,10 +182,10 @@ describe('buildPongMessage', () => {
 })
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has 4 tools (ping, reply, edit_message, evalInBrowser)', () => {
-    assert.equal(TOOL_DEFINITIONS.length, 4)
+  it('has 3 tools (ping, reply, evalInBrowser)', () => {
+    assert.equal(TOOL_DEFINITIONS.length, 3)
     const names = TOOL_DEFINITIONS.map(t => t.name)
-    assert.deepEqual(names, ['ping', 'reply', 'edit_message', 'evalInBrowser'])
+    assert.deepEqual(names, ['ping', 'reply', 'evalInBrowser'])
   })
 
   it('all tools have name, description, inputSchema', () => {
@@ -207,11 +200,6 @@ describe('TOOL_DEFINITIONS', () => {
   it('reply tool requires text', () => {
     const reply = TOOL_DEFINITIONS.find(t => t.name === 'reply')
     assert.deepEqual(reply.inputSchema.required, ['text'])
-  })
-
-  it('edit_message tool requires message_id and text', () => {
-    const edit = TOOL_DEFINITIONS.find(t => t.name === 'edit_message')
-    assert.deepEqual(edit.inputSchema.required, ['message_id', 'text'])
   })
 
   it('evalInBrowser requires code', () => {

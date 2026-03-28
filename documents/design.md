@@ -27,13 +27,12 @@ graph LR
 - **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications
 - **`lib.mjs`** — Pure logic: ID generation, message builders, tool definitions (testable without MCP/WS)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
-- **Capabilities:** `claude/channel` (notifications), `tools` (ping, reply, edit_message, evalInBrowser)
+- **Capabilities:** `claude/channel` (notifications), `tools` (ping, reply, evalInBrowser)
 - **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. Replaces broken `clientCapabilities` check (CC doesn't advertise `claude/channel` in caps). Command `/foxcode:foxcode-ping` wraps the tool.
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:8787` (extension)
 - **Tools exposed:**
   - `ping()` — test bidirectional connectivity (CC → browser → CC)
   - `reply(text, reply_to?)` — send CC response to browser
-  - `edit_message(message_id, text)` — edit previous message
   - `evalInBrowser(code, timeout?)` — execute JS in browser with full API. Validates syntax, sends to extension via WebSocket, returns serialized result
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 

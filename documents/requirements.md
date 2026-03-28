@@ -60,8 +60,8 @@
   - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:290-313`
   - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:230-240`
   - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:142-145`
-  - [x] `reply` + `edit_message` tools preserved. Evidence: `foxcode/channel/lib.mjs:77-100`
-  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url). Evidence: `foxcode/channel/lib.mjs` (4 tools: ping, reply, edit_message, evalInBrowser)
+  - [x] `reply` tool preserved. Evidence: `foxcode/channel/lib.mjs:30-38`
+  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message). Evidence: `foxcode/channel/lib.mjs` (3 tools: ping, reply, evalInBrowser)
   - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `extension/manifest.json:6-11,13`
   - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `extension/background/dom-helpers.test.js`, `extension/background/browser-api.test.js`
   - [ ] Integration test: background executes code → delegates to tab → returns result (requires Firefox)

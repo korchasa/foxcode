@@ -39,16 +39,6 @@ export function buildReplyMessage(text, replyTo) {
 }
 
 /**
- * Build an edit broadcast message.
- * @param {string} messageId
- * @param {string} text
- * @returns {object}
- */
-export function buildEditMessage(messageId, text) {
-  return { type: 'edit', id: messageId, text }
-}
-
-/**
  * Build a tool_use broadcast message.
  * @param {string} tool
  * @param {object} params
@@ -140,18 +130,6 @@ export const TOOL_DEFINITIONS = [
         reply_to: { type: 'string', description: 'Message ID to reply to (optional)' },
       },
       required: ['text'],
-    },
-  },
-  {
-    name: 'edit_message',
-    description: 'Edit a previously sent message in the browser sidebar.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        message_id: { type: 'string', description: 'ID of the message to edit' },
-        text: { type: 'string', description: 'New message text' },
-      },
-      required: ['message_id', 'text'],
     },
   },
   {
