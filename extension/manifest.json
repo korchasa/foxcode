@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "FoxCode",
-  "version": "0.0.0",
+  "version": "0.2.0",
   "description": "Browser UI for Claude Code sessions with full browser automation",
   "permissions": [
     "activeTab",
@@ -26,8 +26,12 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content/content-script.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/content-script.js"
+      ],
       "run_at": "document_idle"
     }
   ],

@@ -1,6 +1,6 @@
 {
   "name": "foxcode-channel",
-  "version": "0.0.0",
+  "version": "0.2.0",
   "description": "MCP channel plugin bridging Claude Code and FoxCode Firefox extension via WebSocket",
   "type": "module",
   "main": "server.mjs",
@@ -11,7 +11,13 @@
     "start": "node server.mjs",
     "test": "node --test lib.test.mjs validator.test.mjs"
   },
-  "keywords": ["claude-code", "mcp", "firefox", "browser-automation", "channel"],
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "firefox",
+    "browser-automation",
+    "channel"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/korchasa/foxcode.git",
