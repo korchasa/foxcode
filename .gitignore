@@ -4,5 +4,6 @@ channel/node_modules/
 .claude/settings.local.json
 .claude/skills/
 .claude/agents/
+.claude-plugins/
 documents/whiteboards/
 .DS_Store

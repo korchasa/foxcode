@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "hooks": {
+    "lint-on-write": {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit",
+      "installedAt": "2026-03-28T22:32:02.355Z"
+    },
+    "test-before-commit": {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "installedAt": "2026-03-28T22:32:02.355Z"
+    },
+    "skill-structure-validate": {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit",
+      "installedAt": "2026-03-28T22:32:02.355Z"
+    },
+    "mermaid-validate": {
+      "event": "PostToolUse",
+      "matcher": "Write|Edit",
+      "installedAt": "2026-03-28T22:32:02.355Z"
+    }
+  }
+}

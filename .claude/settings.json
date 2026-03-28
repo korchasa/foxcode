@@ -1,0 +1,48 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run -A .claude/scripts/lint-on-write/run.ts",
+            "timeout": 30
+          }
+        ],
+        "matcher": "Write|Edit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run -A .claude/scripts/skill-structure-validate/run.ts",
+            "timeout": 30
+          }
+        ],
+        "matcher": "Write|Edit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run -A .claude/scripts/mermaid-validate/run.ts",
+            "timeout": 30
+          }
+        ],
+        "matcher": "Write|Edit"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "deno run -A .claude/scripts/test-before-commit/run.ts",
+            "timeout": 600
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+event: PostToolUse
+matcher: "Write|Edit"
+description: "Auto-validate SKILL.md structure after edits"
+timeout: 30
