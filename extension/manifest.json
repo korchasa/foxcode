@@ -1,0 +1,42 @@
+{
+  "manifest_version": 2,
+  "name": "FoxCode",
+  "version": "0.2.0",
+  "description": "Browser UI for Claude Code sessions with full browser automation",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "contextMenus",
+    "cookies",
+    "webNavigation",
+    "<all_urls>"
+  ],
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "sidebar_action": {
+    "default_title": "FoxCode",
+    "default_panel": "sidebar/sidebar.html",
+    "default_icon": "icons/icon.svg"
+  },
+  "background": {
+    "scripts": [
+      "background/dom-helpers.js",
+      "background/browser-api.js",
+      "background/background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content-script.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon.svg",
+    "32": "icons/icon.svg",
+    "48": "icons/icon.svg",
+    "64": "icons/icon.svg",
+    "96": "icons/icon.svg",
+    "128": "icons/icon.svg"
+  }
+}

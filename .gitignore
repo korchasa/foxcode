@@ -1,0 +1,9 @@
+ref/
+node_modules/
+channel/node_modules/
+channel/package-lock.json
+.claude/settings.local.json
+.claude/skills/
+.claude/agents/
+documents/whiteboards/
+.DS_Store
