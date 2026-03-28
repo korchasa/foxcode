@@ -90,12 +90,6 @@ graph LR
 - **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`npx foxcode-channel`). Loads automatically on plugin enable.
 - **Install command:** `/foxcode:foxcode-install` — interactive flow: prereq check (Node.js ≥18, Firefox) → download .xpi → Firefox install (web-ext or about:debugging) → final summary with launch command
 
-### Fallback: Setup Prompt
-- **Location:** `install-prompt.md` (repo root)
-- **Format:** Prose instructions for CC agent. CC interprets and executes steps using its tools.
-- **Steps:** Prereq check → configure `.mcp.json` → download .xpi → Firefox install → restart CC
-
 ### Idempotency
 - `.xpi` download: detect existing file, ask re-download or skip
-- `.mcp.json`: merge `foxcode` entry, preserve other servers
-- Safe to re-run both paths
+- Safe to re-run

@@ -73,7 +73,7 @@
 - **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; install command (`/foxcode:foxcode-install`) guides user through Firefox extension setup. User should NOT need to read docs or edit configs manually.
 - **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` → `/plugin install foxcode@korchasa` → `/foxcode:foxcode-install` → command checks prereqs, downloads .xpi, guides Firefox setup → user launches CC with `--dangerously-load-development-channels server:foxcode` → done.
 - **Acceptance:**
-  - [x] Setup prompt file exists at `install-prompt.md` in repo root (legacy fallback, plugin as primary). Evidence: `install-prompt.md`
+  - [x] Legacy `install-prompt.md` removed — plugin is the only install path. Evidence: file deleted
   - [x] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root. Evidence: `.claude-plugin/marketplace.json`
   - [x] Plugin manifest: `plugins/foxcode/.claude-plugin/plugin.json`. Evidence: `plugins/foxcode/.claude-plugin/plugin.json`
   - [x] Plugin `.mcp.json` declares foxcode MCP server (`npx foxcode-channel`), auto-loads on plugin enable. Evidence: `plugins/foxcode/.mcp.json`

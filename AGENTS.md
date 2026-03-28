@@ -67,7 +67,6 @@ foxcode/
 │   └── manifest.json     #   Extension manifest
 ├── documents/            # Project docs (SRS, SDS, whiteboards)
 ├── scripts/              # Dev scripts (check.sh, test.sh, dev.sh)
-├── install-prompt.md     # Fallback install prompt (standalone, no plugin refs)
 ├── .mcp.json             # Dev-mode MCP config (local server.mjs)
 └── AGENTS.md             # This file (CLAUDE.md → symlink)
 ```

@@ -16,8 +16,6 @@ Firefox Sidebar ←→ WebSocket ←→ MCP Channel Plugin ←→ stdio ←→ C
 
 ## Getting Started
 
-### Recommended: Claude Code Plugin
-
 ```bash
 /plugin marketplace add korchasa/foxcode
 /plugin install foxcode@korchasa
@@ -25,14 +23,6 @@ Firefox Sidebar ←→ WebSocket ←→ MCP Channel Plugin ←→ stdio ←→ C
 ```
 
 The install command checks prerequisites, downloads the extension, and guides you through Firefox setup interactively.
-
-### Fallback: Setup Prompt
-
-If plugins are unavailable, paste this into a Claude Code session (started with `--dangerously-load-development-channels server:foxcode`):
-
-```
-Fetch https://raw.githubusercontent.com/korchasa/foxcode/main/install-prompt.md and follow the instructions.
-```
 
 ## How it works
 
