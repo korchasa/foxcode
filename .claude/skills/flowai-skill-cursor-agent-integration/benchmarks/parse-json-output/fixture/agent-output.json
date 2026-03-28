@@ -1,0 +1,22 @@
+{
+  "type": "result",
+  "subtype": "success",
+  "is_error": false,
+  "duration_ms": 5210,
+  "result": "Created the user authentication module with JWT support.",
+  "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "messages": [
+    {
+      "type": "user",
+      "content": "Create a user authentication module with JWT support"
+    },
+    {
+      "type": "assistant",
+      "content": "I'll create the authentication module now."
+    },
+    {
+      "type": "assistant",
+      "content": "Created the user authentication module with JWT support."
+    }
+  ]
+}

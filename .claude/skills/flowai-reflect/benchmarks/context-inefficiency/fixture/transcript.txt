@@ -1,0 +1,31 @@
+User: Fix the bug in the calculateTotal function in src/billing/invoice.ts. It returns wrong totals.
+
+Agent: Let me read the file.
+[read_file path="src/billing/invoice.ts"]
+System: (2000 lines of code returned)
+
+Agent: Let me also check the tests.
+[read_file path="src/billing/invoice.test.ts"]
+System: (800 lines of test code returned)
+
+Agent: Let me look at the full project structure.
+[list_dir path="src/"]
+System: src/auth/, src/billing/, src/users/, src/notifications/, src/analytics/, src/config/
+
+Agent: Let me read the auth module too.
+[read_file path="src/auth/auth.service.ts"]
+System: (500 lines of auth code returned)
+
+Agent: Let me read the notifications module.
+[read_file path="src/notifications/email.ts"]
+System: (300 lines of email notification code returned)
+
+Agent: Now let me read invoice.ts again to understand the bug.
+[read_file path="src/billing/invoice.ts"]
+System: (2000 lines of code returned)
+
+Agent: I see the issue in calculateTotal. It doesn't apply the discount correctly. Let me fix it.
+[edit_file path="src/billing/invoice.ts" old="total = subtotal - discount" new="total = subtotal * (1 - discount / 100)"]
+System: File updated.
+
+Agent: The fix is applied. The calculateTotal function now correctly treats discount as a percentage.

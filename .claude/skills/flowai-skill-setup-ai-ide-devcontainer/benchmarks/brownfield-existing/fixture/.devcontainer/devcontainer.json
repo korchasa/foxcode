@@ -1,0 +1,5 @@
+{
+  "name": "old-config",
+  "image": "ubuntu:20.04",
+  "postCreateCommand": "apt-get update"
+}
