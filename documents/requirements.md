@@ -57,7 +57,7 @@
   - [x] API provides DOM helpers (click, fill, type, select, check, hover, waitFor, $, $$, snapshot). Evidence: `extension/background/browser-api.js:87-192`, `extension/background/dom-helpers.js`
   - [x] DOM helpers auto-wait for element (poll 100ms, configurable timeout). Evidence: `extension/background/dom-helpers.js:19-43` (buildWaitAndAct)
   - [x] Navigation helpers await page load via webNavigation.onCompleted. Evidence: `extension/background/browser-api.js:249-259`
-  - [x] `navigate()` creates new background tab on first call, preserving user's active tab. Subsequent operations target managed tab. `closeTab()` resets state. Evidence: `extension/background/browser-api.js:18-28,249-259,297-307`, `extension/background/browser-api.test.js:364-548`
+  - [x] `navigate()` creates new active tab on first call. Subsequent navigations reuse and activate managed tab. `closeTab()` resets state. Evidence: `extension/background/browser-api.js:18-28,248-259,297-307`, `extension/background/browser-api.test.js:364-548`
   - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:290-313`
   - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:230-240`
   - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:142-145`
@@ -90,7 +90,8 @@
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
-- [x] No special CLI flags needed. Evidence: .mcp.json auto-loading, tested
+- [x] Requires `--dangerously-load-development-channels server:foxcode` flag (channels in research preview). Evidence: `channel/server.mjs:169-176` (assertChannelCapability on init)
+- [x] Fail-fast with actionable error if flag missing. Evidence: `channel/lib.mjs:79-86` (assertChannelCapability), `channel/lib.test.mjs:116-150` (5 tests)
 
 ### 4.3 NF-3: Reliability [very important]
 - [x] Auto-reconnect on connection loss. Evidence: `extension/background/background.js:46-54` (scheduleReconnect with backoff)
@@ -121,4 +122,4 @@
   - [x] Page content/selection delivered to CC session
   - [x] CC can pull browser context from terminal
   - [x] Works with project-specific CC sessions
-  - [x] Launch = just run `claude` from project dir with .mcp.json
+  - [x] Launch = run `claude --dangerously-load-development-channels server:foxcode` from project dir with .mcp.json

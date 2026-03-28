@@ -248,12 +248,12 @@ function createBrowserApi(deps) {
 
     async navigate(url) {
       if (managedTabId === null) {
-        const tab = await tabs.create({ url, active: false })
+        const tab = await tabs.create({ url, active: true })
         managedTabId = tab.id
         await waitForNavigation(managedTabId)
       } else {
         const loaded = waitForNavigation(managedTabId)
-        await tabs.update(managedTabId, { url })
+        await tabs.update(managedTabId, { url, active: true })
         await loaded
       }
     },

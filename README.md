@@ -7,7 +7,7 @@ Firefox sidebar extension for Claude Code sessions: real-time chat, page context
 - **Chat in sidebar** — send/receive messages to your Claude Code session without switching to the terminal
 - **Browser automation** — Claude Code controls the browser via `evalInBrowser`: click, fill forms, navigate, take screenshots, read DOM (~30 API helpers)
 - **Page context** — right-click selected text → "Send to Claude" injects it into the session
-- **Zero config launch** — just run `claude` in your project directory
+- **Fail-fast startup** — channel plugin exits immediately with actionable error if Claude Code lacks channel capability
 
 ### Architecture
 
@@ -18,7 +18,7 @@ Firefox Sidebar ←→ WebSocket ←→ MCP Channel Plugin ←→ stdio ←→ C
 
 ## Getting Started
 
-Paste this into a Claude Code session:
+Paste this into a Claude Code session (started with `--dangerously-load-development-channels server:foxcode`):
 
 ```
 Fetch https://raw.githubusercontent.com/korchasa/foxcode/main/install-prompt.md and follow the instructions.

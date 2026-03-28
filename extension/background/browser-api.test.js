@@ -215,7 +215,7 @@ describe('createBrowserApi', () => {
       }, 10)
       await p
       assert.equal(createdOpts.url, 'https://new.com')
-      assert.equal(createdOpts.active, false)
+      assert.equal(createdOpts.active, true)
     })
   })
 
@@ -368,7 +368,7 @@ describe('createBrowserApi', () => {
       let updatedUrl = null
       mocks.tabs.create = async ({ url, active }) => {
         createdUrl = url
-        assert.equal(active, false, 'managed tab should be created in background')
+        assert.equal(active, true, 'managed tab should be created as active')
         return { id: 50 }
       }
       mocks.tabs.update = async (_id, opts) => { updatedUrl = opts?.url }
@@ -381,24 +381,25 @@ describe('createBrowserApi', () => {
       assert.equal(updatedUrl, null, 'should not update existing tab')
     })
 
-    it('second navigate reuses managed tab', async () => {
+    it('second navigate reuses managed tab and activates it', async () => {
       let createCount = 0
-      let updatedId = null
+      const updateCalls = []
       mocks.tabs.create = async ({ url }) => { createCount++; return { id: 50 } }
-      mocks.tabs.update = async (id, opts) => { updatedId = id }
+      mocks.tabs.update = async (id, opts) => { updateCalls.push({ id, ...opts }) }
 
       // First navigate — creates tab
       const p1 = api.navigate('https://first.com')
       setTimeout(() => mocks.webNavigation.onCompleted._fire({ tabId: 50, frameId: 0 }), 10)
       await p1
 
-      // Second navigate — reuses managed tab
+      // Second navigate — reuses managed tab and activates it
       const p2 = api.navigate('https://second.com')
       setTimeout(() => mocks.webNavigation.onCompleted._fire({ tabId: 50, frameId: 0 }), 10)
       await p2
 
       assert.equal(createCount, 1, 'should create tab only once')
-      assert.equal(updatedId, 50, 'should update managed tab')
+      assert.ok(updateCalls.some(c => c.id === 50 && c.url === 'https://second.com' && c.active === true),
+        'should update URL and activate managed tab in one call')
     })
 
     it('click targets managed tab after navigate', async () => {

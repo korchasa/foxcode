@@ -28,6 +28,7 @@ graph LR
 - **`lib.mjs`** — Pure logic: ID generation, message builders, tool definitions (testable without MCP/WS)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
 - **Capabilities:** `claude/channel` (notifications), `tools` (reply, evalInBrowser)
+- **Startup check:** `oninitialized` callback verifies client advertises `experimental['claude/channel']` capability. If absent (CC launched without `--dangerously-load-development-channels`), exits with FATAL error and actionable command. Logic: `lib.mjs:assertChannelCapability()`, wired in `server.mjs:oninitialized`.
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:8787` (extension)
 - **Tools exposed:**
   - `reply(text, reply_to?)` — send CC response to browser
@@ -40,12 +41,13 @@ graph LR
 - **`browser-api.js`** — Factory creating `api` object with ~30 async helpers (DI for testability)
 - **`dom-helpers.js`** — Pure functions generating injectable JS code (buildWaitAndAct, selectors, etc.)
 - **Execution model:** Agent code runs via `new Function('api', code)(browserApi)` in background (persistent, survives navigation). DOM ops delegated to tabs via `executeScript`. Navigation via `webNavigation.onCompleted`.
-- **Managed tab:** `navigate()` creates a new background tab on first call (preserves user's active tab). All subsequent API operations target this managed tab. `closeTab()` resets; next `navigate()` creates fresh tab. `tabs.onRemoved` listener auto-clears state if user closes managed tab. `screenshot()` temporarily activates managed tab for capture, then restores focus.
+- **Managed tab:** `navigate()` creates a new active tab on first call. Subsequent navigations reuse and activate it. All API operations target managed tab. `closeTab()` resets; next `navigate()` creates fresh tab. `tabs.onRemoved` auto-clears state. `screenshot()` temporarily activates managed tab for capture, then restores focus.
 - **Interfaces:** WebSocket (channel), port (sidebar), tabs.executeScript (DOM), tabs.sendMessage (content script for eval)
 - **Deps:** Channel plugin running, CSP `unsafe-eval`
 
 ### 3.3 Sidebar (`extension/sidebar/`)
 - **`markdown.js`** — Pure markdown→HTML renderer (testable without DOM)
+- **`format.js`** — Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
 - **`sidebar.js`** — UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator
 - **Interfaces:** port connection to background script
 - **Deps:** Background script
@@ -72,7 +74,7 @@ graph LR
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 
 ## 7. Constraints
-- **Channels in research preview:** requires `--dangerously-load-development-channels` flag
+- **Channels in research preview:** requires `--dangerously-load-development-channels server:foxcode` flag. Server validates this at init via client capabilities check and exits if missing.
 - **Terminal messages invisible:** Messages initiated from terminal don't appear in browser (CC only calls `reply` for channel-initiated messages)
 - **CSP unsafe-eval required:** `evalInBrowser` uses `new Function()` in background — needs `"script-src 'self' 'unsafe-eval'"` in manifest CSP. Acceptable: code source is trusted (Claude Code agent)
 - **api.eval() CSP-limited:** Page CSP may block `eval()` via wrappedJSObject on strict sites
