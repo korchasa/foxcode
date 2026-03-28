@@ -54,5 +54,5 @@ Setup complete! Two manual steps:
    https://github.com/korchasa/foxcode/releases
    Then: Firefox → about:debugging#/runtime/this-firefox → Load Temporary Add-on → select .xpi
 
-2. Restart Claude Code in this directory: claude
+2. Restart Claude Code in this directory: claude --dangerously-load-development-channels server:foxcode
 ```

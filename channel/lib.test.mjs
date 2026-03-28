@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   state, nextId, buildChannelMeta, buildReplyMessage,
   buildEditMessage, buildToolUseMessage, buildToolResultMessage,
-  TOOL_DEFINITIONS,
+  TOOL_DEFINITIONS, assertChannelCapability,
 } from './lib.mjs'
 
 describe('nextId', () => {
@@ -110,6 +110,42 @@ describe('buildToolResultMessage', () => {
     assert.equal(msg.content, 'https://example.com')
     assert.ok(msg.id)
     assert.ok(msg.ts)
+  })
+})
+
+describe('assertChannelCapability', () => {
+  it('does not throw when claude/channel is present', () => {
+    assert.doesNotThrow(() => {
+      assertChannelCapability({ experimental: { 'claude/channel': {} } })
+    })
+  })
+
+  it('throws with server name in message when experimental is missing', () => {
+    assert.throws(
+      () => assertChannelCapability({ sampling: {} }),
+      { message: /server:foxcode/ }
+    )
+  })
+
+  it('throws when experimental exists but claude/channel is absent', () => {
+    assert.throws(
+      () => assertChannelCapability({ experimental: { other: {} } }),
+      { message: /server:foxcode/ }
+    )
+  })
+
+  it('throws when capabilities is undefined', () => {
+    assert.throws(
+      () => assertChannelCapability(undefined),
+      { message: /server:foxcode/ }
+    )
+  })
+
+  it('uses custom server name in error message', () => {
+    assert.throws(
+      () => assertChannelCapability(undefined, 'my-server'),
+      { message: /server:my-server/ }
+    )
   })
 })
 

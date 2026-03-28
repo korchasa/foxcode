@@ -19,6 +19,7 @@ import { WebSocketServer } from 'ws'
 import {
   nextId, buildChannelMeta, buildReplyMessage, buildEditMessage,
   buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
+  assertChannelCapability,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 
@@ -165,6 +166,15 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
 })
 
 // --- Start ---
+
+mcp.oninitialized = () => {
+  try {
+    assertChannelCapability(mcp.getClientCapabilities())
+  } catch (err) {
+    process.stderr.write(`foxcode: FATAL: ${err.message}\n`)
+    process.exit(1)
+  }
+}
 
 await mcp.connect(new StdioServerTransport())
 process.stderr.write(`foxcode: ws://localhost:${PORT}\n`)
