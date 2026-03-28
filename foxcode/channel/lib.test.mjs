@@ -163,11 +163,11 @@ describe('hasChannelCapability', () => {
 
 describe('buildPongMessage', () => {
   it('builds pong with all telemetry fields', () => {
-    const env = { pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode' }
+    const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode' }
     const msg = buildPongMessage(env)
     assert.equal(msg.type, 'pong')
     assert.equal(msg.server, 'foxcode')
-    assert.equal(msg.version, '0.1.0')
+    assert.equal(msg.version, '0.4.3')
     assert.equal(msg.pid, 12345)
     assert.equal(msg.port, 8787)
     assert.equal(msg.uptime, 10.5)

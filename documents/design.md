@@ -24,7 +24,7 @@ graph LR
 ## 3. Components
 
 ### 3.1 Channel Plugin (`foxcode/channel/`)
-- **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT → terminate WS clients, close server, exit)
+- **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT → terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
 - **`lib.mjs`** — Pure logic: ID generation, message builders, tool definitions (testable without MCP/WS)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
 - **Capabilities:** `claude/channel` (notifications), `tools` (ping, reply, evalInBrowser)

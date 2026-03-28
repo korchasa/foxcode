@@ -22,6 +22,10 @@ import {
   buildPongMessage, CHANNEL_TEST_MARKER,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const pluginMeta = require('../.claude-plugin/plugin.json')
 
 const PORT = Number(process.env.FOXCODE_PORT ?? 8787)
 
@@ -89,6 +93,8 @@ function handleExtensionMessage(msg, ws) {
   switch (msg.type) {
     case 'ping': {
       const pong = buildPongMessage({
+        name: pluginMeta.name,
+        version: pluginMeta.version,
         pid: process.pid,
         port: PORT,
         uptime: process.uptime(),
@@ -134,7 +140,7 @@ function handleExtensionMessage(msg, ws) {
 // --- MCP server ---
 
 const mcp = new Server(
-  { name: 'foxcode', version: '0.1.0' },
+  { name: pluginMeta.name, version: pluginMeta.version },
   {
     capabilities: {
       tools: {},

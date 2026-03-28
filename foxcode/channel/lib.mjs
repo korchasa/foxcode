@@ -86,14 +86,14 @@ export function assertChannelCapability(clientCapabilities, serverName = 'foxcod
 
 /**
  * Build a pong response with server telemetry.
- * @param {{pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined}} env
+ * @param {{name: string, version: string, pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined}} env
  * @returns {object}
  */
 export function buildPongMessage(env) {
   return {
     type: 'pong',
-    server: 'foxcode',
-    version: '0.1.0',
+    server: env.name,
+    version: env.version,
     pid: env.pid,
     port: env.port,
     uptime: env.uptime,
