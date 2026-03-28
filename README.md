@@ -18,32 +18,10 @@ Firefox Sidebar ←→ WebSocket ←→ MCP Channel Plugin ←→ stdio ←→ C
 
 ## Getting Started
 
-### Quick setup
+Paste this into a Claude Code session:
 
-1. Add to your project's `.mcp.json`:
-   ```json
-   {
-     "mcpServers": {
-       "foxcode": {
-         "command": "npx",
-         "args": ["-y", "foxcode-channel"]
-       }
-     }
-   }
-   ```
-2. Download `foxcode-extension.xpi` from [Releases](https://github.com/korchasa/foxcode/releases)
-3. In Firefox: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → select the `.xpi`
-4. Run `claude` in your project directory
-5. Open sidebar: View → Sidebar → FoxCode
-
-For automated setup with permissions, paste [install-prompt.md](install-prompt.md) into a Claude Code session.
-
-### From source
-
-```bash
-cd channel && npm install
-# Load extension: about:debugging → Load Temporary Add-on → extension/manifest.json
-claude
+```
+Fetch https://raw.githubusercontent.com/korchasa/foxcode/main/install-prompt.md and follow the instructions.
 ```
 
 ## How it works
