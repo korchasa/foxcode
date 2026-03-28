@@ -42,12 +42,36 @@ Firefox WebExtension providing browser UI for active Claude Code sessions. Real-
 - **Content Script** (`extension/content/content-script.js`) — DOM text extraction, selected text retrieval
 - **Flow**: Sidebar → Background → WebSocket → Channel Plugin → MCP stdio → Claude Code
 
+## Repository Structure
+
+```
+foxcode/
+├── channel/              # MCP channel plugin (Node.js, npm: foxcode-channel)
+│   ├── server.mjs        #   MCP server, WebSocket bridge
+│   ├── lib.mjs           #   Shared pure functions, tool definitions
+│   ├── validator.mjs     #   JS code validation for evalInBrowser
+│   └── package.json      #   Published as foxcode-channel@0.3.0
+├── extension/            # Firefox WebExtension (Manifest V2)
+│   ├── background/       #   Background script, browser-api, dom-helpers
+│   ├── sidebar/          #   Chat UI (HTML/CSS/JS)
+│   ├── content/          #   Content script (DOM access, api.eval)
+│   ├── icons/            #   Extension icon
+│   └── manifest.json     #   Extension manifest
+├── documents/            # Project docs (SRS, SDS, whiteboards)
+├── scripts/              # Dev scripts (check.sh, test.sh, dev.sh)
+├── install-prompt.md     # Legacy install guide (replaced by plugin)
+├── .mcp.json             # Dev-mode MCP config (local server.mjs)
+└── AGENTS.md             # This file (CLAUDE.md → symlink)
+```
+
 ## Key Decisions
 - MCP Channel Plugin over Native Messaging: bidirectional session sync, no subprocess per request
 - WebSocket on localhost: simple, reliable bridge between Node.js and browser extension
 - Node.js for channel: MCP SDK compatibility, single process
 - Manifest V2: broader Firefox compatibility
 - Sidebar UI: non-intrusive, persistent panel alongside browsing
+- CC Plugin Marketplace for distribution: native install/update/versioning, auto-loads MCP server
+- Channels in research preview: third-party plugins not in Anthropic allowlist → `--dangerously-load-development-channels server:foxcode` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools).
 
 ## Planning Rules
 
@@ -60,6 +84,7 @@ Firefox WebExtension providing browser UI for active Claude Code sessions. Real-
 - **User Decision Gate**: Do NOT detail implementation plan until user explicitly selects a variant.
 - **Plan Persistence**: After variant selection, save the detailed plan to `documents/whiteboards/<YYYY-MM-DD>-<slug>.md` using GODS format. Chat-only plans are lost between sessions.
 - **Proactive Resolution**: Before asking user, exhaust available resources (codebase, docs, web) to find the answer autonomously.
+- **Verify Before Claiming Risk**: During critique/review, check verifiable facts (npm registry, GitHub releases, file existence, API docs) with tools before listing them as risks or open questions.
 
 ## CODE DOCS
 

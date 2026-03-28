@@ -70,24 +70,26 @@
 
 ## 4. Non-Functional
 
-### 4.1 NF-1: Easy Install [important]
-- [x] Load as temporary add-on via about:debugging + .mcp.json in project
-- [ ] One-step extension install (Firefox Add-ons or local .xpi) — deferred
-- [ ] No manual config file editing — permissions added to settings.json
-
-### 4.7 NF-7: Automated Setup via Claude Code Prompt [very important]
-- **Desc:** User pastes a setup prompt into Claude Code session. CC automates all possible steps; asks user about Firefox launch preference; downloads .xpi and installs or launches accordingly.
-- **Scenario:** User has CC running in any project dir → pastes install prompt → CC checks prereqs, configures .mcp.json, sets permissions, downloads .xpi → asks user: separate Firefox window (web-ext) or existing Firefox (about:debugging) → acts accordingly → user restarts CC → done.
+### 4.1 NF-1: Easy Install via Claude Code Plugin [critical]
+- **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; install command (`/foxcode:foxcode-install`) guides user through Firefox extension setup. User should NOT need to read docs or edit configs manually.
+- **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` → `/plugin install foxcode@korchasa` → `/foxcode:foxcode-install` → command checks prereqs, downloads .xpi, guides Firefox setup → user launches CC with `--dangerously-load-development-channels server:foxcode` → done.
 - **Acceptance:**
-  - [x] Setup prompt file exists at `install-prompt.md` in repo root. Evidence: `install-prompt.md`
-  - [ ] Prompt checks prerequisites: Node.js ≥18, Firefox installed, CC CLI ≥2.1.80
-  - [ ] Prompt creates/updates `.mcp.json` in target project with `npx foxcode-channel`
-  - [ ] Prompt adds MCP server permissions to CC settings (`~/.claude/settings.json` or project `.claude/settings.local.json`)
-  - [ ] Prompt downloads `foxcode-extension.xpi` from GitHub releases
-  - [ ] Prompt asks user: **A) Separate window** (`web-ext run`, clean profile) or **B) Existing Firefox** (manual `about:debugging` load)
-  - [ ] Option A: CC runs `npx web-ext run --source-dir <path>/extension` automatically
-  - [ ] Option B: CC outputs manual steps for `about:debugging` → Load Temporary Add-on → .xpi path
-  - [ ] Prompt is idempotent — safe to run multiple times
+  - [x] Setup prompt file exists at `install-prompt.md` in repo root (legacy fallback). Evidence: `install-prompt.md`
+  - [ ] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root
+  - [ ] Plugin manifest: `plugins/foxcode/.claude-plugin/plugin.json`
+  - [ ] Plugin `.mcp.json` declares foxcode MCP server (`npx foxcode-channel`), auto-loads on plugin enable
+  - [ ] Install command: `plugins/foxcode/commands/foxcode-install.md`
+  - [ ] `claude plugin validate .` passes
+  - [ ] Command checks prerequisites: Node.js ≥18, Firefox installed. Reports clear error with fix instructions per platform (macOS/Linux)
+  - [ ] Command downloads `foxcode-extension.xpi` from GitHub releases, verifies integrity (size >0)
+  - [ ] Command asks user: **A) Separate window** (`web-ext run`, requires cloned repo) or **B) Existing Firefox** (`about:debugging` manual load with .xpi)
+  - [ ] Option A: runs `npx web-ext run --source-dir extension/`, explains what happened
+  - [ ] Option B: outputs exact step-by-step with paths for `about:debugging` → Load Temporary Add-on
+  - [ ] Command provides final summary: MCP via plugin, launch command (`--dangerously-load-development-channels`), sidebar access, tool permissions note
+  - [ ] Command is idempotent — detects existing .xpi, asks re-download or skip
+  - [ ] Command communicates in user's language (auto-detect from conversation context)
+  - [ ] Command explains each step BEFORE executing it (transparency)
+  - [ ] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
