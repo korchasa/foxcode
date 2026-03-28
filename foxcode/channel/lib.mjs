@@ -71,13 +71,22 @@ export function buildToolResultMessage(tool, content) {
 }
 
 /**
+ * Check whether the MCP client (Claude Code) advertises claude/channel support.
+ * @param {object|undefined} clientCapabilities - from mcp.getClientCapabilities()
+ * @returns {boolean}
+ */
+export function hasChannelCapability(clientCapabilities) {
+  return !!clientCapabilities?.experimental?.['claude/channel']
+}
+
+/**
  * Assert that the MCP client (Claude Code) advertises claude/channel support.
  * Throws if the capability is missing — meaning Claude was launched without
  * --dangerously-load-development-channels server:<name>.
  * @param {object|undefined} clientCapabilities - from mcp.getClientCapabilities()
  */
 export function assertChannelCapability(clientCapabilities, serverName = 'foxcode') {
-  if (!clientCapabilities?.experimental?.['claude/channel']) {
+  if (!hasChannelCapability(clientCapabilities)) {
     throw new Error(
       'Client does not support claude/channel. ' +
       `Start Claude Code with: claude --dangerously-load-development-channels server:${serverName}`
@@ -86,9 +95,41 @@ export function assertChannelCapability(clientCapabilities, serverName = 'foxcod
 }
 
 /**
+ * Build a pong response with server telemetry.
+ * @param {{pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined}} env
+ * @returns {object}
+ */
+export function buildPongMessage(env) {
+  return {
+    type: 'pong',
+    server: 'foxcode',
+    version: '0.1.0',
+    pid: env.pid,
+    port: env.port,
+    uptime: env.uptime,
+    clients: env.clients,
+    pendingRequests: env.pendingRequests,
+    nodeVersion: env.nodeVersion,
+    pluginRoot: env.pluginRoot,
+    ts: Date.now(),
+  }
+}
+
+/**
  * MCP tool definitions exposed by the channel plugin.
  */
+/** Marker text for channel connectivity test. Background script auto-replies with 'pong'. */
+export const CHANNEL_TEST_MARKER = 'ping'
+
 export const TOOL_DEFINITIONS = [
+  {
+    name: 'ping',
+    description: 'Test connectivity: CC → WebSocket → browser → WebSocket → CC. Returns { forward: bool, reverse: bool }.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
   {
     name: 'reply',
     description: 'Send a message to the Firefox browser sidebar.',

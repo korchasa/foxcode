@@ -30,3 +30,9 @@ npx web-ext run \
 ```
 
 Tell the user: Firefox launched with FoxCode. Open sidebar: **View > Sidebar > FoxCode**.
+
+---
+
+## Step 3: Verify connectivity
+
+After Firefox is running and the user has opened the sidebar, call the `ping` tool to verify the connection. See `/foxcode:foxcode-ping` for details.

@@ -55,6 +55,7 @@ function connect() {
   ws.onopen = () => {
     reconnectInterval = RECONNECT_INTERVAL_MS
     broadcastStatus(true)
+    sendToChannel({ type: 'ping' })
   }
 
   ws.onclose = () => {
@@ -111,7 +112,18 @@ function broadcastStatus(connected) {
 
 function handleChannelMessage(msg) {
   switch (msg.type) {
+    case 'pong':
+      if (sidebarPort) sidebarPort.postMessage(msg)
+      break
+
     case 'msg':
+      // Channel connectivity test: auto-reply to confirm reverse path
+      if (msg.text === 'ping') {
+        sendToChannel({ type: 'message', text: 'pong', id: `ack-${msg.id}` })
+      }
+      if (sidebarPort) sidebarPort.postMessage(msg)
+      break
+
     case 'edit':
     case 'tool_use':
     case 'tool_result':

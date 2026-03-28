@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import {
   state, nextId, buildChannelMeta, buildReplyMessage,
   buildEditMessage, buildToolUseMessage, buildToolResultMessage,
-  TOOL_DEFINITIONS, assertChannelCapability,
+  TOOL_DEFINITIONS, assertChannelCapability, hasChannelCapability,
+  buildPongMessage,
 } from './lib.mjs'
 
 describe('nextId', () => {
@@ -149,11 +150,49 @@ describe('assertChannelCapability', () => {
   })
 })
 
+describe('hasChannelCapability', () => {
+  it('returns true when claude/channel is present', () => {
+    assert.equal(hasChannelCapability({ experimental: { 'claude/channel': {} } }), true)
+  })
+
+  it('returns false when experimental is missing', () => {
+    assert.equal(hasChannelCapability({ sampling: {} }), false)
+  })
+
+  it('returns false when claude/channel is absent', () => {
+    assert.equal(hasChannelCapability({ experimental: { other: {} } }), false)
+  })
+
+  it('returns false when capabilities is undefined', () => {
+    assert.equal(hasChannelCapability(undefined), false)
+  })
+})
+
+describe('buildPongMessage', () => {
+  it('builds pong with all telemetry fields', () => {
+    const env = { pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode' }
+    const msg = buildPongMessage(env)
+    assert.equal(msg.type, 'pong')
+    assert.equal(msg.server, 'foxcode')
+    assert.equal(msg.version, '0.1.0')
+    assert.equal(msg.pid, 12345)
+    assert.equal(msg.port, 8787)
+    assert.equal(msg.uptime, 10.5)
+    assert.equal(msg.clients, 2)
+    assert.equal(msg.pendingRequests, 1)
+    assert.equal(msg.nodeVersion, 'v22.0.0')
+    assert.equal(msg.pluginRoot, '/home/.claude/plugins/cache/foxcode')
+    assert.ok(msg.ts)
+    assert.equal(msg.channel, undefined)
+    assert.equal(msg.channelHint, undefined)
+  })
+})
+
 describe('TOOL_DEFINITIONS', () => {
-  it('has 3 tools (reply, edit_message, evalInBrowser)', () => {
-    assert.equal(TOOL_DEFINITIONS.length, 3)
+  it('has 4 tools (ping, reply, edit_message, evalInBrowser)', () => {
+    assert.equal(TOOL_DEFINITIONS.length, 4)
     const names = TOOL_DEFINITIONS.map(t => t.name)
-    assert.deepEqual(names, ['reply', 'edit_message', 'evalInBrowser'])
+    assert.deepEqual(names, ['ping', 'reply', 'edit_message', 'evalInBrowser'])
   })
 
   it('all tools have name, description, inputSchema', () => {

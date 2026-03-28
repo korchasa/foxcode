@@ -19,11 +19,14 @@ import { WebSocketServer } from 'ws'
 import {
   nextId, buildChannelMeta, buildReplyMessage, buildEditMessage,
   buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
-  assertChannelCapability,
+  buildPongMessage, CHANNEL_TEST_MARKER,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 
 const PORT = Number(process.env.FOXCODE_PORT ?? 8787)
+
+/** Resolver for pending ping test. Set during ping tool call. */
+let channelTestResolve = null
 
 // --- WebSocket server for extension connection ---
 
@@ -76,15 +79,36 @@ wss.on('connection', (ws) => {
   ws.on('message', (raw) => {
     try {
       const msg = JSON.parse(String(raw))
-      handleExtensionMessage(msg)
+      handleExtensionMessage(msg, ws)
     } catch { /* ignore malformed messages */ }
   })
 })
 
-function handleExtensionMessage(msg) {
+function handleExtensionMessage(msg, ws) {
   process.stderr.write(`foxcode: rx ${msg.type} ${JSON.stringify(msg).slice(0, 200)}\n`)
   switch (msg.type) {
+    case 'ping': {
+      const pong = buildPongMessage({
+        pid: process.pid,
+        port: PORT,
+        uptime: process.uptime(),
+        clients: clients.size,
+        pendingRequests: pendingToolRequests.size,
+        nodeVersion: process.version,
+        pluginRoot: process.env.CLAUDE_PLUGIN_ROOT,
+      })
+      if (ws.readyState === 1) ws.send(JSON.stringify(pong))
+      break
+    }
     case 'message': {
+      // Channel test ack from browser — resolve pending verify
+      if (msg.text === 'pong') {
+        if (channelTestResolve) {
+          channelTestResolve(true)
+          channelTestResolve = null
+        }
+        break
+      }
       // FR-2: User message from browser → forward to CC via channel notification
       const { content, meta } = buildChannelMeta(msg)
       process.stderr.write(`foxcode: notify channel content=${content.slice(0, 100)}\n`)
@@ -136,6 +160,27 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
   const args = (req.params.arguments ?? {})
   try {
     switch (req.params.name) {
+      case 'ping': {
+        const VERIFY_TIMEOUT_MS = 5000
+        // Forward path: send test message to browser via WebSocket
+        const forward = hasClients()
+        if (forward) {
+          broadcast(buildReplyMessage(CHANNEL_TEST_MARKER))
+        }
+        // Reverse path: wait for browser's auto-ack via channel notification
+        let reverse = false
+        if (forward) {
+          reverse = await new Promise((resolve) => {
+            channelTestResolve = resolve
+            setTimeout(() => {
+              channelTestResolve = null
+              resolve(false)
+            }, VERIFY_TIMEOUT_MS)
+          })
+        }
+        const result = { forward, reverse }
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+      }
       case 'reply': {
         const replyMsg = buildReplyMessage(args.text, args.reply_to)
         broadcast(replyMsg)
@@ -168,12 +213,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
 // --- Start ---
 
 mcp.oninitialized = () => {
-  try {
-    assertChannelCapability(mcp.getClientCapabilities())
-  } catch (err) {
-    process.stderr.write(`foxcode: FATAL: ${err.message}\n`)
-    process.exit(1)
-  }
+  process.stderr.write('foxcode: initialized, channel status pending verify_channel call\n')
 }
 
 await mcp.connect(new StdioServerTransport())

@@ -27,10 +27,11 @@ graph LR
 - **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications
 - **`lib.mjs`** — Pure logic: ID generation, message builders, tool definitions (testable without MCP/WS)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
-- **Capabilities:** `claude/channel` (notifications), `tools` (reply, evalInBrowser)
-- **Startup check:** `oninitialized` callback verifies client advertises `experimental['claude/channel']` capability. If absent (CC launched without `--dangerously-load-development-channels`), exits with FATAL error and actionable command. Logic: `lib.mjs:assertChannelCapability()`, wired in `server.mjs:oninitialized`.
+- **Capabilities:** `claude/channel` (notifications), `tools` (ping, reply, edit_message, evalInBrowser)
+- **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. Replaces broken `clientCapabilities` check (CC doesn't advertise `claude/channel` in caps). Command `/foxcode:foxcode-ping` wraps the tool.
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:8787` (extension)
 - **Tools exposed:**
+  - `ping()` — test bidirectional connectivity (CC → browser → CC)
   - `reply(text, reply_to?)` — send CC response to browser
   - `edit_message(message_id, text)` — edit previous message
   - `evalInBrowser(code, timeout?)` — execute JS in browser with full API. Validates syntax, sends to extension via WebSocket, returns serialized result
@@ -74,7 +75,7 @@ graph LR
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 
 ## 7. Constraints
-- **Channels in research preview:** requires `--dangerously-load-development-channels server:foxcode` flag. Server validates this at init via client capabilities check and exits if missing.
+- **Channels in research preview:** requires `--dangerously-load-development-channels server:foxcode` flag. CC does not advertise `claude/channel` in MCP client capabilities — verification via `ping` tool instead.
 - **Terminal messages invisible:** Messages initiated from terminal don't appear in browser (CC only calls `reply` for channel-initiated messages)
 - **CSP unsafe-eval required:** `evalInBrowser` uses `new Function()` in background — needs `"script-src 'self' 'unsafe-eval'"` in manifest CSP. Acceptable: code source is trusted (Claude Code agent)
 - **api.eval() CSP-limited:** Page CSP may block `eval()` via wrappedJSObject on strict sites

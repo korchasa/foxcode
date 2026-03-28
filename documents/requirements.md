@@ -61,7 +61,7 @@
   - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:230-240`
   - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:142-145`
   - [x] `reply` + `edit_message` tools preserved. Evidence: `foxcode/channel/lib.mjs:77-100`
-  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url). Evidence: `foxcode/channel/lib.mjs` (only 3 tools)
+  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url). Evidence: `foxcode/channel/lib.mjs` (4 tools: ping, reply, edit_message, evalInBrowser)
   - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `extension/manifest.json:6-11,13`
   - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `extension/background/dom-helpers.test.js`, `extension/background/browser-api.test.js`
   - [ ] Integration test: background executes code → delegates to tab → returns result (requires Firefox)
@@ -92,8 +92,10 @@
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
-- [x] Requires `--dangerously-load-development-channels server:foxcode` flag (channels in research preview). Evidence: `foxcode/channel/server.mjs:169-176` (assertChannelCapability on init)
-- [x] Fail-fast with actionable error if flag missing. Evidence: `foxcode/channel/lib.mjs:79-86` (assertChannelCapability), `foxcode/channel/lib.test.mjs:116-150` (5 tests)
+- [x] Requires `--dangerously-load-development-channels server:foxcode` flag (channels in research preview). Evidence: `foxcode/commands/foxcode-run.md`
+- [x] `ping` tool verifies bidirectional connectivity (CC → browser → CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
+- [x] `/foxcode:foxcode-ping` command wraps ping tool with user-facing diagnostics. Evidence: `foxcode/commands/foxcode-ping.md`
+- [x] `/foxcode:foxcode-run` Step 3 calls ping after Firefox launch. Evidence: `foxcode/commands/foxcode-run.md`
 
 ### 4.3 NF-3: Reliability [very important]
 - [x] Auto-reconnect on connection loss. Evidence: `extension/background/background.js:46-54` (scheduleReconnect with backoff)
