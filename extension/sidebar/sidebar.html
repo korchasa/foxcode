@@ -6,6 +6,17 @@
   <link rel="stylesheet" href="sidebar.css">
 </head>
 <body>
+  <div id="connection-error" class="connection-error">
+    <div class="connection-error-title">No connection to Claude Code</div>
+    <div class="connection-error-hint">Start Claude Code with FoxCode channel:</div>
+    <pre class="connection-error-cmd">claude --dangerously-load-development-channels server:fire-cc</pre>
+    <div class="connection-error-hint">Make sure <code>.mcp.json</code> has the foxcode server:</div>
+    <pre class="connection-error-cmd">{ "mcpServers": { "foxcode": {
+  "command": "npx",
+  "args": ["-y", "foxcode-channel"]
+}}}</pre>
+    <div class="connection-error-status">Reconnecting...</div>
+  </div>
   <div id="messages"></div>
   <div id="composer">
     <form id="input-form">

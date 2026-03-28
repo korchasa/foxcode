@@ -59,13 +59,19 @@ browser.tabs.onUpdated.addListener((_id, changeInfo) => {
 
 // --- Status ---
 
+const connectionErrorEl = document.getElementById('connection-error')
+
 function setStatus(connected) {
   if (connected) {
     inputEl.classList.remove('disconnected')
     inputEl.placeholder = 'Ask a question about this page...'
+    inputEl.disabled = false
+    connectionErrorEl.classList.add('hidden')
   } else {
     inputEl.classList.add('disconnected')
-    inputEl.placeholder = 'No connection to Claude Code'
+    inputEl.placeholder = 'No connection...'
+    inputEl.disabled = true
+    connectionErrorEl.classList.remove('hidden')
   }
 }
 
