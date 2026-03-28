@@ -1,8 +1,10 @@
 {
   "name": "foxcode",
   "description": "Firefox browser UI for Claude Code sessions with real-time sync and browser automation",
-  "version": "0.3.0",
-  "author": { "name": "korchasa" },
+  "version": "0.4.3",
+  "author": {
+    "name": "korchasa"
+  },
   "homepage": "https://github.com/korchasa/foxcode",
   "license": "MIT"
 }

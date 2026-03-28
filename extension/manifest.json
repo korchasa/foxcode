@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "FoxCode",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Browser UI for Claude Code sessions with full browser automation",
   "permissions": [
     "activeTab",
