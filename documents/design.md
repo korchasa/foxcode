@@ -18,12 +18,12 @@ graph LR
   BG -->|messages| S
 ```
 - **Subsystems:**
-  - Channel Plugin (`channel/`): Bun/Node MCP server, WebSocket bridge
+  - Channel Plugin (`foxcode/channel/`): Node.js MCP server, WebSocket bridge
   - Extension (`extension/`): Sidebar UI, Background script, Content script
 
 ## 3. Components
 
-### 3.1 Channel Plugin (`channel/`)
+### 3.1 Channel Plugin (`foxcode/channel/`)
 - **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications
 - **`lib.mjs`** — Pure logic: ID generation, message builders, tool definitions (testable without MCP/WS)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
@@ -87,8 +87,8 @@ graph LR
 ### Primary: CC Plugin Marketplace
 - **Structure:** `.claude-plugin/marketplace.json` (repo root) → `plugins/foxcode/` (plugin dir)
 - **Plugin contents:** `.claude-plugin/plugin.json` (manifest), `.mcp.json` (MCP server config), `commands/foxcode-install.md` (install command)
-- **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`npx foxcode-channel`). Loads automatically on plugin enable.
-- **Install command:** `/foxcode:foxcode-install` — interactive flow: prereq check (Node.js ≥18, Firefox) → download .xpi → Firefox install (web-ext or about:debugging) → final summary with launch command
+- **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`sh -c "cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install && node server.mjs"`). Auto-installs deps on first run, loads automatically on plugin enable. No npm package needed.
+- **Install command:** `/foxcode:foxcode-install` — interactive flow: prereq check (Node.js ≥18, Firefox) → locate extension source (local or marketplace clone) → launch Firefox with persistent profile → final summary with launch command
 
 ### Idempotency
 - `.xpi` download: detect existing file, ask re-download or skip

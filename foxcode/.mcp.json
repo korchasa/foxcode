@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "foxcode": {
-      "command": "npx",
-      "args": ["-y", "foxcode-channel"]
+      "command": "sh",
+      "args": ["-c", "cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install --omit=dev --silent 2>/dev/null && node server.mjs"]
     }
   }
 }

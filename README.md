@@ -11,14 +11,19 @@ Firefox sidebar extension for Claude Code sessions: real-time chat, page context
 
 ```
 Firefox Sidebar ←→ WebSocket ←→ MCP Channel Plugin ←→ stdio ←→ Claude Code
-(extension)        (localhost:8787)  (Node.js / npx)              (terminal)
+(extension)        (localhost:8787)  (Node.js)              (terminal)
 ```
 
 ## Getting Started
 
+Install plugin:
 ```bash
 /plugin marketplace add korchasa/foxcode
 /plugin install foxcode@korchasa
+```
+
+Run the installation command:
+```bash
 /foxcode:foxcode-install
 ```
 
@@ -26,7 +31,7 @@ The install command checks prerequisites, downloads the extension, and guides yo
 
 ## How it works
 
-- **Channel Plugin** (`foxcode-channel` on npm) — MCP server bridging Claude Code ↔ extension via WebSocket
+- **Channel Plugin** (`foxcode/channel/`) — MCP server bridging Claude Code ↔ extension via WebSocket
 - **Sidebar UI** — chat interface rendering messages, tool calls/results, with markdown support
 - **Background script** — WebSocket connection, message routing, code execution engine
 - **Content script** — DOM access for `api.eval()` in page main world

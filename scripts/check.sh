@@ -10,7 +10,7 @@ echo "=== FoxCode: check ==="
 
 # Comment scan
 echo "--- Comment scan ---"
-grep -rn "TODO\|FIXME\|HACK\|XXX\|debugger\|console\.log" extension/ channel/server.mjs channel/lib.mjs 2>/dev/null || echo "No issues found."
+grep -rn "TODO\|FIXME\|HACK\|XXX\|debugger\|console\.log" extension/ foxcode/channel/server.mjs foxcode/channel/lib.mjs 2>/dev/null || echo "No issues found."
 
 # Validate manifest.json
 echo "--- Manifest validation ---"
@@ -22,12 +22,12 @@ fi
 
 # JS syntax check
 echo "--- JS syntax check ---"
-node --check channel/server.mjs && echo "channel/server.mjs: syntax OK"
-node --check channel/lib.mjs && echo "channel/lib.mjs: syntax OK"
+node --check foxcode/channel/server.mjs && echo "foxcode/channel/server.mjs: syntax OK"
+node --check foxcode/channel/lib.mjs && echo "foxcode/channel/lib.mjs: syntax OK"
 
 # Tests
 echo "--- Tests ---"
-node --test channel/lib.test.mjs
+node --test foxcode/channel/lib.test.mjs
 node --test extension/sidebar/markdown.test.js
 
 echo "=== check complete ==="

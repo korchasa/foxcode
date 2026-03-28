@@ -17,10 +17,10 @@
 
 ## Detected Commands
 - **Load Extension**: `about:debugging` → This Firefox → Load Temporary Add-on → `extension/manifest.json`
-- **Install Channel deps**: `cd channel && npm install`
-- **Start Channel server**: `cd channel && npm start`
+- **Install Channel deps**: `cd foxcode/channel && npm install`
+- **Start Channel server**: `cd foxcode/channel && npm start`
 - **Verify Claude CLI**: `claude --version`
 
 ## Command Scripts
-- `scripts/check.sh` — Comment scan, validate manifest.json, JS syntax check for `extension/` and `channel/`
+- `scripts/check.sh` — Comment scan, validate manifest.json, JS syntax check for `extension/` and `foxcode/channel/`
 - `scripts/dev.sh` — Open Firefox with extension loaded (via `web-ext run` if available)

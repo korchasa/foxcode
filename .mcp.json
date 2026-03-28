@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "foxcode": {
-      "command": "node",
-      "args": ["./channel/server.mjs"]
+      "command": "sh",
+      "args": ["-c", "cd foxcode/channel && npm install --omit=dev --silent 2>/dev/null && node server.mjs"]
     }
   }
 }

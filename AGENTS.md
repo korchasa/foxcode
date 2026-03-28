@@ -36,7 +36,7 @@ Firefox WebExtension providing browser UI for active Claude Code sessions. Real-
 - **Platform**: Cross-platform (macOS primary)
 
 ## Architecture
-- **Channel Plugin** (`channel/server.mjs`) — MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
+- **Channel Plugin** (`foxcode/channel/server.mjs`) — MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
 - **WebExtension Sidebar** (`extension/sidebar/`) — Chat UI: message rendering, text input
 - **Background Script** (`extension/background/background.js`) — WebSocket connection management, message routing, tool request handling
 - **Content Script** (`extension/content/content-script.js`) — DOM access, `api.eval()` in page main world
@@ -53,12 +53,12 @@ foxcode/
 │   │   └── plugin.json   #   Plugin manifest (name, version, author)
 │   ├── commands/
 │   │   └── foxcode-install.md  # Install command (/foxcode:foxcode-install)
-│   └── .mcp.json         #   MCP server config (npx foxcode-channel)
-├── channel/              # MCP channel plugin (Node.js, npm: foxcode-channel)
-│   ├── server.mjs        #   MCP server, WebSocket bridge
-│   ├── lib.mjs           #   Shared pure functions, tool definitions
-│   ├── validator.mjs     #   JS code validation for evalInBrowser
-│   └── package.json      #   Published as foxcode-channel@0.3.0
+│   ├── channel/           #   MCP channel plugin (Node.js)
+│   │   ├── server.mjs    #     MCP server, WebSocket bridge
+│   │   ├── lib.mjs       #     Shared pure functions, tool definitions
+│   │   ├── validator.mjs #     JS code validation for evalInBrowser
+│   │   └── package.json  #     Dependencies
+│   └── .mcp.json         #   MCP server config (node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs)
 ├── extension/            # Firefox WebExtension (Manifest V2)
 │   ├── background/       #   Background script, browser-api, dom-helpers
 │   ├── sidebar/          #   Chat UI (HTML/CSS/JS)
