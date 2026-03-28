@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "foxcode": {
+      "command": "npx",
+      "args": ["-y", "foxcode-channel"]
+    }
+  }
+}

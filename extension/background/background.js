@@ -177,34 +177,5 @@ browser.runtime.onConnect.addListener((port) => {
   })
 })
 
-// --- Context menu (FR-3) ---
-
-browser.contextMenus.create({
-  id: 'send-to-claude',
-  title: 'Send to Claude',
-  contexts: ['selection'],
-})
-
-browser.contextMenus.onClicked.addListener((info) => {
-  if (info.menuItemId === 'send-to-claude' && info.selectionText) {
-    const id = `ctx-${Date.now()}`
-    sendToChannel({
-      type: 'message',
-      id,
-      text: `[Selected text from ${info.pageUrl}]\n\n${info.selectionText}`,
-    })
-    // Also show in sidebar
-    if (sidebarPort) {
-      sidebarPort.postMessage({
-        type: 'msg',
-        id,
-        from: 'user',
-        text: `[Selected text from ${info.pageUrl}]\n\n${info.selectionText}`,
-        ts: Date.now(),
-      })
-    }
-  }
-})
-
 // Start connection
 connect()

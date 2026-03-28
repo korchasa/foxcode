@@ -37,7 +37,7 @@ graph LR
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 
 ### 3.2 Background Script (`extension/background/`)
-- **`background.js`** — WebSocket connection, message routing, EVAL_CODE handler, context menu
+- **`background.js`** — WebSocket connection, message routing, EVAL_CODE handler
 - **`browser-api.js`** — Factory creating `api` object with ~30 async helpers (DI for testability)
 - **`dom-helpers.js`** — Pure functions generating injectable JS code (buildWaitAndAct, selectors, etc.)
 - **Execution model:** Agent code runs via `new Function('api', code)(browserApi)` in background (persistent, survives navigation). DOM ops delegated to tabs via `executeScript`. Navigation via `webNavigation.onCompleted`.
@@ -80,31 +80,22 @@ graph LR
 - **api.eval() CSP-limited:** Page CSP may block `eval()` via wrappedJSObject on strict sites
 - **No iframe support:** executeScript targets top frame only
 - **No file upload:** Browser security prevents programmatic file path injection
-- **Deferred:** Plugin marketplace packaging, permission relay, iframe support, video/tracing
+- **Deferred:** Permission relay, iframe support, video/tracing
 
-## 8. Setup Automation (`install-prompt.md`)
+## 8. Distribution & Setup
 
-- **Purpose:** Markdown file containing a prompt for Claude Code that automates project setup
-- **Location:** Repo root `install-prompt.md`
-- **Format:** Prose instructions for CC agent — not a shell script. CC interprets and executes steps using its tools.
+### Primary: CC Plugin Marketplace
+- **Structure:** `.claude-plugin/marketplace.json` (repo root) → `plugins/foxcode/` (plugin dir)
+- **Plugin contents:** `.claude-plugin/plugin.json` (manifest), `.mcp.json` (MCP server config), `commands/foxcode-install.md` (install command)
+- **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`npx foxcode-channel`). Loads automatically on plugin enable.
+- **Install command:** `/foxcode:foxcode-install` — interactive flow: prereq check (Node.js ≥18, Firefox) → download .xpi → Firefox install (web-ext or about:debugging) → final summary with launch command
 
-### Automated Steps (CC executes)
-1. **Prereq check**: verify `node --version` ≥18, `firefox --version` exists (or `open -a Firefox` on macOS), `claude --version` ≥2.1.80
-2. **Deps install**: `npm install` in `channel/`
-3. **Smoke test**: `node -e "require('./channel/server.mjs')"` or quick syntax check — verify no startup crash
-4. **Configure .mcp.json**: Create/merge `.mcp.json` in CWD (target project) with `{"mcpServers":{"foxcode":{"command":"node","args":["<abs-path>/channel/server.mjs"]}}}`
-5. **Configure CC permissions**: Add `foxcode` MCP server to allowed in `~/.claude/settings.json` or `.claude/settings.local.json`
-6. **Verify**: Confirm `.mcp.json` is valid JSON, paths resolve
-
-### Extension Install (CC asks user, then acts)
-1. CC downloads `foxcode-extension.xpi` from GitHub releases to `/tmp/`
-2. CC asks user: **A) Separate window** (clean profile via `web-ext run`) or **B) Existing Firefox** (manual load via `about:debugging`)
-3. **Option A:** CC runs `npx web-ext run --source-dir <repo>/extension` — launches isolated Firefox with extension pre-loaded
-4. **Option B:** CC outputs manual steps: `about:debugging` → Load Temporary Add-on → select `/tmp/foxcode-extension.xpi`
-5. User restarts CC session with `--dangerously-load-development-channels server:foxcode`
+### Fallback: Setup Prompt
+- **Location:** `install-prompt.md` (repo root)
+- **Format:** Prose instructions for CC agent. CC interprets and executes steps using its tools.
+- **Steps:** Prereq check → configure `.mcp.json` → download .xpi → Firefox install → restart CC
 
 ### Idempotency
+- `.xpi` download: detect existing file, ask re-download or skip
 - `.mcp.json`: merge `foxcode` entry, preserve other servers
-- `npm install`: safe to re-run
-- Permissions: additive, no overwrites
-- Skip steps if already done (check before act)
+- Safe to re-run both paths

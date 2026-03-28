@@ -6,7 +6,6 @@
   "permissions": [
     "activeTab",
     "tabs",
-    "contextMenus",
     "cookies",
     "webNavigation",
     "<all_urls>"

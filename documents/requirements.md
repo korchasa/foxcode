@@ -34,10 +34,9 @@
 
 ### 3.3 FR-3: Page Context Injection
 - **Desc:** Send current page content or selected text as context into CC session
-- **Scenario:** User clicks "Send page" or selects text → right-click → "Send to Claude" → content delivered as message/context to active CC session
+- **Scenario:** CC requests page content via MCP tool → content delivered as context to active CC session
 - **Acceptance:**
   - [x] Page content accessible to CC via `get_page_content` MCP tool. Evidence: `channel/server.mjs:105-110` (get_page_content tool), `extension/content/content-script.js:27-73` (extractPageContent)
-  - [x] Context menu on selected text sends selection to CC session. Evidence: `extension/background/background.js:131-147` (contextMenus handler)
   - [x] Content arrives in CC session as user message with clear source attribution. Evidence: `channel/server.mjs:91-100` (page_content with [Page: url] prefix)
 
 ### 3.4 FR-4: Project Context
@@ -74,22 +73,22 @@
 - **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; install command (`/foxcode:foxcode-install`) guides user through Firefox extension setup. User should NOT need to read docs or edit configs manually.
 - **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` → `/plugin install foxcode@korchasa` → `/foxcode:foxcode-install` → command checks prereqs, downloads .xpi, guides Firefox setup → user launches CC with `--dangerously-load-development-channels server:foxcode` → done.
 - **Acceptance:**
-  - [x] Setup prompt file exists at `install-prompt.md` in repo root (legacy fallback). Evidence: `install-prompt.md`
-  - [ ] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root
-  - [ ] Plugin manifest: `plugins/foxcode/.claude-plugin/plugin.json`
-  - [ ] Plugin `.mcp.json` declares foxcode MCP server (`npx foxcode-channel`), auto-loads on plugin enable
-  - [ ] Install command: `plugins/foxcode/commands/foxcode-install.md`
-  - [ ] `claude plugin validate .` passes
-  - [ ] Command checks prerequisites: Node.js ≥18, Firefox installed. Reports clear error with fix instructions per platform (macOS/Linux)
-  - [ ] Command downloads `foxcode-extension.xpi` from GitHub releases, verifies integrity (size >0)
-  - [ ] Command asks user: **A) Separate window** (`web-ext run`, requires cloned repo) or **B) Existing Firefox** (`about:debugging` manual load with .xpi)
-  - [ ] Option A: runs `npx web-ext run --source-dir extension/`, explains what happened
-  - [ ] Option B: outputs exact step-by-step with paths for `about:debugging` → Load Temporary Add-on
-  - [ ] Command provides final summary: MCP via plugin, launch command (`--dangerously-load-development-channels`), sidebar access, tool permissions note
-  - [ ] Command is idempotent — detects existing .xpi, asks re-download or skip
-  - [ ] Command communicates in user's language (auto-detect from conversation context)
-  - [ ] Command explains each step BEFORE executing it (transparency)
-  - [ ] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps
+  - [x] Setup prompt file exists at `install-prompt.md` in repo root (legacy fallback, plugin as primary). Evidence: `install-prompt.md`
+  - [x] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root. Evidence: `.claude-plugin/marketplace.json`
+  - [x] Plugin manifest: `plugins/foxcode/.claude-plugin/plugin.json`. Evidence: `plugins/foxcode/.claude-plugin/plugin.json`
+  - [x] Plugin `.mcp.json` declares foxcode MCP server (`npx foxcode-channel`), auto-loads on plugin enable. Evidence: `plugins/foxcode/.mcp.json`
+  - [x] Install command: `plugins/foxcode/commands/foxcode-install.md`. Evidence: `plugins/foxcode/commands/foxcode-install.md`
+  - [x] `claude plugin validate .` passes. Evidence: validated locally, `claude plugin validate .` → "Validation passed"
+  - [x] Command checks prerequisites: Node.js ≥18, Firefox installed. Reports clear error with fix instructions per platform (macOS/Linux). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 1
+  - [x] Command downloads `foxcode-extension.xpi` from GitHub releases, verifies integrity (size >0). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 2
+  - [x] Command asks user: **A) Separate window** (`web-ext run`, requires cloned repo) or **B) Existing Firefox** (`about:debugging` manual load with .xpi). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 3
+  - [x] Option A: runs `npx web-ext run --source-dir extension/`, explains what happened. Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 4a
+  - [x] Option B: outputs exact step-by-step with paths for `about:debugging` → Load Temporary Add-on. Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 4b
+  - [x] Command provides final summary: MCP via plugin, launch command (`--dangerously-load-development-channels`), sidebar access, tool permissions note. Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 5
+  - [x] Command is idempotent — detects existing .xpi, asks re-download or skip. Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 2
+  - [x] Command communicates in user's language (auto-detect from conversation context). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 0
+  - [x] Command explains each step BEFORE executing it (transparency). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 0
+  - [x] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps. Evidence: `plugins/foxcode/commands/foxcode-install.md` Steps 1-2
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
@@ -114,7 +113,7 @@
 
 ## 5. Interfaces
 - **Transport:** Channel Plugin (MCP server inside CC) ↔ WebSocket localhost:8787 ↔ Firefox Extension
-- **Extension APIs:** browser.sidebarAction, browser.contextMenus, browser.runtime, browser.tabs, browser.cookies, browser.webNavigation, browser.windows
+- **Extension APIs:** browser.sidebarAction, browser.runtime, browser.tabs, browser.cookies, browser.webNavigation, browser.windows
 - **UI:** Sidebar panel with message stream and input
 
 ## 6. Acceptance

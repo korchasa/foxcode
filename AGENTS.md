@@ -38,14 +38,22 @@ Firefox WebExtension providing browser UI for active Claude Code sessions. Real-
 ## Architecture
 - **Channel Plugin** (`channel/server.mjs`) — MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
 - **WebExtension Sidebar** (`extension/sidebar/`) — Chat UI: message rendering, text input
-- **Background Script** (`extension/background/background.js`) — WebSocket connection management, message routing, context menu, tool request handling
-- **Content Script** (`extension/content/content-script.js`) — DOM text extraction, selected text retrieval
+- **Background Script** (`extension/background/background.js`) — WebSocket connection management, message routing, tool request handling
+- **Content Script** (`extension/content/content-script.js`) — DOM access, `api.eval()` in page main world
 - **Flow**: Sidebar → Background → WebSocket → Channel Plugin → MCP stdio → Claude Code
 
 ## Repository Structure
 
 ```
 foxcode/
+├── .claude-plugin/       # CC Plugin Marketplace manifest
+│   └── marketplace.json
+├── plugins/foxcode/      # CC Plugin (installed via /plugin install)
+│   ├── .claude-plugin/
+│   │   └── plugin.json   #   Plugin manifest (name, version, author)
+│   ├── commands/
+│   │   └── foxcode-install.md  # Install command (/foxcode:foxcode-install)
+│   └── .mcp.json         #   MCP server config (npx foxcode-channel)
 ├── channel/              # MCP channel plugin (Node.js, npm: foxcode-channel)
 │   ├── server.mjs        #   MCP server, WebSocket bridge
 │   ├── lib.mjs           #   Shared pure functions, tool definitions
@@ -59,7 +67,7 @@ foxcode/
 │   └── manifest.json     #   Extension manifest
 ├── documents/            # Project docs (SRS, SDS, whiteboards)
 ├── scripts/              # Dev scripts (check.sh, test.sh, dev.sh)
-├── install-prompt.md     # Legacy install guide (replaced by plugin)
+├── install-prompt.md     # Fallback install prompt (standalone, no plugin refs)
 ├── .mcp.json             # Dev-mode MCP config (local server.mjs)
 └── AGENTS.md             # This file (CLAUDE.md → symlink)
 ```

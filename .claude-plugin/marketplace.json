@@ -1,0 +1,15 @@
+{
+  "name": "korchasa",
+  "owner": { "name": "korchasa" },
+  "metadata": {
+    "description": "FoxCode — Firefox browser UI for Claude Code sessions",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "foxcode",
+      "source": "./foxcode",
+      "description": "Firefox browser UI for Claude Code: real-time session sync, messaging, browser automation via evalInBrowser"
+    }
+  ]
+}

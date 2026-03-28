@@ -8,9 +8,8 @@ Before doing anything, tell the user what you are about to do. Use the user's la
 
 1. You will check that Node.js and Firefox are installed
 2. You will add the FoxCode channel plugin to `.mcp.json` in the current project
-3. You will add tool permissions to Claude Code settings
-4. You will download the extension .xpi and install it into Firefox
-5. The user will need to restart Claude Code
+3. You will download the extension .xpi and install it into Firefox
+4. The user will need to restart Claude Code with channel flag
 
 Ask the user to confirm before proceeding.
 
@@ -36,19 +35,11 @@ Create or update `.mcp.json` in CWD (merge into existing `mcpServers`, don't ove
 }
 ```
 
-### Step 3: Configure permissions
+### Step 3: Download extension .xpi
 
-Add to `allowedTools` in `.claude/settings.local.json` (CWD) or `~/.claude/settings.json`:
-
-```
-"mcp__foxcode__reply"
-"mcp__foxcode__edit_message"
-"mcp__foxcode__evalInBrowser"
-```
-
-### Step 4: Download extension .xpi
-
-Download the latest `foxcode-extension.xpi` from GitHub releases:
+Check if `/tmp/foxcode-extension.xpi` already exists.
+- If exists: ask "Re-download or skip?"
+- If not: download
 
 ```bash
 curl -L -o /tmp/foxcode-extension.xpi \
@@ -57,7 +48,7 @@ curl -L -o /tmp/foxcode-extension.xpi \
 
 Verify download succeeded (file must be >0 bytes).
 
-### Step 5: Ask user about Firefox launch mode
+### Step 4: Ask user about Firefox launch mode
 
 Ask the user (in their language):
 
@@ -67,9 +58,9 @@ Ask the user (in their language):
 >
 > **B) Existing Firefox** — installs extension as temporary add-on into your running Firefox via `about:debugging`. Extension stays until Firefox restart.
 
-Wait for user's answer before proceeding to Step 6.
+Wait for user's answer before proceeding.
 
-### Step 6: Install extension
+### Step 5: Install extension
 
 #### If user chose A (separate window):
 
@@ -92,7 +83,7 @@ Tell the user to perform these steps manually:
 
 Note: there is no CLI command to load a temporary add-on into a running Firefox. This must be done via the GUI.
 
-### Step 7: Tell user
+### Step 6: Tell user
 
 ```
 Setup complete! Restart Claude Code in this directory:
