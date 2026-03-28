@@ -67,7 +67,7 @@ Print this message to the user:
 **Setup complete!** Two manual steps remain:
 
 1. **Install the extension in Firefox:**
-   - Download `foxcode-extension.xpi` from [Releases](https://github.com/korchasa/firefox-agent/releases)
+   - Download `foxcode-extension.xpi` from [Releases](https://github.com/korchasa/foxcode/releases)
    - Open Firefox → `about:debugging#/runtime/this-firefox`
    - Click **"Load Temporary Add-on..."** → select the downloaded `.xpi`
    - The "FoxCode" sidebar will appear in View → Sidebar

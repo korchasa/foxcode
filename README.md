@@ -31,7 +31,7 @@ Firefox Sidebar ←→ WebSocket ←→ MCP Channel Plugin ←→ stdio ←→ C
      }
    }
    ```
-2. Download `foxcode-extension.xpi` from [Releases](https://github.com/korchasa/firefox-agent/releases)
+2. Download `foxcode-extension.xpi` from [Releases](https://github.com/korchasa/foxcode/releases)
 3. In Firefox: `about:debugging#/runtime/this-firefox` → **Load Temporary Add-on** → select the `.xpi`
 4. Run `claude` in your project directory
 5. Open sidebar: View → Sidebar → FoxCode

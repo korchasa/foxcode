@@ -14,7 +14,7 @@
   "keywords": ["claude-code", "mcp", "firefox", "browser-automation", "channel"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/korchasa/firefox-agent.git",
+    "url": "https://github.com/korchasa/foxcode.git",
     "directory": "channel"
   },
   "license": "MIT",
