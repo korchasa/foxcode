@@ -76,16 +76,17 @@
 - [ ] No manual config file editing — permissions added to settings.json
 
 ### 4.7 NF-7: Automated Setup via Claude Code Prompt [very important]
-- **Desc:** User pastes a setup prompt into Claude Code session. CC automates all possible steps; outputs manual instructions for what requires human action (browser GUI).
-- **Scenario:** User has CC running in any project dir → pastes install prompt → CC clones repo / checks local copy, installs deps, configures .mcp.json, sets permissions → tells user to load extension in Firefox manually → user loads extension → done.
+- **Desc:** User pastes a setup prompt into Claude Code session. CC automates all possible steps; asks user about Firefox launch preference; downloads .xpi and installs or launches accordingly.
+- **Scenario:** User has CC running in any project dir → pastes install prompt → CC checks prereqs, configures .mcp.json, sets permissions, downloads .xpi → asks user: separate Firefox window (web-ext) or existing Firefox (about:debugging) → acts accordingly → user restarts CC → done.
 - **Acceptance:**
-  - [ ] Setup prompt file exists at `install-prompt.md` in repo root
+  - [x] Setup prompt file exists at `install-prompt.md` in repo root. Evidence: `install-prompt.md`
   - [ ] Prompt checks prerequisites: Node.js ≥18, Firefox installed, CC CLI ≥2.1.80
-  - [ ] Prompt runs `npm install` in `channel/`
-  - [ ] Prompt creates/updates `.mcp.json` in target project with correct path to `channel/server.mjs`
+  - [ ] Prompt creates/updates `.mcp.json` in target project with `npx foxcode-channel`
   - [ ] Prompt adds MCP server permissions to CC settings (`~/.claude/settings.json` or project `.claude/settings.local.json`)
-  - [ ] Prompt outputs clear manual steps for Firefox extension loading (about:debugging → Load Temporary Add-on → path to `extension/manifest.json`)
-  - [ ] Prompt verifies setup by checking channel server starts without errors (`node channel/server.mjs` smoke test)
+  - [ ] Prompt downloads `foxcode-extension.xpi` from GitHub releases
+  - [ ] Prompt asks user: **A) Separate window** (`web-ext run`, clean profile) or **B) Existing Firefox** (manual `about:debugging` load)
+  - [ ] Option A: CC runs `npx web-ext run --source-dir <path>/extension` automatically
+  - [ ] Option B: CC outputs manual steps for `about:debugging` → Load Temporary Add-on → .xpi path
   - [ ] Prompt is idempotent — safe to run multiple times
 
 ### 4.2 NF-2: Easy Launch [very important]

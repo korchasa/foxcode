@@ -96,12 +96,12 @@ graph LR
 5. **Configure CC permissions**: Add `foxcode` MCP server to allowed in `~/.claude/settings.json` or `.claude/settings.local.json`
 6. **Verify**: Confirm `.mcp.json` is valid JSON, paths resolve
 
-### Manual Steps (CC outputs instructions)
-1. Open Firefox → `about:debugging#/runtime/this-firefox`
-2. Click "Load Temporary Add-on..."
-3. Navigate to `<repo>/extension/manifest.json`, select it
-4. Open sidebar: View → Sidebar → FoxCode (or Ctrl+B)
-5. Restart CC session in target project to pick up `.mcp.json`
+### Extension Install (CC asks user, then acts)
+1. CC downloads `foxcode-extension.xpi` from GitHub releases to `/tmp/`
+2. CC asks user: **A) Separate window** (clean profile via `web-ext run`) or **B) Existing Firefox** (manual load via `about:debugging`)
+3. **Option A:** CC runs `npx web-ext run --source-dir <repo>/extension` — launches isolated Firefox with extension pre-loaded
+4. **Option B:** CC outputs manual steps: `about:debugging` → Load Temporary Add-on → select `/tmp/foxcode-extension.xpi`
+5. User restarts CC session with `--dangerously-load-development-channels server:foxcode`
 
 ### Idempotency
 - `.mcp.json`: merge `foxcode` entry, preserve other servers
