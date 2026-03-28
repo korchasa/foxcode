@@ -2,6 +2,17 @@
 
 Set up **FoxCode** — Firefox browser UI for Claude Code sessions.
 
+### Step 0: Explain to user (in their language)
+
+Before doing anything, tell the user what you are about to do. Use the user's language (detect from conversation context). Briefly explain:
+
+1. You will check that Node.js and Firefox are installed
+2. You will add the FoxCode channel plugin to `.mcp.json` in the current project
+3. You will add tool permissions to Claude Code settings
+4. The user will need to manually install the Firefox extension and restart Claude Code
+
+Ask the user to confirm before proceeding.
+
 ### Step 1: Check prerequisites
 
 1. `node --version` — must be v18+
