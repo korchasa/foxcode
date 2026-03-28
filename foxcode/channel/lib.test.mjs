@@ -114,31 +114,31 @@ describe('assertChannelCapability', () => {
     })
   })
 
-  it('throws with server name in message when experimental is missing', () => {
+  it('throws with plugin name in message when experimental is missing', () => {
     assert.throws(
       () => assertChannelCapability({ sampling: {} }),
-      { message: /server:foxcode/ }
+      { message: /plugin:foxcode@korchasa/ }
     )
   })
 
   it('throws when experimental exists but claude/channel is absent', () => {
     assert.throws(
       () => assertChannelCapability({ experimental: { other: {} } }),
-      { message: /server:foxcode/ }
+      { message: /plugin:foxcode@korchasa/ }
     )
   })
 
   it('throws when capabilities is undefined', () => {
     assert.throws(
       () => assertChannelCapability(undefined),
-      { message: /server:foxcode/ }
+      { message: /plugin:foxcode@korchasa/ }
     )
   })
 
   it('uses custom server name in error message', () => {
     assert.throws(
       () => assertChannelCapability(undefined, 'my-server'),
-      { message: /server:my-server/ }
+      { message: /plugin:my-server@korchasa/ }
     )
   })
 })

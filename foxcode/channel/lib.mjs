@@ -72,14 +72,14 @@ export function hasChannelCapability(clientCapabilities) {
 /**
  * Assert that the MCP client (Claude Code) advertises claude/channel support.
  * Throws if the capability is missing — meaning Claude was launched without
- * --dangerously-load-development-channels server:<name>.
+ * --dangerously-load-development-channels plugin:<name>@<marketplace>.
  * @param {object|undefined} clientCapabilities - from mcp.getClientCapabilities()
  */
 export function assertChannelCapability(clientCapabilities, serverName = 'foxcode') {
   if (!hasChannelCapability(clientCapabilities)) {
     throw new Error(
       'Client does not support claude/channel. ' +
-      `Start Claude Code with: claude --dangerously-load-development-channels server:${serverName}`
+      `Start Claude Code with: claude --dangerously-load-development-channels plugin:${serverName}@korchasa`
     )
   }
 }

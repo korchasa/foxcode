@@ -74,7 +74,7 @@ graph LR
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 
 ## 7. Constraints
-- **Channels in research preview:** requires `--dangerously-load-development-channels server:foxcode` flag. CC does not advertise `claude/channel` in MCP client capabilities — verification via `ping` tool instead.
+- **Channels in research preview:** requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag. CC does not advertise `claude/channel` in MCP client capabilities — verification via `ping` tool instead.
 - **Terminal messages invisible:** Messages initiated from terminal don't appear in browser (CC only calls `reply` for channel-initiated messages)
 - **CSP unsafe-eval required:** `evalInBrowser` uses `new Function()` in background — needs `"script-src 'self' 'unsafe-eval'"` in manifest CSP. Acceptable: code source is trusted (Claude Code agent)
 - **api.eval() CSP-limited:** Page CSP may block `eval()` via wrappedJSObject on strict sites

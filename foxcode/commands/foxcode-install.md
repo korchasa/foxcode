@@ -87,7 +87,7 @@ Extension: running in persistent profile at .foxcode/firefox-profile/
 Tool permissions: will be prompted on first use (approve mcp__foxcode__*)
 
 Launch Claude Code with FoxCode:
-  claude --dangerously-load-development-channels server:foxcode
+  claude --dangerously-load-development-channels plugin:foxcode@korchasa
 
 Open sidebar: View > Sidebar > FoxCode
 ```

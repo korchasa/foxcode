@@ -71,7 +71,7 @@
 
 ### 4.1 NF-1: Easy Install via Claude Code Plugin [critical]
 - **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; install command (`/foxcode:foxcode-install`) guides user through Firefox extension setup. User should NOT need to read docs or edit configs manually.
-- **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` → `/plugin install foxcode@korchasa` → `/foxcode:foxcode-install` → command checks prereqs, downloads .xpi, guides Firefox setup → user launches CC with `--dangerously-load-development-channels server:foxcode` → done.
+- **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` → `/plugin install foxcode@korchasa` → `/foxcode:foxcode-install` → command checks prereqs, downloads .xpi, guides Firefox setup → user launches CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` → done.
 - **Acceptance:**
   - [x] Legacy `install-prompt.md` removed — plugin is the only install path. Evidence: file deleted
   - [x] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root. Evidence: `.claude-plugin/marketplace.json`
@@ -92,7 +92,7 @@
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
-- [x] Requires `--dangerously-load-development-channels server:foxcode` flag (channels in research preview). Evidence: `foxcode/commands/foxcode-run.md`
+- [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/commands/foxcode-run.md`
 - [x] `ping` tool verifies bidirectional connectivity (CC → browser → CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
 - [x] `/foxcode:foxcode-ping` command wraps ping tool with user-facing diagnostics. Evidence: `foxcode/commands/foxcode-ping.md`
 - [x] `/foxcode:foxcode-run` Step 3 calls ping after Firefox launch. Evidence: `foxcode/commands/foxcode-run.md`
@@ -126,4 +126,4 @@
   - [x] Page content/selection delivered to CC session
   - [x] CC can pull browser context from terminal
   - [x] Works with project-specific CC sessions
-  - [x] Launch = run `claude --dangerously-load-development-channels server:foxcode` from project dir with .mcp.json
+  - [x] Launch = run `claude --dangerously-load-development-channels plugin:foxcode@korchasa` from project dir with .mcp.json
