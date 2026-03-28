@@ -18,13 +18,7 @@ flowai generates two types of outputs:
 - **Synced** (skills/, agents/) — updated automatically by `flowai sync`, then adapted to the project
 - **Scaffolded** (AGENTS.md, .devcontainer/, deno.json tasks, scripts/check.ts, documents/) — created once by setup skills (flowai-init, flowai-setup-agent-*, flowai-skill-configure-deno-commands), then owned by the project
 
-Skills have an `adapted` frontmatter field that tracks whether they've been customized for the project:
-```yaml
-adapted:
-  upstream-version: "1.0.0"  # pack version at time of adaptation
-  date: "2026-03-25"
-```
-`flowai sync` overwrites skills with upstream versions (removing `adapted`). This skill detects the overwrite via `git diff HEAD` and re-adapts, merging upstream changes with previous project customizations.
+`flowai sync` overwrites skills with upstream versions. This skill detects the overwrite via `git diff HEAD` and re-adapts, merging upstream changes with previous project customizations. Adaptation state is tracked entirely through git history — no extra frontmatter fields needed.
 
 `flowai sync` outputs an `>>> ACTIONS REQUIRED` section listing exactly which skills changed and which scaffolded artifacts they affect. This skill follows those instructions.
 </context>
@@ -85,7 +79,6 @@ adapted:
    - The subagent performs a 3-way merge:
      - Keeps all upstream changes (new rules, steps, corrections)
      - Preserves project-specific adaptations (custom commands, examples, removed irrelevant sections)
-     - Adds/updates `adapted:` frontmatter with current pack version and date
    - Wait for all subagents to complete.
    - Review each adaptation result: show the diff (`git diff HEAD -- <skill-path>`) to the user.
    - Wait for user approval/rejection per skill. Revert rejected adaptations with `git checkout HEAD -- <skill-path>`.

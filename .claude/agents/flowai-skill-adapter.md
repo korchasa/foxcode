@@ -24,7 +24,7 @@ You receive:
    - If `git show` fails (new skill, no HEAD version) — this is a first-time adaptation. Skip merge, go to step 4.
 3. **Analyze diff**: Compare the two versions to understand:
    - **Upstream changes**: New rules, steps, sections, or corrections added in the new version.
-   - **Project adaptations**: Custom commands, tool names, examples, or removed sections in the previous version (identifiable by the `adapted:` frontmatter field and project-specific content).
+   - **Project adaptations**: Custom commands, tool names, examples, or removed sections in the previous version (identifiable by project-specific content differing from generic upstream).
 4. **Detect project context**: Read AGENTS.md (via CLAUDE.md) to understand:
    - Programming language and framework
    - Package manager and test runner
@@ -36,13 +36,7 @@ You receive:
    - **Apply project adaptations**: Replace generic commands/examples with project-specific ones from the previous adapted version (e.g., `deno test` → `poetry run pytest`, `deno lint` → `ruff check .`).
    - **Preserve ALL project-specific commands and examples** from the previous adapted version — language-specific tools, package managers, test runners, linter commands.
    - Remove sections irrelevant to the project's stack (e.g., Deno-specific sections for a Python project).
-6. **Add `adapted` frontmatter**: Add or update the `adapted` field:
-   ```yaml
-   adapted:
-     upstream-version: "<version from pack.yaml or 'unknown'>"
-     date: "<today's date YYYY-MM-DD>"
-   ```
-7. **Write result**: Edit the SKILL.md with the adapted content.
+6. **Write result**: Edit the SKILL.md with the adapted content.
 
 # Rules
 
@@ -56,4 +50,4 @@ You receive:
 Return a brief summary:
 - What upstream changes were incorporated
 - What project adaptations were applied/preserved
-- The final `adapted.upstream-version` value
+- The pack version used (from pack.yaml, if available)

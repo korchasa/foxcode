@@ -9,11 +9,10 @@ import { runGit } from "@bench/utils.ts";
  * 1. Project uses Python + pytest (visible in AGENTS.md)
  * 2. flowai-commit skill is installed with generic Deno examples
  * 3. flowai sync brings a new version of flowai-commit (adds a new rule)
- * 4. Agent should detect the upstream change, adapt the skill to Python/pytest,
- *    and add the `adapted` frontmatter field
+ * 4. Agent should detect the upstream change, adapt the skill to Python/pytest
  *
- * The skill was previously adapted (HEAD has adapted frontmatter + Python references).
- * After sync, the upstream version overwrites it (no adapted field, generic examples).
+ * The skill was previously adapted (HEAD has Python references).
+ * After sync, the upstream version overwrites it (generic examples).
  * Agent must merge: keep Python adaptations + incorporate new upstream rule.
  */
 export const FlowUpdateSkillAdaptationBench = new class
@@ -73,7 +72,7 @@ fi
     ],
     modified: [".claude/skills/flowai-commit/SKILL.md"],
     expectedOutcome:
-      "Agent detects upstream skill update, merges new rule (sign-off) while preserving Python/pytest adaptations and adapted frontmatter",
+      "Agent detects upstream skill update, merges new rule (sign-off) while preserving Python/pytest adaptations",
   };
 
   override async setup(sandboxPath: string) {
@@ -87,13 +86,10 @@ fi
     const skillDir = join(sandboxPath, ".claude", "skills", "flowai-commit");
     await Deno.mkdir(skillDir, { recursive: true });
 
-    // "Previous" version: adapted for Python project
+    // "Previous" version: adapted for Python project (no adapted frontmatter — git tracks this)
     const adaptedSkill = `---
 name: flowai-commit
 description: Commit workflow
-adapted:
-  upstream-version: "1.0.0"
-  date: "2026-03-20"
 ---
 
 # Task: Commit Changes
@@ -141,8 +137,8 @@ description: Commit workflow
 `;
     await Deno.writeTextFile(join(skillDir, "SKILL.md"), newUpstreamSkill);
 
-    // Now working tree has upstream version, HEAD has adapted version
-    // Agent should detect this and merge
+    // Now working tree has upstream version, HEAD has project-adapted version
+    // Agent should detect this via git diff and merge
   }
 
   userQuery =
@@ -156,27 +152,21 @@ description: Commit workflow
       critical: true,
     },
     {
-      id: "read_previous_adapted",
+      id: "read_previous_version",
       description:
-        "Did the agent read the previous adapted version from HEAD (via git show or git diff) to understand project-specific adaptations?",
+        "Did the agent read the previous version from HEAD (via git show or git diff) to understand project-specific adaptations?",
       critical: true,
     },
     {
       id: "preserved_python_commands",
       description:
-        "Did the agent keep Python/pytest commands (poetry run pytest, ruff) instead of generic Deno commands in the adapted result?",
+        "Did the agent keep Python/pytest commands (poetry run pytest, ruff) instead of generic Deno commands in the result?",
       critical: true,
     },
     {
       id: "incorporated_new_rule",
       description:
-        "Did the agent incorporate the new upstream rule (sign-off line in commits) into the adapted skill?",
-      critical: true,
-    },
-    {
-      id: "added_adapted_frontmatter",
-      description:
-        "Did the agent add/update the `adapted` frontmatter field with upstream-version and date?",
+        "Did the agent incorporate the new upstream rule (sign-off line in commits) into the skill?",
       critical: true,
     },
     {

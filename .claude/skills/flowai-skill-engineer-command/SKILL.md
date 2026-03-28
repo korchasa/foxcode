@@ -68,7 +68,7 @@ Think of flowai as exploring a path: a narrow bridge with cliffs needs specific 
 
 ### Anatomy of a Command
 
-Every command consists of a required SKILL.md file and optional bundled resources, located in `.cursor/skills/cmd-<name>`:
+Every command consists of a required SKILL.md file and optional bundled resources, located in `.claude/skills/cmd-<name>`:
 
 ```
 cmd-<name>/
@@ -286,7 +286,7 @@ When creating a new command from scratch, always run the `init_command.ts` scrip
 Usage:
 
 ```bash
-deno run -A scripts/init_command.ts <command-name> --path <output-directory>
+node scripts/init_command.ts <command-name> --path <output-directory>
 ```
 
 The script:
@@ -344,13 +344,13 @@ Write instructions for using the command and its bundled resources.
 Once development of the command is complete, it must be packaged into a distributable .skill file that gets shared with the user. The packaging process automatically validates the command first to ensure it meets all requirements:
 
 ```bash
-deno run -A scripts/package_command.ts <path/to/command-folder>
+node scripts/package_command.ts <path/to/command-folder>
 ```
 
 Optional output directory specification:
 
 ```bash
-deno run -A scripts/package_command.ts <path/to/command-folder> ./dist
+node scripts/package_command.ts <path/to/command-folder> ./dist
 ```
 
 The packaging script will:

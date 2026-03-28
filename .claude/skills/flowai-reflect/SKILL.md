@@ -65,11 +65,12 @@ When proposing a fix, classify *where* it belongs:
 ## Rules & Constraints
 
 <rules>
-1. **Evidence-Based**: Base all observations on the actual conversation history and tool outputs from the current session.
+1. **Evidence-Based**: Base all observations on the actual conversation history, tool outputs, AND session history (if available).
 2. **Specific References**: When suggesting improvements, cite the specific file (e.g., a rules or commands file in the project's IDE configuration directory) or the command name.
 3. **Constructive**: Focus on actionable improvements (additions, clarifications, removals).
 4. **Do not make changes to the agent's instructions or rules**. Only suggest improvements.
 5. **Mandatory**: The agent MUST use a task management tool (e.g., `todo_write`, `todowrite`, `Task`) to track the execution steps.
+6. **Pattern Validation**: Before proposing a fix for an issue found in the current session, check session history to determine whether it is a **recurring pattern** or an **isolated incident**. Prioritize systemic fixes for recurring patterns over one-off corrections.
 </rules>
 
 ## Instructions
@@ -82,19 +83,25 @@ When proposing a fix, classify *where* it belongs:
    - If the user points to a transcript file, read it using available file reading tools.
    - Otherwise, review the current conversation history.
 
-3. **Analyze Execution Flow**
+3. **Load Session History**
+   - Look for session history files (e.g., `session-history/` directory, previous transcripts, or logs).
+   - If session history exists, read all available session transcripts.
+   - Build a summary of recurring issues: for each error type, note how many sessions it appeared in, the pattern signature, and whether the root cause was the same.
+   - This data will be used in later steps to distinguish recurring patterns from isolated incidents.
+
+4. **Analyze Execution Flow**
    - Map out the agent's "Thought -> Action -> Result" loop.
    - Identify where the chain broke:
      - Did the Thought match the Goal?
      - Did the Action match the Thought?
      - Did the Agent interpret the Result correctly?
 
-4. **Detect Logic Patterns**
+5. **Detect Logic Patterns**
    - **Looping**: Is the agent retrying without changing strategy?
    - **Blindness**: Is the agent ignoring "File not found" or linter errors?
    - **Stubbornness**: Is the agent forcing a solution that doesn't fit?
 
-5. **Evaluate Technical Decisions**
+6. **Evaluate Technical Decisions**
    Review the actual code/changes produced by the agent:
    - **Complexity Check**: Is the solution proportional to the problem? Could it be simpler?
    - **Pattern Conformance**: Does it follow existing project patterns (naming, structure, error handling)? Or does it introduce inconsistencies?
@@ -106,7 +113,7 @@ When proposing a fix, classify *where* it belongs:
    - **Dependency Choice**: Are dependencies justified? Could stdlib or existing project code suffice?
    - **Unrequested Fallbacks**: Did the agent add fallback/default behavior not asked for (silent retries, default values masking errors, graceful degradation where fail-fast was expected)?
 
-6. **Analyze Context: Missing Information**
+7. **Analyze Context: Missing Information**
    Identify what the agent *should have* read/checked but didn't:
    - **Unread docs**: Project docs (README, AGENTS.md, design docs) relevant to the task but never opened.
    - **Unread source**: Related source files (imports, callers, interfaces) that would have prevented errors.
@@ -114,7 +121,7 @@ When proposing a fix, classify *where* it belongs:
    - **Skipped verification**: Test results, linter output, or runtime checks that would have caught issues earlier.
    - **Unasked questions**: Ambiguities the agent resolved by guessing instead of asking the user.
 
-7. **Analyze Context: Redundant Information**
+8. **Analyze Context: Redundant Information**
    Identify what the agent loaded but *didn't need*:
    - **Read-but-unused files**: Files opened via file reading tools but never referenced in the solution.
    - **Over-reading**: Large files read entirely when only a small fragment (function, config key) was needed.
@@ -122,7 +129,7 @@ When proposing a fix, classify *where* it belongs:
    - **Irrelevant tool output**: Command outputs (e.g., verbose logs, full `git diff`) that added noise without value.
    - **Off-task files**: Files from unrelated domains or previous tasks still in context.
 
-8. **Extract Undocumented Discoveries**
+9. **Extract Undocumented Discoveries**
    Scan the session for useful knowledge that was learned but not persisted:
    - Review tool outputs, error messages, and user clarifications for **facts not present in any project file**.
    - For each discovery, check whether it is already documented in project docs (AGENTS.md, README, SRS, SDS, rules, code comments).
@@ -133,17 +140,27 @@ When proposing a fix, classify *where* it belongs:
    - **Discard** task-specific, one-off, or narrow facts that won't help in other contexts (e.g., "file X had a typo on line 42", "user prefers blue buttons").
    - **Keep** knowledge that affects how the project is built, run, tested, or deployed in general (e.g., "API requires header X for all endpoints", "tests must run sequentially due to shared DB state", "config changes require service restart").
 
-9. **Identify Automation Opportunities**
+10. **Identify Automation Opportunities**
    Scan the session for repeating manual work that could be codified:
    - **Repeated workflows**: Was a multi-step sequence performed manually that is likely to recur? → suggest a skill or command.
    - **Ad-hoc decisions**: Were formatting, naming, or structural choices made without a documented rule? → suggest a rule.
    - **Manual checks**: Were invariants verified by the agent manually (e.g., "check that file has frontmatter") that a hook could enforce? → suggest a hook.
    - Only include items that would save effort across multiple future tasks.
 
-10. **Formulate Report**
+11. **Cross-Session Pattern Analysis**
+   If session history was loaded in step 3:
+   - For each issue found in steps 4-10, check if a **similar issue** appeared in previous sessions.
+   - Classify each issue as:
+     - **Recurring** (appeared in 2+ sessions with similar root cause) — requires a systemic fix (rule, hook, skill, or architectural change).
+     - **Isolated** (appeared only in the current session) — may be a one-off; propose a targeted fix but note the lower priority.
+   - For recurring patterns, include: frequency (N sessions out of M total), pattern signature, and why it keeps happening.
+   - Recurring patterns MUST be prioritized above isolated issues in the report.
+
+12. **Formulate Report**
    - **Process Summary**: What went wrong in the *process*?
    - **Technical Summary**: What was wrong with the *technical approach*?
    - **Root Cause**: Why did the agent make this mistake? (e.g., "Assumed file existed", "Didn't check existing patterns").
+   - **Cross-Session Patterns**: Which issues are recurring across sessions? Include frequency and evidence from multiple sessions.
    - **Context Gaps**: What missing information led to errors or wasted effort?
    - **Context Waste**: What unnecessary information consumed context budget?
    - **Undocumented Discoveries**: What useful knowledge was gained but not captured in project files?
@@ -174,9 +191,14 @@ When proposing a fix, classify *where* it belongs:
       - Artifact: Hook (pre-commit)
       - Fix: Add frontmatter schema check
       - Evidence: agent manually verified frontmatter 3 times in session
+   7. **[Recurring] Stale mocks cause TypeError in test fixes (3/3 sessions)**
+      - Artifact: Rule (AGENTS.md) + Skill (mock refresh)
+      - Fix: Add rule "always regenerate mocks from current interfaces before fixing tests"; create a skill for automated mock refresh
+      - Evidence: sessions 2025-12-01, 2025-12-15, 2026-01-10 — same pattern of trial-and-error mock editing
+      - Priority: HIGH (systemic, not isolated)
 
-11. **Report Findings**
-   - Present the report from step 10.
+13. **Report Findings**
+   - Present the report from step 12.
    - List the proposed actionable items.
    - Ask the user if they want to apply these changes immediately.
 </step_by_step>
