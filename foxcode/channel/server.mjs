@@ -206,6 +206,19 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
   }
 })
 
+// --- Graceful shutdown ---
+
+function shutdown(reason) {
+  process.stderr.write(`foxcode: shutdown (${reason})\n`)
+  for (const ws of clients) ws.terminate()
+  wss.close()
+  process.exit(0)
+}
+
+process.stdin.on('end', () => shutdown('stdin closed'))
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
+
 // --- Start ---
 
 mcp.oninitialized = () => {

@@ -24,7 +24,7 @@ graph LR
 ## 3. Components
 
 ### 3.1 Channel Plugin (`foxcode/channel/`)
-- **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications
+- **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT → terminate WS clients, close server, exit)
 - **`lib.mjs`** — Pure logic: ID generation, message builders, tool definitions (testable without MCP/WS)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
 - **Capabilities:** `claude/channel` (notifications), `tools` (ping, reply, evalInBrowser)
@@ -69,7 +69,7 @@ graph LR
 - **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `message`, `tool_request`, `tool_response`, `tool_use`, `tool_result`)
 
 ## 6. Non-Functional
-- **Fault Tolerance:** Auto-reconnect with exponential backoff (3s → 30s max)
+- **Fault Tolerance:** Auto-reconnect with exponential backoff (3s → 30s max). Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.
 - **Sec:** localhost-only WebSocket (`127.0.0.1`), no external traffic
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 
