@@ -1,15 +1,5 @@
 # FoxCode — Setup Prompt for Claude Code
 
-One-liner for Claude Code session:
-
-```
-Fetch https://raw.githubusercontent.com/korchasa/foxcode/main/install-prompt.md and follow the instructions.
-```
-
----
-
-## Instructions for Claude Code
-
 Set up **FoxCode** — Firefox browser UI for Claude Code sessions.
 
 ### Step 1: Check prerequisites
