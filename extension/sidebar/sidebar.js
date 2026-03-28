@@ -177,12 +177,7 @@ function addToolResultMessage(msg) {
   scrollToBottom()
 }
 
-function formatToolParams(params) {
-  if (!params || Object.keys(params).length === 0) return ''
-  return Object.entries(params)
-    .map(([k, v]) => `${k}: ${JSON.stringify(v)}`)
-    .join(', ')
-}
+// formatParamValue and formatToolParams are loaded from format.js
 
 // --- Send message ---
 
