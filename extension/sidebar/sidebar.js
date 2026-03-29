@@ -14,6 +14,7 @@ const settingsFormEl = document.getElementById('settings-form')
 const settingsPortEl = document.getElementById('settings-port')
 const settingsPasswordEl = document.getElementById('settings-password')
 const settingsConnectBtn = document.getElementById('settings-connect')
+const channelsWarningEl = document.getElementById('channels-warning')
 
 const messages = new Map()
 let uid = 0
@@ -27,15 +28,17 @@ const port = browser.runtime.connect({ name: 'sidebar' })
 port.onMessage.addListener((msg) => {
   switch (msg.type) {
     case 'status':
-      setStatus(msg.connected)
+      setStatus(msg.connected, msg)
       break
     case 'show-settings':
       showSettings()
       break
     case 'pong':
+      setStatus(true)
       updateActiveServerInfo(msg)
       break
     case 'msg':
+      setStatus(true)
       removeThinking()
       addMessage(msg)
       break
@@ -43,9 +46,11 @@ port.onMessage.addListener((msg) => {
       editMessage(msg.id, msg.text)
       break
     case 'tool_use':
+      setStatus(true)
       addToolUseMessage(msg)
       break
     case 'tool_result':
+      setStatus(true)
       addToolResultMessage(msg)
       break
     case 'send-failed':
@@ -78,23 +83,63 @@ browser.tabs.onUpdated.addListener((_id, changeInfo) => {
 // --- Status ---
 
 const connectionErrorEl = document.getElementById('connection-error')
+const connectionDiagEl = document.getElementById('connection-diag')
 
-function setStatus(connected) {
-  if (connected) {
+const SOURCE_LABELS = {
+  url: 'URL hash params',
+  saved: 'saved from previous session',
+  manual: 'manual settings',
+}
+
+let isConnected = false
+let hasChannels = true // assume true until pong says otherwise
+
+/** Single source of truth for input state. Priority: disconnected > no channels > normal. */
+function updateInputState() {
+  if (!isConnected) {
+    inputEl.classList.add('disconnected')
+    inputEl.disabled = true
+    inputEl.placeholder = 'No connection...'
+  } else if (!hasChannels) {
     inputEl.classList.remove('disconnected')
-    inputEl.placeholder = 'Ask a question about this page...'
+    inputEl.disabled = true
+    inputEl.placeholder = 'Channels not enabled — input disabled'
+  } else {
+    inputEl.classList.remove('disconnected')
     inputEl.disabled = false
+    inputEl.placeholder = 'Ask a question about this page...'
+  }
+}
+
+function setStatus(connected, diag) {
+  isConnected = connected
+  if (connected) {
     connectionErrorEl.classList.add('hidden')
     serverIndicatorEl.classList.add('connected')
+    if (!serverIndicatorEl.dataset.hasServerInfo) {
+      serverIndicatorEl.textContent = 'Connected'
+    }
     hideSettings()
   } else {
-    inputEl.classList.add('disconnected')
-    inputEl.placeholder = 'No connection...'
-    inputEl.disabled = true
     connectionErrorEl.classList.remove('hidden')
     serverIndicatorEl.classList.remove('connected')
     serverIndicatorEl.textContent = 'No connection'
+    serverIndicatorEl.dataset.hasServerInfo = ''
+    hasChannels = true // reset until next pong
+    channelsWarningEl.classList.add('hidden')
+    updateDiag(diag)
   }
+  updateInputState()
+}
+
+function updateDiag(diag) {
+  if (!diag || !connectionDiagEl) return
+  const lines = []
+  if (diag.port) lines.push(`Port: ${diag.port}`)
+  if (diag.source) lines.push(`Source: ${SOURCE_LABELS[diag.source] || diag.source}`)
+  if (diag.error) lines.push(`Error: ${diag.error}`)
+  if (diag.reconnectIn) lines.push(`Retry in: ~${diag.reconnectIn}s`)
+  connectionDiagEl.textContent = lines.join('\n')
 }
 
 // --- Settings form ---
@@ -260,6 +305,15 @@ function updateActiveServerInfo(pong) {
   const label = projectLabel(pong)
   const uptimeMin = Math.floor((pong.uptime || 0) / 60)
   serverIndicatorEl.textContent = `${label} :${pong.port} | v${pong.version} | up ${uptimeMin}m`
+  serverIndicatorEl.dataset.hasServerInfo = '1'
+  if (pong.channelsDetected === false) {
+    hasChannels = false
+    channelsWarningEl.classList.remove('hidden')
+  } else {
+    hasChannels = true
+    channelsWarningEl.classList.add('hidden')
+  }
+  updateInputState()
 }
 
 function projectLabel(server) {

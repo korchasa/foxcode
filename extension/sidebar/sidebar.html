@@ -17,12 +17,12 @@
   </div>
   <div id="connection-error" class="connection-error">
     <div class="connection-error-title">No connection to Claude Code</div>
-    <div class="connection-error-hint">Start Claude Code with FoxCode channel:</div>
-    <pre class="connection-error-cmd">claude --dangerously-load-development-channels plugin:foxcode@korchasa</pre>
-    <div class="connection-error-hint">Make sure <code>.mcp.json</code> has the foxcode server:</div>
-    <pre class="connection-error-cmd">MCP server loads automatically via plugin.
-Install: /plugin install foxcode@korchasa</pre>
+    <div id="connection-diag" class="connection-diag"></div>
     <div class="connection-error-status">Reconnecting...</div>
+  </div>
+  <div id="channels-warning" class="channels-warning hidden">
+    <div class="channels-warning-title">Channels not enabled</div>
+    <div class="channels-warning-text">Messages from this sidebar won't reach Claude Code. CC&nbsp;&rarr;&nbsp;Browser tools (reply, evalInBrowser) work normally.</div>
   </div>
   <div id="messages"></div>
   <div id="composer">

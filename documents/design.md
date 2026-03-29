@@ -25,21 +25,21 @@ graph LR
 
 ### 3.1 Channel Plugin (`foxcode/channel/`)
 - **`server.mjs`** - MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT -> terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
-- **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createHttpServer`, `portStorage`), password management (`passwordStorage`). File I/O limited to `portStorage` (`~/.foxcode/port`) and `passwordStorage` (`~/.foxcode/password`)
+- **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createHttpServer`, `portStorage`), password management (`passwordStorage`), channel detection (`detectChannels`). File I/O limited to `portStorage` (`~/.foxcode/port`) and `passwordStorage` (`~/.foxcode/password`)
 - **`validator.mjs`** - Code syntax validation (async-aware via `new Function` wrapper)
 - **Capabilities:** `claude/channel` (notifications), `tools` (status, ping, reply, evalInBrowser)
 - **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. `/foxcode:run-project-profile` and `/foxcode:run-user-profile` call `status` then `ping` as part of launch flow.
 - **Port binding:** Auto-binds to first available port in range 8787–8886. Priority: `FOXCODE_PORT` env -> saved port (`~/.foxcode/port`) -> random start with wrap-around. Saved on successful bind. Null-safe: runs without WebSocket if all ports taken (MCP stdio still works)
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:{port}` (extension, dynamic port)
 - **Tools exposed:**
-  - `status()` - server telemetry (port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion, pid, pluginRoot). Always works, no browser required
+  - `status()` - server telemetry (port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion, pid, pluginRoot, launchMode, channelsDetected, client). Always works, no browser required. `channelsDetected` indicates if CC was launched with `--dangerously-load-development-channels` (detected via process tree walk at startup). `client` contains `{paramsSource, connectedAt}` from last extension ping
   - `ping()` - test bidirectional connectivity (CC -> browser -> CC)
   - `reply(text, reply_to?)` - send CC response to browser
   - `evalInBrowser(code, timeout?)` - execute JS in browser with full API. Validates syntax, sends to extension via WebSocket, returns serialized result
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 
 ### 3.2 Background Script (`extension/background/`)
-- **`background.js`** - WebSocket connection with token auth, message routing, EVAL_CODE handler. Supports `update-settings` from sidebar. Persists port+password in `browser.storage.local`. Connect priority: URL hash params > saved params > show settings form
+- **`background.js`** - WebSocket connection with token auth, message routing, EVAL_CODE handler. Supports `update-settings` from sidebar. Persists port+password in `browser.storage.local`. Connect priority: URL hash params > saved params > show settings form. Tracks `paramsSource` ('url'|'saved'|'manual') and `lastError` for diagnostics, sends enriched status messages to sidebar (port, source, error, reconnectIn). Sends `paramsSource` in ping to server for `client` field in `status` tool
 - **`url-params.js`** - Parses `foxcode-port` and `foxcode-password` from tab URL hash (set via `web-ext run --start-url "about:blank#foxcode-port=PORT&foxcode-password=PASS"`). Returns `{port, password}` or null
 - **`browser-api.js`** - Factory creating `api` object with ~30 async helpers (DI for testability)
 - **`dom-helpers.js`** - Pure functions generating injectable JS code (buildWaitAndAct, selectors, etc.)
@@ -51,7 +51,7 @@ graph LR
 ### 3.3 Sidebar (`extension/sidebar/`)
 - **`markdown.js`** - Pure markdown->HTML renderer (testable without DOM)
 - **`format.js`** - Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
-- **`sidebar.js`** - UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, connection settings form (port + password inputs, toggled via indicator click)
+- **`sidebar.js`** - UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, connection settings form (port + password inputs, toggled via indicator click). Connection diagnostics panel (port, source, error, retry time). Channels warning banner when `pong.channelsDetected === false`. Input state managed via `updateInputState()` with priority: disconnected > no channels > normal
 - **Interfaces:** port connection to background script
 - **Deps:** Background script
 
@@ -70,7 +70,8 @@ graph LR
 - **CC -> Browser:** CC calls `reply` tool -> channel -> WebSocket -> background -> sidebar
 - **CC automates browser:** CC calls `evalInBrowser` -> channel validates syntax -> sends `EVAL_CODE` via WebSocket -> background executes via `new Function('api',code)(browserApi)` -> API helpers delegate to `executeScript`/`webNavigation`/`cookies`/etc -> result serialized -> returned to CC
 - **Page main world eval:** `api.eval(expr)` -> background sends `EVAL_IN_PAGE` message to content script -> content script uses `wrappedJSObject.eval()` -> result returned
-- **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `message`, `tool_request`, `tool_response`, `tool_use`, `tool_result`). `pong` messages include `protocol_version` (integer) for compatibility checks
+- **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `message`, `tool_request`, `tool_response`, `tool_use`, `tool_result`). `pong` messages include `protocol_version` (integer) for compatibility checks, `channelsDetected` (boolean) for channel support status
+- **Channel detection:** `detectChannels(pid)` in `lib.mjs` walks parent process tree via `ps` (macOS/Linux) or `powershell Get-CimInstance` (Windows), looking for `--dangerously-load-development-channels` in CC process args. Called once at server startup. Result exposed in `status` tool and `pong` message
 
 ## 6. Non-Functional
 - **Fault Tolerance:** Auto-reconnect with exponential backoff (3s -> 30s max), retry with saved params (no port scanning). Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.

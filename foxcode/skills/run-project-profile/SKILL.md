@@ -13,14 +13,24 @@ Self-contained launch: prerequisites → locate extension → web-ext → verify
 
 **IMPORTANT:** Detect the user's language from conversation context and communicate in that language throughout.
 
-## Step 1: Check server status
+## Step 1: Check server status and channels
 
 Call the `status` MCP tool.
 
 If the tool call fails:
 > FoxCode MCP server is not running. Make sure `.mcp.json` is configured and Claude Code loaded the foxcode MCP server. Restart Claude Code if needed.
 
-Note the `port`, `password`, and `connectedClients` from the response.
+Note the `port`, `password`, `connectedClients`, and `channelsDetected` from the response.
+
+If `channelsDetected` is `false`:
+> ⚠ Channels not detected. Browser → CC messaging will not work (sidebar messages won't reach Claude Code). CC → Browser tools (`reply`, `evalInBrowser`) will work normally.
+>
+> To enable bidirectional messaging, restart Claude Code with:
+> `claude --dangerously-load-development-channels plugin:foxcode@korchasa`
+>
+> Or, if using an approved plugin on a team/enterprise plan, ensure `channelsEnabled: true` is set in managed settings.
+
+Continue with setup regardless — the extension is still useful for `reply` and `evalInBrowser`.
 
 ## Step 2: Check browser connection
 

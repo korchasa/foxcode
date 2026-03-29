@@ -4,8 +4,9 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { execSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { homedir } from 'node:os'
+import { homedir, platform } from 'node:os'
 import { join, dirname } from 'node:path'
 
 /**
@@ -87,6 +88,7 @@ export function buildPongMessage(env) {
     nodeVersion: env.nodeVersion,
     pluginRoot: env.pluginRoot,
     projectDir: env.projectDir,
+    channelsDetected: env.channelsDetected ?? false,
     ts: Date.now(),
   }
 }
@@ -196,6 +198,37 @@ async function tryBindHttpPort(port) {
     if (err.code !== 'EADDRINUSE') throw err
     return { httpServer: null, port: null }
   }
+}
+
+/**
+ * Detect if the parent Claude Code process was launched with channel support.
+ * Walks up the process tree looking for `--dangerously-load-development-channels` in args.
+ * Cross-platform: macOS/Linux use `ps`, Windows uses `wmic`.
+ * @param {number} pid - Starting PID (typically process.ppid)
+ * @returns {boolean}
+ */
+export function detectChannels(pid) {
+  const FLAG = 'dangerously-load-development-channels'
+  try {
+    if (platform() === 'win32') {
+      // powershell works on Win10+; wmic deprecated on Win11+
+      const out = execSync(
+        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object {$_.Name -like '*claude*'} | Select-Object -ExpandProperty CommandLine"`,
+        { encoding: 'utf8', timeout: 5000 },
+      )
+      return out.includes(FLAG)
+    }
+    // macOS / Linux: walk up process tree (single ps call per iteration)
+    let current = pid
+    for (let i = 0; i < 10 && current > 1; i++) {
+      const line = execSync(`ps -o ppid=,args= -p ${current}`, { encoding: 'utf8', timeout: 1000 }).trim()
+      if (/\bclaude\b/.test(line) && line.includes(FLAG)) return true
+      const ppid = Number(line.split(/\s+/)[0])
+      if (isNaN(ppid) || ppid === current) break
+      current = ppid
+    }
+  } catch { /* ps/powershell unavailable or process gone */ }
+  return false
 }
 
 /**

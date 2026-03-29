@@ -26,6 +26,8 @@ let reconnectInterval = RECONNECT_INTERVAL_MS
 let sidebarPort = null
 let activePort = null
 let activePassword = null
+let paramsSource = null // 'url' | 'saved' | 'manual' | null
+let lastError = null
 
 /** Save connection params to extension storage for persistence across restarts. */
 function saveConnectionParams(port, password) {
@@ -88,17 +90,21 @@ function connectToServer(port, password) {
 
   ws.onopen = () => {
     reconnectInterval = RECONNECT_INTERVAL_MS
+    lastError = null
     broadcastStatus(true)
-    sendToChannel({ type: 'ping' })
+    sendToChannel({ type: 'ping', paramsSource })
   }
 
-  ws.onclose = () => {
+  ws.onclose = (event) => {
+    if (!lastError) {
+      lastError = event.code === 1006 ? 'Connection refused or dropped' : `WebSocket closed (${event.code})`
+    }
     broadcastStatus(false)
     scheduleReconnect()
   }
 
   ws.onerror = () => {
-    // onclose will fire after this
+    lastError = `Cannot connect to ws://127.0.0.1:${port}`
   }
 
   ws.onmessage = (event) => {
@@ -118,6 +124,7 @@ async function connect() {
   // URL path: params passed via web-ext --start-url "about:blank#foxcode-port=PORT&foxcode-password=PASS"
   const urlParams = await getParamsFromTabs(() => browser.tabs.query({}))
   if (urlParams && urlParams.port) {
+    paramsSource = 'url'
     connectToServer(urlParams.port, urlParams.password)
     return
   }
@@ -125,12 +132,18 @@ async function connect() {
   // Saved params from previous session
   const saved = await loadSavedParams()
   if (saved) {
+    paramsSource = 'saved'
     connectToServer(saved.port, saved.password)
     return
   }
 
   // No params available - sidebar will show settings form
-  if (sidebarPort) sidebarPort.postMessage({ type: 'show-settings' })
+  paramsSource = null
+  lastError = 'No connection params: no URL hash, no saved settings'
+  if (sidebarPort) {
+    broadcastStatus(false)
+    sidebarPort.postMessage({ type: 'show-settings' })
+  }
 }
 
 /**
@@ -166,7 +179,14 @@ function sendToChannel(msg) {
 
 function broadcastStatus(connected) {
   if (sidebarPort) {
-    sidebarPort.postMessage({ type: 'status', connected })
+    sidebarPort.postMessage({
+      type: 'status',
+      connected,
+      port: activePort,
+      source: paramsSource,
+      error: connected ? null : lastError,
+      reconnectIn: reconnectTimer ? Math.round(reconnectInterval / 1000) : null,
+    })
   }
 }
 
@@ -235,6 +255,11 @@ browser.runtime.onConnect.addListener((port) => {
   const connected = ws && ws.readyState === WebSocket.OPEN
   port.postMessage({ type: 'status', connected })
 
+  // If connected, request fresh server info so sidebar gets pong with details
+  if (connected) {
+    sendToChannel({ type: 'ping' })
+  }
+
   // If not connected and no active params, prompt settings
   if (!connected && !activePort) {
     port.postMessage({ type: 'show-settings' })
@@ -258,6 +283,8 @@ browser.runtime.onConnect.addListener((port) => {
         if (ws) { ws.onclose = null; ws.close(); ws = null }
         activePort = null
         activePassword = null
+        paramsSource = 'manual'
+        lastError = null
         connectToServer(msg.port, msg.password)
         break
     }

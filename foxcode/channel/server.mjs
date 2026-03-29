@@ -20,7 +20,7 @@ import {
   nextId, buildChannelMeta, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
   buildPongMessage, CHANNEL_TEST_MARKER, createHttpServer,
-  passwordStorage,
+  passwordStorage, detectChannels,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 import { createRequire } from 'node:module'
@@ -29,6 +29,7 @@ const require = createRequire(import.meta.url)
 const pluginMeta = require('../.claude-plugin/plugin.json')
 
 const explicitPort = process.env.FOXCODE_PORT != null ? Number(process.env.FOXCODE_PORT) : null
+const CHANNELS_DETECTED = detectChannels(process.ppid)
 
 // --- Password auth ---
 
@@ -40,6 +41,9 @@ const PASSWORD = passwordStorage.load() ?? (() => {
 
 /** Resolver for pending ping test. Set during ping tool call. */
 let channelTestResolve = null
+
+/** Last known client connection info from extension ping. */
+let clientInfo = null
 
 // --- WebSocket server with upgrade-level auth ---
 
@@ -111,6 +115,7 @@ if (httpServer) wss.on('connection', (ws) => {
   clients.add(ws)
   ws.on('close', () => {
     clients.delete(ws)
+    if (clients.size === 0) clientInfo = null
     // Reject all pending tool requests from this disconnected client
     for (const [id, pending] of pendingToolRequests) {
       clearTimeout(pending.timer)
@@ -131,6 +136,10 @@ function handleExtensionMessage(msg, ws) {
   process.stderr.write(`foxcode: rx ${msg.type} ${JSON.stringify(msg).slice(0, 200)}\n`)
   switch (msg.type) {
     case 'ping': {
+      clientInfo = {
+        paramsSource: msg.paramsSource || null,
+        connectedAt: new Date().toISOString(),
+      }
       const pong = buildPongMessage({
         name: pluginMeta.name,
         version: pluginMeta.version,
@@ -142,6 +151,7 @@ function handleExtensionMessage(msg, ws) {
         nodeVersion: process.version,
         pluginRoot: process.env.CLAUDE_PLUGIN_ROOT,
         projectDir: process.env.FOXCODE_PROJECT_DIR || process.cwd(),
+        channelsDetected: CHANNELS_DETECTED,
       })
       if (ws.readyState === 1) ws.send(JSON.stringify(pong))
       break
@@ -218,6 +228,9 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
           serverVersion: pluginMeta.version,
           pid: process.pid,
           pluginRoot: process.env.CLAUDE_PLUGIN_ROOT || null,
+          launchMode: process.env.CLAUDE_PLUGIN_ROOT ? 'plugin' : 'dev',
+          channelsDetected: CHANNELS_DETECTED,
+          client: clientInfo,
         }
         return { content: [{ type: 'text', text: JSON.stringify(status) }] }
       }
@@ -284,7 +297,7 @@ process.on('SIGINT', () => shutdown('SIGINT'))
 // --- Start ---
 
 mcp.oninitialized = () => {
-  process.stderr.write('foxcode: initialized, channel status pending verify_channel call\n')
+  process.stderr.write('foxcode: initialized\n')
 }
 
 await mcp.connect(new StdioServerTransport())

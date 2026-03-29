@@ -5,3 +5,6 @@ channel/node_modules/
 documents/whiteboards/
 .DS_Store
 demo-project/
+.foxcode/
+.idea/
+.vscode/

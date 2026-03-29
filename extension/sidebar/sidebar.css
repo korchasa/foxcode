@@ -207,38 +207,53 @@ body {
   font-size: 14px;
 }
 
-.connection-error-hint {
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
-
-.connection-error-hint code {
-  background: var(--bg-code);
-  color: var(--text-code);
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-.connection-error-cmd {
+.connection-diag {
   background: var(--bg-code-block);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 10px;
-  margin: 4px 0 10px;
+  margin: 6px 0;
   font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
   font-size: 12px;
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-all;
-  overflow-x: auto;
+}
+
+.connection-diag:empty {
+  display: none;
 }
 
 .connection-error-status {
   color: var(--text-meta);
   font-size: 12px;
   margin-top: 4px;
+}
+
+/* --- Channels warning banner --- */
+
+.channels-warning {
+  margin: 8px 12px;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--text-secondary);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.channels-warning.hidden {
+  display: none;
+}
+
+.channels-warning-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.channels-warning-text {
+  color: var(--text-secondary);
 }
 
 /* --- Messages --- */

@@ -5,7 +5,7 @@ import {
   buildToolUseMessage, buildToolResultMessage,
   TOOL_DEFINITIONS,
   buildPongMessage, PROTOCOL_VERSION, createHttpServer, BASE_PORT, PORT_RANGE, portStorage,
-  passwordStorage,
+  passwordStorage, detectChannels,
 } from './lib.mjs'
 import { createServer } from 'node:http'
 
@@ -111,7 +111,7 @@ describe('buildToolResultMessage', () => {
 
 describe('buildPongMessage', () => {
   it('builds pong with all telemetry fields', () => {
-    const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode', projectDir: '/Users/test/www/4ra' }
+    const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode', projectDir: '/Users/test/www/4ra', channelsDetected: true }
     const msg = buildPongMessage(env)
     assert.equal(msg.type, 'pong')
     assert.equal(msg.protocol_version, PROTOCOL_VERSION)
@@ -125,6 +125,7 @@ describe('buildPongMessage', () => {
     assert.equal(msg.nodeVersion, 'v22.0.0')
     assert.equal(msg.pluginRoot, '/home/.claude/plugins/cache/foxcode')
     assert.equal(msg.projectDir, '/Users/test/www/4ra')
+    assert.equal(msg.channelsDetected, true)
     assert.ok(msg.ts)
   })
 })
@@ -258,5 +259,20 @@ describe('TOOL_DEFINITIONS', () => {
     assert.deepEqual(tool.inputSchema.required, ['code'])
     assert.ok(tool.inputSchema.properties.code)
     assert.ok(tool.inputSchema.properties.timeout)
+  })
+})
+
+describe('detectChannels', () => {
+  it('returns boolean', () => {
+    const result = detectChannels(process.ppid)
+    assert.equal(typeof result, 'boolean')
+  })
+
+  it('returns false for PID 1', () => {
+    assert.equal(detectChannels(1), false)
+  })
+
+  it('returns false for non-existent PID', () => {
+    assert.equal(detectChannels(999999999), false)
   })
 })
