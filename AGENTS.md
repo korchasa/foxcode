@@ -52,10 +52,10 @@ foxcode/
 │   ├── .claude-plugin/
 │   │   └── plugin.json   #   Plugin manifest (name, version, author)
 │   ├── skills/
-│   │   ├── run-project-profile/
-│   │   │   └── SKILL.md  # Run skill — Project Profile (/foxcode:run-project-profile)
-│   │   └── run-user-profile/
-│   │       └── SKILL.md  # Run skill — User Profile (/foxcode:run-user-profile)
+│   │   ├── foxcode-run-project-profile/
+│   │   │   └── SKILL.md  # Run skill — Project Profile (/foxcode:foxcode-run-project-profile)
+│   │   └── foxcode-run-user-profile/
+│   │       └── SKILL.md  # Run skill — User Profile (/foxcode:foxcode-run-user-profile)
 │   ├── channel/           #   MCP channel plugin (Node.js)
 │   │   ├── server.mjs    #     MCP server, WebSocket bridge
 │   │   ├── lib.mjs       #     Shared pure functions, tool definitions
@@ -78,13 +78,13 @@ foxcode/
 
 Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa`. Launch CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` (channels in research preview).
 
-### Project Profile (`/foxcode:run-project-profile`)
+### Project Profile (`/foxcode:foxcode-run-project-profile`)
 - Isolated Firefox instance launched via `web-ext run` with project-local profile (`.foxcode/firefox-profile/`)
 - Port + password passed via URL hash (`about:blank#foxcode-port=PORT&foxcode-password=PASS`) -> instant connection, no scanning
 - Self-contained skill: checks prerequisites (Node.js ≥18, Firefox), locates extension, caches paths in `.foxcode/config.json`, launches Firefox, verifies connectivity via `status` + `ping`
-- Re-launch: run `/foxcode:run-project-profile` again
+- Re-launch: run `/foxcode:foxcode-run-project-profile` again
 
-### User Profile (`/foxcode:run-user-profile`)
+### User Profile (`/foxcode:foxcode-run-user-profile`)
 - Extension loaded into user's own Firefox via `about:debugging` -> Load Temporary Add-on -> `manifest.json`
 - No port in URL -> extension uses saved port from `browser.storage.local` or manual sidebar settings form
 - Self-contained skill: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`, verifies connectivity

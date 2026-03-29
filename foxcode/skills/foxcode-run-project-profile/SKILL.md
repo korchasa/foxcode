@@ -1,5 +1,5 @@
 ---
-name: run-project-profile
+name: foxcode-run-project-profile
 description: >
   Launch FoxCode in Project Profile mode. Self-contained: checks prerequisites, locates extension,
   launches isolated Firefox via web-ext with project-local profile, verifies connectivity.
@@ -96,15 +96,28 @@ Tell the user:
 On first run, also explain:
 > A separate Firefox window opened. Your existing Firefox stays untouched. The profile in `.foxcode/firefox-profile/` persists logins, cookies, and settings between sessions.
 
-## Step 5: Verify connectivity
+## Step 5: Wait for browser connection
 
-After the user confirms the sidebar is open, call the `ping` tool.
+Poll the `status` MCP tool every ~5 seconds, up to 12 attempts (60 seconds total).
+
+On each poll, check `connectedClients`:
+- If `connectedClients > 0` — proceed to verification below.
+- If `connectedClients == 0` — wait ~5 seconds and retry.
+
+If all 12 attempts exhausted with no connection:
+> Browser did not connect within 60 seconds. Make sure the sidebar is open: **View > Sidebar > FoxCode** (or Cmd+B / Ctrl+B). Then run this skill again.
+
+Stop here.
+
+### Verify bidirectional connectivity
+
+Once `connectedClients > 0`, call the `ping` tool.
 
 If both `forward` and `reverse` are `true`:
 > Bidirectional connectivity confirmed. Ready to go.
 
 If `forward` is `false`:
-> No browser extension connected. Make sure the sidebar is open: **View > Sidebar > FoxCode**. Then try again.
+> Browser connected but ping failed. Try reloading the extension.
 
 If `forward` is `true` but `reverse` is `false`:
 > Forward path works but browser did not reply. Try reloading the extension.

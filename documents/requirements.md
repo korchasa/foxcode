@@ -71,29 +71,29 @@
 
 ### 4.1 NF-1: Easy Install via Claude Code Plugin [critical]
 - **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; self-contained launch skills handle prerequisites and Firefox setup. User should NOT need to read docs or edit configs manually.
-- **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa` -> `/foxcode:run-project-profile` or `/foxcode:run-user-profile` -> skill checks prereqs, locates extension, launches/guides Firefox setup, caches paths in `.foxcode/config.json` -> user launches CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` -> done.
+- **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa` -> `/foxcode:foxcode-run-project-profile` or `/foxcode:foxcode-run-user-profile` -> skill checks prereqs, locates extension, launches/guides Firefox setup, caches paths in `.foxcode/config.json` -> user launches CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` -> done.
 - **Acceptance:**
   - [x] Legacy `install-prompt.md` removed - plugin is the only install path. Evidence: file deleted
   - [x] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root. Evidence: `.claude-plugin/marketplace.json`
   - [x] Plugin manifest: `plugins/foxcode/.claude-plugin/plugin.json`. Evidence: `plugins/foxcode/.claude-plugin/plugin.json`
   - [x] Plugin `.mcp.json` declares foxcode MCP server (`node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs`), auto-loads on plugin enable. Evidence: `foxcode/.mcp.json`
   - [x] `claude plugin validate .` passes. Evidence: validated locally, `claude plugin validate .` -> "Validation passed"
-  - [x] Launch skills are self-contained: check prerequisites, locate extension, cache in `.foxcode/config.json`, launch/guide, verify. Evidence: `foxcode/skills/run-project-profile/SKILL.md`, `foxcode/skills/run-user-profile/SKILL.md`
-  - [x] Skills check prerequisites: Node.js ≥18 (project profile), Firefox installed. Clear error with fix instructions per platform. Evidence: `foxcode/skills/run-project-profile/SKILL.md` Step 3
-  - [x] Two launch modes: **Project Profile** (isolated Firefox via web-ext) and **User Profile** (manual about:debugging). Evidence: `foxcode/skills/run-project-profile/SKILL.md`, `foxcode/skills/run-user-profile/SKILL.md`
+  - [x] Launch skills are self-contained: check prerequisites, locate extension, cache in `.foxcode/config.json`, launch/guide, verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`, `foxcode/skills/foxcode-run-user-profile/SKILL.md`
+  - [x] Skills check prerequisites: Node.js ≥18 (project profile), Firefox installed. Clear error with fix instructions per platform. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md` Step 3
+  - [x] Two launch modes: **Project Profile** (isolated Firefox via web-ext) and **User Profile** (manual about:debugging). Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`, `foxcode/skills/foxcode-run-user-profile/SKILL.md`
   - [x] Skills communicate in user's language (auto-detect from conversation context). Evidence: SKILL.md frontmatter
   - [x] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps. Evidence: SKILL.md Step 3
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
-- [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/skills/run-project-profile/SKILL.md`
+- [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
 - [x] `status` tool returns server telemetry (port, clients, uptime, launchMode, channelsDetected, client) without browser. Evidence: `foxcode/channel/server.mjs:210-229` (status handler)
 - [x] `ping` tool verifies bidirectional connectivity (CC -> browser -> CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
-- [x] `/foxcode:run-project-profile` flow: status (incl. channelsDetected check) -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/run-project-profile/SKILL.md`
-- [x] `/foxcode:run-user-profile` flow: status (incl. channelsDetected check) -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/run-user-profile/SKILL.md`
+- [x] `/foxcode:foxcode-run-project-profile` flow: status (incl. channelsDetected check) -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
+- [x] `/foxcode:foxcode-run-user-profile` flow: status (incl. channelsDetected check) -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
 - [x] Extension connects via URL hash params (`foxcode-port` + `foxcode-password`) or saved params or manual sidebar settings form. No port scanning. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
 - [x] Channel detection: MCP server detects `--dangerously-load-development-channels` in CC process args via process tree walk at startup (ps on macOS/Linux, PowerShell on Windows). Result in `status` tool and `pong` message. Evidence: `foxcode/channel/lib.mjs:200-234` (detectChannels), `foxcode/channel/server.mjs:32` (CHANNELS_DETECTED)
-- [x] Skills warn when channels not detected: sidebar messages won't reach CC, but CC→Browser tools work. Evidence: `foxcode/skills/run-project-profile/SKILL.md` Step 1, `foxcode/skills/run-user-profile/SKILL.md` Step 1
+- [x] Skills warn when channels not detected: sidebar messages won't reach CC, but CC→Browser tools work. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md` Step 1, `foxcode/skills/foxcode-run-user-profile/SKILL.md` Step 1
 
 ### 4.3 NF-3: Reliability [very important]
 - [x] Auto-reconnect on connection loss with exponential backoff (3s → 30s max). Evidence: `extension/background/background.js:140-152` (scheduleReconnect)

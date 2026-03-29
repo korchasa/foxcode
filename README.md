@@ -30,14 +30,14 @@ Install plugin:
 
 Launch FoxCode with one of two modes:
 ```bash
-/foxcode:run-project-profile   # isolated Firefox with project-local profile
-/foxcode:run-user-profile      # load extension into your own Firefox
+/foxcode:foxcode-run-project-profile   # isolated Firefox with project-local profile
+/foxcode:foxcode-run-user-profile      # load extension into your own Firefox
 ```
 
 ### Commands
 
-- `/foxcode:run-project-profile` — launch in isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
-- `/foxcode:run-user-profile` — load extension into your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
+- `/foxcode:foxcode-run-project-profile` — launch in isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
+- `/foxcode:foxcode-run-user-profile` — load extension into your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
 
 ## Features
 
@@ -64,8 +64,8 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 - **Channel Plugin** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging Claude Code ↔ extension via WebSocket. Installed as a Claude Code plugin, provides MCP tools and the channel capability
 - **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: sidebar chat UI, background script for WebSocket + code execution, content script for DOM access in page context
-- **Run Project Profile Skill** (`foxcode/skills/run-project-profile/SKILL.md`) - self-contained: prerequisites, locate extension, launch isolated Firefox via web-ext, verify connectivity
-- **Run User Profile Skill** (`foxcode/skills/run-user-profile/SKILL.md`) - self-contained: prerequisites, locate extension, guide manual loading, verify connectivity
+- **Run Project Profile Skill** (`foxcode/skills/foxcode-run-project-profile/SKILL.md`) - self-contained: prerequisites, locate extension, launch isolated Firefox via web-ext, verify connectivity
+- **Run User Profile Skill** (`foxcode/skills/foxcode-run-user-profile/SKILL.md`) - self-contained: prerequisites, locate extension, guide manual loading, verify connectivity
 
 ### MCP tools provided to Claude Code
 
@@ -78,7 +78,7 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 Two ways to load the extension into Firefox. Both are valid and must stay working.
 
-### Project Profile (`/foxcode:run-project-profile`)
+### Project Profile (`/foxcode:foxcode-run-project-profile`)
 
 Isolated Firefox instance launched via `web-ext run` with a project-local profile (`.foxcode/firefox-profile/`). Port is passed via URL hash — instant connection. First setup via `install`, subsequent launches via `run`.
 
@@ -96,7 +96,7 @@ sequenceDiagram
     MCP->>MCP: Bind port (8787–8886)
     MCP->>MCP: Save port to ~/.foxcode/port
 
-    U->>CC: /foxcode:run-project-profile
+    U->>CC: /foxcode:foxcode-run-project-profile
     CC->>MCP: status tool → get port
     CC->>WE: npx web-ext run --start-url "about:blank#foxcode-port=PORT"
     WE->>FF: Launch with extension pre-loaded
@@ -110,9 +110,9 @@ sequenceDiagram
     EXT-->>U: Sidebar ready, connected
 ```
 
-### User Profile (`/foxcode:run-user-profile`)
+### User Profile (`/foxcode:foxcode-run-user-profile`)
 
-Extension loaded into user's own Firefox via about:debugging. No port in URL — extension uses saved port from previous session or manual settings form. Re-launch via `/foxcode:run-user-profile`.
+Extension loaded into user's own Firefox via about:debugging. No port in URL — extension uses saved port from previous session or manual settings form. Re-launch via `/foxcode:foxcode-run-user-profile`.
 
 ```mermaid
 sequenceDiagram
@@ -126,7 +126,7 @@ sequenceDiagram
     CC->>MCP: Launch (stdio)
     MCP->>MCP: Bind port, detect channels
 
-    U->>CC: /foxcode:run-user-profile
+    U->>CC: /foxcode:foxcode-run-user-profile
     CC->>MCP: status → get port, channelsDetected
     CC-->>U: Instructions + port/password
 
@@ -165,7 +165,7 @@ The sidebar displays diagnostic info: port, params source, error, and retry time
 
 - **Error: "Cannot connect to ws://127.0.0.1:PORT"** — MCP server not running or wrong port. Check `/mcp` in Claude Code.
 - **Error: "Connection refused or dropped"** — Server was running but stopped. CC may have exited.
-- **Source: "URL hash params"** — Port came from launch URL (project profile mode). If wrong, re-run `/foxcode:run-project-profile`.
+- **Source: "URL hash params"** — Port came from launch URL (project profile mode). If wrong, re-run `/foxcode:foxcode-run-project-profile`.
 - **Source: "saved from previous session"** — Using stale port. Click the connection indicator → enter correct port/password manually.
 
 ### Sidebar shows "Channels not enabled"

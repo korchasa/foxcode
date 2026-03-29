@@ -1,5 +1,5 @@
 ---
-name: run-user-profile
+name: foxcode-run-user-profile
 description: >
   Launch FoxCode in User Profile mode. Self-contained: checks prerequisites, locates extension,
   guides user to load it manually via about:debugging into their own Firefox, verifies connectivity.
@@ -92,15 +92,33 @@ Tell the user:
 >
 > **Note:** Temporary add-ons are removed when Firefox closes. You'll need to re-load each time.
 
-## Step 5: Verify connectivity
+## Step 5: Wait for browser connection
 
-After the user confirms the sidebar is open, call the `ping` tool.
+Poll the `status` MCP tool every ~5 seconds, up to 24 attempts (120 seconds total). User Profile requires manual loading, so allow more time.
+
+On each poll, check `connectedClients`:
+- If `connectedClients > 0` — proceed to verification below.
+- If `connectedClients == 0` — wait ~5 seconds and retry.
+
+If all 24 attempts exhausted with no connection:
+> Browser did not connect within 120 seconds. Make sure:
+> 1. Extension is loaded in `about:debugging`
+> 2. Sidebar is open: **View > Sidebar > FoxCode** (or Cmd+B / Ctrl+B)
+> 3. Port and password are entered correctly in sidebar settings
+>
+> Then run this skill again.
+
+Stop here.
+
+### Verify bidirectional connectivity
+
+Once `connectedClients > 0`, call the `ping` tool.
 
 If both `forward` and `reverse` are `true`:
 > Bidirectional connectivity confirmed. Ready to go.
 
 If `forward` is `false`:
-> No browser extension connected. Make sure the sidebar is open: **View > Sidebar > FoxCode**. Then try again.
+> Browser connected but ping failed. Try reloading the extension in `about:debugging`.
 
 If `forward` is `true` but `reverse` is `false`:
 > Forward path works but browser did not reply. Try reloading the extension in `about:debugging`.
