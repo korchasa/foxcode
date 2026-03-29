@@ -1,5 +1,7 @@
 # FoxCode — Browser UI for Claude Code
 
+> **⚠️ Active Development** — This project is under heavy development. APIs, configuration, and behavior may change without notice. Expect breaking changes between versions.
+
 Firefox sidebar extension for Claude Code sessions: real-time chat, page context injection, and browser automation — all from the browser.
 
 ## What it does
