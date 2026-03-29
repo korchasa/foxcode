@@ -34,6 +34,15 @@ port.onMessage.addListener((msg) => {
     case 'pong':
       updateActiveServerInfo(msg)
       break
+    case 'scan-start':
+      onScanStart()
+      break
+    case 'scan-progress':
+      onScanProgress(msg)
+      break
+    case 'scan-done':
+      onScanDone(msg)
+      break
     case 'msg':
       removeThinking()
       addMessage(msg)
@@ -85,6 +94,51 @@ function setStatus(connected) {
     inputEl.placeholder = 'No connection...'
     inputEl.disabled = true
     connectionErrorEl.classList.remove('hidden')
+  }
+}
+
+// --- Scan progress ---
+
+let scanProgressEl = null
+
+function onScanStart() {
+  rescanBtnEl.classList.add('scanning')
+  serverIndicatorEl.textContent = 'Scanning...'
+  removeScanProgress()
+  scanProgressEl = document.createElement('div')
+  scanProgressEl.className = 'message tool-use'
+  scanProgressEl.id = 'scan-progress'
+  const body = document.createElement('div')
+  body.className = 'body'
+  body.textContent = 'Scanning ports 8787–8886...'
+  scanProgressEl.appendChild(body)
+  messagesEl.appendChild(scanProgressEl)
+  scrollToBottom()
+}
+
+function onScanProgress(msg) {
+  if (!scanProgressEl) return
+  const body = scanProgressEl.querySelector('.body')
+  const pct = Math.round((msg.scanned / msg.total) * 100)
+  body.textContent = `Scanning: ${pct}% (${msg.scanned}/${msg.total} ports, found ${msg.found})`
+}
+
+function onScanDone(msg) {
+  rescanBtnEl.classList.remove('scanning')
+  if (scanProgressEl) {
+    const body = scanProgressEl.querySelector('.body')
+    body.textContent = msg.found > 0
+      ? `Scan complete: ${msg.found} server${msg.found > 1 ? 's' : ''} found`
+      : 'Scan complete: no servers found'
+    // Auto-remove after a short delay
+    setTimeout(() => removeScanProgress(), 3000)
+  }
+}
+
+function removeScanProgress() {
+  if (scanProgressEl) {
+    scanProgressEl.remove()
+    scanProgressEl = null
   }
 }
 

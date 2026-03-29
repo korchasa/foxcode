@@ -50,7 +50,7 @@ graph LR
 ### 3.3 Sidebar (`extension/sidebar/`)
 - **`markdown.js`** — Pure markdown→HTML renderer (testable without DOM)
 - **`format.js`** — Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
-- **`sidebar.js`** — UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, server picker (indicator + dropdown for multi-session switching, rescan button)
+- **`sidebar.js`** — UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, server picker (indicator + dropdown for multi-session switching, rescan button with spin animation + scan progress in chat via `scan-start`/`scan-progress`/`scan-done` messages)
 - **Interfaces:** port connection to background script
 - **Deps:** Background script
 

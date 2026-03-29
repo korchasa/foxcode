@@ -101,8 +101,10 @@ function probePort(port) {
 /**
  * Scan all ports in range in batches to avoid excessive parallel connections.
  * Returns array of pong objects sorted by port.
+ * @param {Object} [options]
+ * @param {function} [options.onProgress] - Called with {scanned, total, found} after each batch
  */
-async function discoverServers() {
+async function discoverServers({ onProgress } = {}) {
   const BATCH_SIZE = 20
   const found = []
   for (let i = 0; i < PORT_RANGE; i += BATCH_SIZE) {
@@ -112,6 +114,9 @@ async function discoverServers() {
     }
     const results = await Promise.all(batch)
     for (const r of results) if (r) found.push(r)
+    if (onProgress) {
+      onProgress({ scanned: Math.min(i + BATCH_SIZE, PORT_RANGE), total: PORT_RANGE, found: found.length })
+    }
   }
   return found.sort((a, b) => a.port - b.port)
 }
@@ -176,7 +181,13 @@ async function connect() {
   }
 
   // Slow path: full range scan
-  discoveredServers = await discoverServers()
+  if (sidebarPort) sidebarPort.postMessage({ type: 'scan-start' })
+  discoveredServers = await discoverServers({
+    onProgress(p) {
+      if (sidebarPort) sidebarPort.postMessage({ type: 'scan-progress', ...p })
+    }
+  })
+  if (sidebarPort) sidebarPort.postMessage({ type: 'scan-done', found: discoveredServers.length })
   if (sidebarPort) sidebarPort.postMessage({ type: 'servers', list: discoveredServers, activePort })
 
   if (discoveredServers.length === 0) {

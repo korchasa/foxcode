@@ -174,16 +174,28 @@ body {
   height: 28px;
   padding: 0;
   background: none;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 6px;
   color: var(--text-secondary);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .rescan-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+.rescan-btn.scanning {
+  animation: spin 1s linear infinite;
+  pointer-events: none;
+  opacity: 0.5;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* --- Disconnected input --- */
