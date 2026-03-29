@@ -71,6 +71,28 @@ foxcode/
 └── AGENTS.md             # This file (CLAUDE.md → symlink)
 ```
 
+## Launch Modes
+
+### Development Mode (local repo)
+- **MCP config**: root `.mcp.json` — runs `cd foxcode/channel && npm install && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"`, path is relative to repo root
+- **Extension**: loaded via `web-ext run --source-dir extension/` (see `scripts/dev.sh`) or manually via `about:debugging` → Load Temporary Add-on → `extension/manifest.json`
+- **Claude Code**: standard session from repo root; `.mcp.json` auto-detected, no special flags needed
+- **Workflow**: edit code → reload extension in Firefox → test immediately
+
+### Production Mode (CC Plugin Marketplace)
+- **Install**: `claude /plugin install korchasa/foxcode` — clones repo to `~/.claude/plugins/cache/`, copies `foxcode/` dir as plugin
+- **MCP config**: `foxcode/.mcp.json` — same command but uses `${CLAUDE_PLUGIN_ROOT}` (plugin cache dir) instead of relative path. Dependencies installed at runtime (not cached)
+- **Extension**: user runs `/foxcode:foxcode-install` command which launches Firefox via `npx web-ext run` using marketplace clone path (`~/.claude/plugins/marketplaces/korchasa/extension/`) with persistent profile in `.foxcode/firefox-profile/`
+- **Claude Code**: `claude --dangerously-load-development-channels plugin:foxcode@korchasa` (required while channels are in research preview)
+- **Workflow**: install once → launch Firefox via `/foxcode:foxcode-run` → open sidebar
+
+### Key Differences
+- **MCP server path resolution**: dev uses relative `foxcode/channel/` from repo root; prod uses `${CLAUDE_PLUGIN_ROOT}/channel/` (absolute, expanded by CC plugin system)
+- **Extension source**: dev uses `./extension/` from working dir; prod uses marketplace clone at `~/.claude/plugins/marketplaces/korchasa/extension/`
+- **Firefox profile**: dev uses ephemeral `web-ext` temp profile; prod uses persistent `.foxcode/firefox-profile/` in project dir
+- **CC launch flags**: dev — none; prod — `--dangerously-load-development-channels` required
+- **WebSocket port**: both modes use same port range `8787–8886` (BASE_PORT=8787, PORT_RANGE=100), with random start + saved port in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var. Extension discovers active server by probing the entire range in batches
+
 ## Key Decisions
 - MCP Channel Plugin over Native Messaging: bidirectional session sync, no subprocess per request
 - WebSocket on localhost: simple, reliable bridge between Node.js and browser extension
