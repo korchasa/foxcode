@@ -76,25 +76,31 @@ foxcode/
 
 ## Launch Modes
 
-### Development Mode (local repo)
-- **MCP config**: root `.mcp.json` - runs `cd foxcode/channel && npm install && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"`, path is relative to repo root
-- **Extension**: loaded via `web-ext run --source-dir extension/` (see `scripts/dev.sh`) or manually via `about:debugging` -> Load Temporary Add-on -> `extension/manifest.json`
-- **Claude Code**: standard session from repo root; `.mcp.json` auto-detected, no special flags needed
-- **Workflow**: edit code -> reload extension in Firefox -> test immediately
+Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa`. Launch CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` (channels in research preview).
 
-### Production Mode (CC Plugin Marketplace)
-- **Install**: `claude /plugin install korchasa/foxcode` - clones repo to `~/.claude/plugins/cache/`, copies `foxcode/` dir as plugin
-- **MCP config**: `foxcode/.mcp.json` - same command but uses `${CLAUDE_PLUGIN_ROOT}` (plugin cache dir) instead of relative path. Dependencies installed at runtime (not cached)
-- **Extension**: user runs `/foxcode:run-project-profile` which launches Firefox via `npx web-ext run` using marketplace clone path (`~/.claude/plugins/marketplaces/korchasa/extension/`) with persistent profile in `.foxcode/firefox-profile/`
-- **Claude Code**: `claude --dangerously-load-development-channels plugin:foxcode@korchasa` (required while channels are in research preview)
-- **Workflow**: install once -> launch Firefox via `/foxcode:run-project-profile` or `/foxcode:run-user-profile` -> open sidebar
+### Project Profile (`/foxcode:run-project-profile`)
+- Isolated Firefox instance launched via `web-ext run` with project-local profile (`.foxcode/firefox-profile/`)
+- Port + password passed via URL hash (`about:blank#foxcode-port=PORT&foxcode-password=PASS`) -> instant connection, no scanning
+- Self-contained skill: checks prerequisites (Node.js ≥18, Firefox), locates extension, caches paths in `.foxcode/config.json`, launches Firefox, verifies connectivity via `status` + `ping`
+- Re-launch: run `/foxcode:run-project-profile` again
+
+### User Profile (`/foxcode:run-user-profile`)
+- Extension loaded into user's own Firefox via `about:debugging` -> Load Temporary Add-on -> `manifest.json`
+- No port in URL -> extension uses saved port from `browser.storage.local` or manual sidebar settings form
+- Self-contained skill: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`, verifies connectivity
+- Temporary add-on: must re-load after Firefox restart
 
 ### Key Differences
-- **MCP server path resolution**: dev uses relative `foxcode/channel/` from repo root; prod uses `${CLAUDE_PLUGIN_ROOT}/channel/` (absolute, expanded by CC plugin system)
-- **Extension source**: dev uses `./extension/` from working dir; prod uses marketplace clone at `~/.claude/plugins/marketplaces/korchasa/extension/`
-- **Firefox profile**: dev uses ephemeral `web-ext` temp profile; prod uses persistent `.foxcode/firefox-profile/` in project dir
-- **CC launch flags**: dev - none; prod - `--dangerously-load-development-channels` required
-- **WebSocket port**: both modes use same port range `8787–8886` (BASE_PORT=8787, PORT_RANGE=100), with random start + saved port in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var. Extension connects using port+password from URL hash params or manual sidebar input (no scanning)
+- **Project Profile**: isolated Firefox, port known upfront (URL hash) -> instant connect. Persistent project-local profile
+- **User Profile**: user's own Firefox, no port hint -> probe saved port or manual entry. Temporary add-on
+- **Reconnect**: both use same logic (saved port) with exponential backoff (3s -> 30s max)
+- **WebSocket port**: both use range 8787–8886 (BASE_PORT=8787, PORT_RANGE=100), random start + saved in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var
+
+### Local Development (contributing to FoxCode)
+- Root `.mcp.json` runs `cd foxcode/channel && npm install && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"` (relative to repo root)
+- Extension loaded via `scripts/dev.sh` (`web-ext run --source-dir extension/`) or manually via `about:debugging`
+- CC: `claude --mcp-config .mcp.json --dangerously-load-development-channels server:foxcode`
+- Workflow: edit code -> reload extension -> test
 
 ## Key Decisions
 - MCP Channel Plugin over Native Messaging: bidirectional session sync, no subprocess per request
@@ -107,8 +113,8 @@ foxcode/
 - CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported
 - Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
 - Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
-- Channels in research preview: third-party plugins not in Anthropic allowlist -> `--dangerously-load-development-channels plugin:foxcode@korchasa` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools).
-- URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Skills build `about:blank#foxcode-port=PORT&foxcode-password=PASS` URL. Extension reads params from URL hash or manual sidebar settings form. No port scanning. Multiple CC sessions coexist (different ports, shared password).
+- Channels in research preview: third-party plugins not in Anthropic allowlist -> `--dangerously-load-development-channels plugin:foxcode@korchasa` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools)
+- URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Project Profile skill builds `about:blank#foxcode-port=PORT&foxcode-password=PASS` URL for instant connection. User Profile uses saved port from `browser.storage.local` or manual sidebar settings form. Multiple CC sessions coexist (different ports, shared password)
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
 - When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
 
