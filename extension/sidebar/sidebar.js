@@ -6,11 +6,18 @@
 const messagesEl = document.getElementById('messages')
 const inputEl = document.getElementById('input')
 const formEl = document.getElementById('input-form')
+const serverBarEl = document.getElementById('server-bar')
+const serverIndicatorEl = document.getElementById('server-indicator')
+const serverPickerEl = document.getElementById('server-picker')
+const serverListEl = document.getElementById('server-list')
+const rescanBtnEl = document.getElementById('rescan-btn')
 
 const messages = new Map()
 let uid = 0
 let thinkingEl = null
 let currentTab = null
+let knownServers = []
+let currentActivePort = null
 
 // --- Connect to background ---
 
@@ -20,6 +27,12 @@ port.onMessage.addListener((msg) => {
   switch (msg.type) {
     case 'status':
       setStatus(msg.connected)
+      break
+    case 'servers':
+      updateServerList(msg.list, msg.activePort)
+      break
+    case 'pong':
+      updateActiveServerInfo(msg)
       break
     case 'msg':
       removeThinking()
@@ -178,6 +191,95 @@ function addToolResultMessage(msg) {
 }
 
 // formatParamValue and formatToolParams are loaded from format.js
+
+// --- Server picker ---
+
+/**
+ * Extract a short project label from server telemetry.
+ * Uses projectDir (FOXCODE_PROJECT_DIR) when available, falls back to pluginRoot.
+ * e.g. "/Users/foo/www/4ra" → "4ra"
+ * e.g. "/home/foo/www/sandbox/foxcode" → "sandbox/foxcode"
+ */
+function projectLabel(server) {
+  const path = server.projectDir || server.pluginRoot
+  if (!path) return `port ${server.port}`
+  // Strip home dir prefix on any platform: /Users/x/..., /home/x/..., C:\Users\x\...
+  const rel = path.replace(/^(?:\/(?:Users|home)\/[^/]+\/|[A-Z]:\\Users\\[^\\]+\\)/, '')
+  const segments = rel.replace(/[\\/]+$/, '').split(/[\\/]/)
+  return segments.length > 2 ? segments.slice(-2).join('/') : rel
+}
+
+function updateServerList(servers, activePort) {
+  knownServers = servers
+  currentActivePort = activePort
+
+  if (servers.length === 0) {
+    serverIndicatorEl.textContent = 'No servers found'
+    serverIndicatorEl.style.cursor = 'default'
+    serverListEl.innerHTML = ''
+    return
+  }
+
+  // Update indicator text
+  const active = servers.find(s => s.port === activePort) || servers[0]
+  serverIndicatorEl.textContent = projectLabel(active)
+
+  // Only show picker toggle if multiple servers
+  serverIndicatorEl.style.cursor = servers.length > 1 ? 'pointer' : 'default'
+
+  // Render picker list
+  serverListEl.innerHTML = ''
+  for (const s of servers) {
+    const item = document.createElement('div')
+    item.className = 'server-list-item' + (s.port === activePort ? ' active' : '')
+
+    const name = document.createElement('div')
+    name.className = 'server-list-item-name'
+    name.textContent = projectLabel(s)
+
+    const detail = document.createElement('div')
+    detail.className = 'server-list-item-detail'
+    const uptimeMin = Math.floor(s.uptime / 60)
+    detail.textContent = `:${s.port} | v${s.version} | pid ${s.pid} | up ${uptimeMin}m`
+
+    item.appendChild(name)
+    item.appendChild(detail)
+    item.addEventListener('click', () => {
+      port.postMessage({ type: 'select-server', port: s.port })
+      serverPickerEl.classList.add('hidden')
+    })
+    serverListEl.appendChild(item)
+  }
+}
+
+function updateActiveServerInfo(pong) {
+  currentActivePort = pong.port
+  const active = knownServers.find(s => s.port === pong.port)
+  if (active) {
+    Object.assign(active, pong)
+  }
+  serverIndicatorEl.textContent = projectLabel(pong)
+}
+
+// Toggle picker on indicator click
+serverIndicatorEl.addEventListener('click', () => {
+  if (knownServers.length > 1) {
+    serverPickerEl.classList.toggle('hidden')
+  }
+})
+
+// Rescan button
+rescanBtnEl.addEventListener('click', () => {
+  serverPickerEl.classList.add('hidden')
+  port.postMessage({ type: 'rescan' })
+})
+
+// Close picker on outside click
+document.addEventListener('click', (e) => {
+  if (!serverBarEl.contains(e.target)) {
+    serverPickerEl.classList.add('hidden')
+  }
+})
 
 // --- Send message ---
 

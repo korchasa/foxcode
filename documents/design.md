@@ -25,11 +25,12 @@ graph LR
 
 ### 3.1 Channel Plugin (`foxcode/channel/`)
 - **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT → terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
-- **`lib.mjs`** — Pure logic: ID generation, message builders, tool definitions (testable without MCP/WS)
+- **`lib.mjs`** — Shared logic: ID generation, message builders, tool definitions, port management (`createWebSocketServer`, `portStorage`). File I/O limited to `portStorage` (load/save `~/.foxcode/port`)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
 - **Capabilities:** `claude/channel` (notifications), `tools` (ping, reply, evalInBrowser)
 - **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. Replaces broken `clientCapabilities` check (CC doesn't advertise `claude/channel` in caps). Command `/foxcode:foxcode-ping` wraps the tool.
-- **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:8787` (extension)
+- **Port binding:** Auto-binds to first available port in range 8787–8886. Priority: `FOXCODE_PORT` env → saved port (`~/.foxcode/port`) → random start with wrap-around. Saved on successful bind. Null-safe: runs without WebSocket if all ports taken (MCP stdio still works)
+- **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:{port}` (extension, dynamic port)
 - **Tools exposed:**
   - `ping()` — test bidirectional connectivity (CC → browser → CC)
   - `reply(text, reply_to?)` — send CC response to browser
@@ -37,7 +38,7 @@ graph LR
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 
 ### 3.2 Background Script (`extension/background/`)
-- **`background.js`** — WebSocket connection, message routing, EVAL_CODE handler
+- **`background.js`** — Port discovery (scans 8787–8886 in batches of 20), WebSocket connection, message routing, EVAL_CODE handler. Supports `select-server`/`rescan` commands from sidebar. Persists last selected port in `browser.storage.local`
 - **`browser-api.js`** — Factory creating `api` object with ~30 async helpers (DI for testability)
 - **`dom-helpers.js`** — Pure functions generating injectable JS code (buildWaitAndAct, selectors, etc.)
 - **Execution model:** Agent code runs via `new Function('api', code)(browserApi)` in background (persistent, survives navigation). DOM ops delegated to tabs via `executeScript`. Navigation via `webNavigation.onCompleted`.
@@ -48,7 +49,7 @@ graph LR
 ### 3.3 Sidebar (`extension/sidebar/`)
 - **`markdown.js`** — Pure markdown→HTML renderer (testable without DOM)
 - **`format.js`** — Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
-- **`sidebar.js`** — UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator
+- **`sidebar.js`** — UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, server picker (indicator + dropdown for multi-session switching, rescan button)
 - **Interfaces:** port connection to background script
 - **Deps:** Background script
 
@@ -59,7 +60,8 @@ graph LR
 
 ## 4. Data
 - **Entities:** Message (id, from, text, ts, replyTo?), ToolUse (id, tool, params, ts), ToolResult (id, tool, content, ts)
-- **No persistent storage**: All data session-scoped, in-memory
+- **Port persistence:** Server saves last port to `~/.foxcode/port` (file). Extension saves last selected port to `browser.storage.local`
+- **Session data:** Messages, tool results — in-memory, session-scoped
 
 ## 5. Logic
 - **Browser → CC:** Sidebar input → background → WebSocket → channel → `notifications/claude/channel` → CC
@@ -69,7 +71,7 @@ graph LR
 - **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `message`, `tool_request`, `tool_response`, `tool_use`, `tool_result`)
 
 ## 6. Non-Functional
-- **Fault Tolerance:** Auto-reconnect with exponential backoff (3s → 30s max). Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.
+- **Fault Tolerance:** Auto-reconnect with exponential backoff (3s → 30s max) + full port re-scan on each reconnect. Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.
 - **Sec:** localhost-only WebSocket (`127.0.0.1`), no external traffic
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 

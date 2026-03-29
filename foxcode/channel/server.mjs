@@ -19,7 +19,7 @@ import { WebSocketServer } from 'ws'
 import {
   nextId, buildChannelMeta, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
-  buildPongMessage, CHANNEL_TEST_MARKER,
+  buildPongMessage, CHANNEL_TEST_MARKER, createWebSocketServer,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 import { createRequire } from 'node:module'
@@ -27,14 +27,14 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const pluginMeta = require('../.claude-plugin/plugin.json')
 
-const PORT = Number(process.env.FOXCODE_PORT ?? 8787)
+const explicitPort = process.env.FOXCODE_PORT != null ? Number(process.env.FOXCODE_PORT) : null
 
 /** Resolver for pending ping test. Set during ping tool call. */
 let channelTestResolve = null
 
 // --- WebSocket server for extension connection ---
 
-const wss = new WebSocketServer({ host: '127.0.0.1', port: PORT })
+const { wss, port: PORT } = await createWebSocketServer(WebSocketServer, explicitPort)
 const clients = new Set()
 
 /** Pending browser tool requests: request_id → {resolve, reject, timer} */
@@ -76,7 +76,7 @@ function requestFromBrowser(tool, params = {}) {
   })
 }
 
-wss.on('connection', (ws) => {
+if (wss) wss.on('connection', (ws) => {
   clients.add(ws)
   ws.on('close', () => clients.delete(ws))
   ws.on('error', () => clients.delete(ws))
@@ -102,6 +102,7 @@ function handleExtensionMessage(msg, ws) {
         pendingRequests: pendingToolRequests.size,
         nodeVersion: process.version,
         pluginRoot: process.env.CLAUDE_PLUGIN_ROOT,
+        projectDir: process.env.FOXCODE_PROJECT_DIR || process.cwd(),
       })
       if (ws.readyState === 1) ws.send(JSON.stringify(pong))
       break
@@ -151,7 +152,7 @@ const mcp = new Server(
       'The tab_url and tab_title attributes show which page the user is currently viewing.',
       'The browser user reads the Firefox sidebar, not this terminal. Anything you want them to see MUST go through the reply tool — your transcript output never reaches the browser UI.',
       'Use evalInBrowser tool to execute JS in browser with full browser automation API (click, fill, navigate, snapshot, etc.).',
-      `Browser extension connects to ws://localhost:${PORT}.`,
+      PORT ? `Browser extension connects to ws://localhost:${PORT}.` : 'No WebSocket port available — browser extension cannot connect.',
     ].join('\n'),
   },
 )
@@ -217,7 +218,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
 function shutdown(reason) {
   process.stderr.write(`foxcode: shutdown (${reason})\n`)
   for (const ws of clients) ws.terminate()
-  wss.close()
+  if (wss) wss.close()
   process.exit(0)
 }
 
@@ -232,4 +233,8 @@ mcp.oninitialized = () => {
 }
 
 await mcp.connect(new StdioServerTransport())
-process.stderr.write(`foxcode: ws://localhost:${PORT}\n`)
+if (PORT) {
+  process.stderr.write(`foxcode: ws://localhost:${PORT}\n`)
+} else {
+  process.stderr.write('foxcode: no free port in range, running without WebSocket\n')
+}

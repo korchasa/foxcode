@@ -2,7 +2,7 @@
   "mcpServers": {
     "foxcode": {
       "command": "sh",
-      "args": ["-c", "cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install --omit=dev --silent 2>/dev/null && node server.mjs"]
+      "args": ["-c", "export FOXCODE_PROJECT_DIR=\"$PWD\" && cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install --omit=dev --silent 2>/dev/null && node server.mjs"]
     }
   }
 }
