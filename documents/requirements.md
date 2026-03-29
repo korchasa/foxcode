@@ -70,32 +70,27 @@
 ## 4. Non-Functional
 
 ### 4.1 NF-1: Easy Install via Claude Code Plugin [critical]
-- **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; install command (`/foxcode:foxcode-install`) guides user through Firefox extension setup. User should NOT need to read docs or edit configs manually.
-- **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa` -> `/foxcode:foxcode-install` -> command checks prereqs, downloads .xpi, guides Firefox setup -> user launches CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` -> done.
+- **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; self-contained launch skills handle prerequisites and Firefox setup. User should NOT need to read docs or edit configs manually.
+- **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa` -> `/foxcode:run-project-profile` or `/foxcode:run-user-profile` -> skill checks prereqs, locates extension, launches/guides Firefox setup, caches paths in `.foxcode/config.json` -> user launches CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` -> done.
 - **Acceptance:**
   - [x] Legacy `install-prompt.md` removed - plugin is the only install path. Evidence: file deleted
   - [x] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root. Evidence: `.claude-plugin/marketplace.json`
   - [x] Plugin manifest: `plugins/foxcode/.claude-plugin/plugin.json`. Evidence: `plugins/foxcode/.claude-plugin/plugin.json`
   - [x] Plugin `.mcp.json` declares foxcode MCP server (`node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs`), auto-loads on plugin enable. Evidence: `foxcode/.mcp.json`
-  - [x] Install command: `plugins/foxcode/commands/foxcode-install.md`. Evidence: `plugins/foxcode/commands/foxcode-install.md`
   - [x] `claude plugin validate .` passes. Evidence: validated locally, `claude plugin validate .` -> "Validation passed"
-  - [x] Command checks prerequisites: Node.js ≥18, Firefox installed. Reports clear error with fix instructions per platform (macOS/Linux). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 1
-  - [x] Command downloads `foxcode-extension.xpi` from GitHub releases, verifies integrity (size >0). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 2
-  - [x] Command asks user: **A) Separate window** (`web-ext run`, requires cloned repo) or **B) Existing Firefox** (`about:debugging` manual load with .xpi). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 3
-  - [x] Option A (only path): resolves extension source (local or marketplace clone), launches Firefox with persistent project-local profile via `web-ext run`. Evidence: `foxcode/commands/foxcode-install.md` Steps 2-3
-  - [x] ~~Option B removed~~ - single install path via separate Firefox profile
-  - [x] Command provides final summary: MCP via plugin, launch command (`--dangerously-load-development-channels`), sidebar access, tool permissions note. Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 5
-  - [x] Command is idempotent - detects existing .xpi, asks re-download or skip. Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 2
-  - [x] Command communicates in user's language (auto-detect from conversation context). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 0
-  - [x] Command explains each step BEFORE executing it (transparency). Evidence: `plugins/foxcode/commands/foxcode-install.md` Step 0
-  - [x] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps. Evidence: `plugins/foxcode/commands/foxcode-install.md` Steps 1-2
+  - [x] Launch skills are self-contained: check prerequisites, locate extension, cache in `.foxcode/config.json`, launch/guide, verify. Evidence: `foxcode/skills/run-project-profile/SKILL.md`, `foxcode/skills/run-user-profile/SKILL.md`
+  - [x] Skills check prerequisites: Node.js ≥18 (project profile), Firefox installed. Clear error with fix instructions per platform. Evidence: `foxcode/skills/run-project-profile/SKILL.md` Step 3
+  - [x] Two launch modes: **Project Profile** (isolated Firefox via web-ext) and **User Profile** (manual about:debugging). Evidence: `foxcode/skills/run-project-profile/SKILL.md`, `foxcode/skills/run-user-profile/SKILL.md`
+  - [x] Skills communicate in user's language (auto-detect from conversation context). Evidence: SKILL.md frontmatter
+  - [x] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps. Evidence: SKILL.md Step 3
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
-- [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/commands/foxcode-run.md`
+- [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/skills/run-project-profile/SKILL.md`
 - [x] `status` tool returns server telemetry (port, clients, uptime) without browser. Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS status), `foxcode/channel/server.mjs` (status handler)
 - [x] `ping` tool verifies bidirectional connectivity (CC -> browser -> CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
-- [x] `/foxcode:foxcode-run` unified flow: status check -> ping -> launch Firefox if needed -> verify. Evidence: `foxcode/commands/foxcode-run.md`
+- [x] `/foxcode:run-project-profile` flow: status -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/run-project-profile/SKILL.md`
+- [x] `/foxcode:run-user-profile` flow: status -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/run-user-profile/SKILL.md`
 - [x] Extension fast-path connect: probes saved port first, full scan only on failure. Evidence: `extension/background/background.js:165-176`
 
 ### 4.3 NF-3: Reliability [very important]

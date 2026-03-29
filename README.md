@@ -13,6 +13,25 @@ FoxCode is a two-part system: a **Claude Code plugin** (MCP channel server on No
 - **Browser automation** - Claude Code controls the browser via `evalInBrowser`: click, fill forms, navigate, take screenshots, read DOM (~30 API helpers)
 - **Multi-session support** - multiple Claude Code sessions can run FoxCode simultaneously; the extension discovers and switches between them
 
+## Getting Started
+
+Install plugin:
+```bash
+/plugin marketplace add korchasa/foxcode
+/plugin install foxcode@korchasa
+```
+
+Launch FoxCode with one of two modes:
+```bash
+/foxcode:run-project-profile   # isolated Firefox with project-local profile
+/foxcode:run-user-profile      # load extension into your own Firefox
+```
+
+### Commands
+
+- `/foxcode:run-project-profile` — launch in isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
+- `/foxcode:run-user-profile` — load extension into your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
+
 ## Architecture
 
 ```
@@ -30,7 +49,8 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 - **Channel Plugin** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging Claude Code ↔ extension via WebSocket. Installed as a Claude Code plugin, provides MCP tools and the channel capability
 - **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: sidebar chat UI, background script for WebSocket + code execution, content script for DOM access in page context
-- **Install Command** (`foxcode/commands/foxcode-install.md`) - guides through Firefox setup after plugin install
+- **Run Project Profile Skill** (`foxcode/skills/run-project-profile/SKILL.md`) - self-contained: prerequisites, locate extension, launch isolated Firefox via web-ext, verify connectivity
+- **Run User Profile Skill** (`foxcode/skills/run-user-profile/SKILL.md`) - self-contained: prerequisites, locate extension, guide manual loading, verify connectivity
 
 ### MCP tools provided to Claude Code
 
@@ -39,36 +59,90 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 - `status()` - check connection status and active tab info
 - `ping()` - verify extension connectivity
 
-## Getting Started
+## Launch Flows
 
-Install plugin:
-```bash
-/plugin marketplace add korchasa/foxcode
-/plugin install foxcode@korchasa
+Two ways to load the extension into Firefox. Both are valid and must stay working.
+
+### Project Profile (`/foxcode:run-project-profile`)
+
+Isolated Firefox instance launched via `web-ext run` with a project-local profile (`.foxcode/firefox-profile/`). Port is passed via URL hash — instant connection. First setup via `install`, subsequent launches via `run`.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant CC as Claude Code
+    participant MCP as MCP Server
+    participant WE as web-ext
+    participant FF as Firefox (project profile)
+    participant EXT as Extension
+
+    U->>CC: Start session
+    CC->>MCP: Launch (stdio)
+    MCP->>MCP: Bind port (8787–8886)
+    MCP->>MCP: Save port to ~/.foxcode/port
+
+    U->>CC: /foxcode:run-project-profile
+    CC->>MCP: status tool → get port
+    CC->>WE: npx web-ext run --start-url "about:blank#foxcode-port=PORT"
+    WE->>FF: Launch with extension pre-loaded
+    FF->>EXT: Load extension automatically
+
+    EXT->>EXT: background.js: connect()
+    EXT->>EXT: getPortFromTabs() → parse #foxcode-port from tab URL
+    Note over EXT: Port found instantly from URL hash
+    EXT->>MCP: WebSocket connect to PORT
+    MCP-->>EXT: Connection established
+    EXT-->>U: Sidebar ready, connected
 ```
 
-Run the installation command:
-```bash
-/foxcode:foxcode-install
+### User Profile (`/foxcode:run-user-profile`)
+
+Extension loaded into user's own Firefox via about:debugging. No port in URL — extension falls back to saved port or full range scan. Re-launch via `/foxcode:run-user-profile`.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant CC as Claude Code
+    participant MCP as MCP Server
+    participant FF as Firefox (user profile)
+    participant EXT as Extension
+
+    U->>CC: Start session
+    CC->>MCP: Launch (stdio)
+    MCP->>MCP: Bind port (8787–8886)
+
+    U->>CC: /foxcode:run-user-profile
+    CC-->>U: Instructions for manual loading
+
+    U->>FF: Open about:debugging
+    U->>FF: Load Temporary Add-on → manifest.json
+    FF->>EXT: Load extension
+
+    EXT->>EXT: background.js: connect()
+    EXT->>EXT: getPortFromTabs() → no #foxcode-port in any tab
+    EXT->>EXT: loadSavedPort() from browser.storage.local
+
+    alt Saved port exists
+        EXT->>MCP: Probe saved port
+        MCP-->>EXT: Pong → connect
+    else No saved port
+        EXT->>EXT: Full scan: ports 8787–8886 (batches of 20)
+        loop Each batch
+            EXT->>MCP: Probe ports
+            MCP-->>EXT: Pong from active server(s)
+        end
+        EXT->>MCP: Connect to first found
+    end
+
+    MCP-->>EXT: Connection established
+    EXT-->>U: Sidebar ready, connected
 ```
 
-The install command checks prerequisites, downloads the extension, and guides you through Firefox setup interactively.
+### Key differences
 
-### Manual extension install (without `/foxcode:foxcode-install`)
-
-If you need to load the extension manually (e.g. into an existing Firefox profile):
-
-1. Find the extension source in the marketplace cache:
-   ```
-   ~/.claude/plugins/marketplaces/korchasa/extension/
-   ```
-2. In Firefox, open `about:debugging` -> This Firefox -> Load Temporary Add-on
-3. Select `manifest.json` from the path above
-4. Open the sidebar: View -> Sidebar -> FoxCode (or `Ctrl+B` / `Cmd+B`)
-
-The extension will auto-discover running MCP servers by scanning ports 8787–8886.
-
-> **Note:** Temporary add-ons are removed when Firefox closes. For a persistent install, use `web-ext run` with `--keep-profile-changes` or the `/foxcode:foxcode-install` command.
+- **Project Profile**: isolated Firefox, port known upfront (URL hash) → zero scan, instant connect. Persistent project-local profile. Re-launch via `/foxcode:run-project-profile`
+- **User Profile**: user's own Firefox, no port hint → probe saved port → full range scan (up to ~7s). Temporary add-on, re-load after Firefox restart
+- **Reconnect**: both flows use the same reconnect logic (saved port → full scan) with exponential backoff
 
 ## Troubleshooting
 

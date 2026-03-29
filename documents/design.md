@@ -28,7 +28,7 @@ graph LR
 - **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createWebSocketServer`, `portStorage`). File I/O limited to `portStorage` (load/save `~/.foxcode/port`)
 - **`validator.mjs`** - Code syntax validation (async-aware via `new Function` wrapper)
 - **Capabilities:** `claude/channel` (notifications), `tools` (status, ping, reply, evalInBrowser)
-- **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. `/foxcode:foxcode-run` calls `status` then `ping` as part of unified launch flow.
+- **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. `/foxcode:run-project-profile` and `/foxcode:run-user-profile` call `status` then `ping` as part of launch flow.
 - **Port binding:** Auto-binds to first available port in range 8787–8886. Priority: `FOXCODE_PORT` env -> saved port (`~/.foxcode/port`) -> random start with wrap-around. Saved on successful bind. Null-safe: runs without WebSocket if all ports taken (MCP stdio still works)
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:{port}` (extension, dynamic port)
 - **Tools exposed:**
@@ -90,9 +90,9 @@ graph LR
 
 ### Primary: CC Plugin Marketplace
 - **Structure:** `.claude-plugin/marketplace.json` (repo root) -> `plugins/foxcode/` (plugin dir)
-- **Plugin contents:** `.claude-plugin/plugin.json` (manifest), `.mcp.json` (MCP server config), `commands/foxcode-install.md` (install command)
+- **Plugin contents:** `.claude-plugin/plugin.json` (manifest), `.mcp.json` (MCP server config), `skills/run-project-profile/SKILL.md`, `skills/run-user-profile/SKILL.md`
 - **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`sh -c "cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install && node server.mjs"`). Auto-installs deps on first run, loads automatically on plugin enable. No npm package needed.
-- **Install command:** `/foxcode:foxcode-install` - interactive flow: prereq check (Node.js ≥18, Firefox) -> locate extension source (local or marketplace clone) -> launch Firefox with persistent profile -> final summary with launch command
+- **Launch skills:** `/foxcode:run-project-profile` (isolated Firefox via web-ext) and `/foxcode:run-user-profile` (manual about:debugging). Both self-contained: prereq check, locate extension, cache paths in `.foxcode/config.json`, launch/guide, verify connectivity
 
 ### Idempotency
 - `.xpi` download: detect existing file, ask re-download or skip

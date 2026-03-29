@@ -51,8 +51,11 @@ foxcode/
 ├── foxcode/              # CC Plugin (installed via /plugin install)
 │   ├── .claude-plugin/
 │   │   └── plugin.json   #   Plugin manifest (name, version, author)
-│   ├── commands/
-│   │   └── foxcode-install.md  # Install command (/foxcode:foxcode-install)
+│   ├── skills/
+│   │   ├── run-project-profile/
+│   │   │   └── SKILL.md  # Run skill — Project Profile (/foxcode:run-project-profile)
+│   │   └── run-user-profile/
+│   │       └── SKILL.md  # Run skill — User Profile (/foxcode:run-user-profile)
 │   ├── channel/           #   MCP channel plugin (Node.js)
 │   │   ├── server.mjs    #     MCP server, WebSocket bridge
 │   │   ├── lib.mjs       #     Shared pure functions, tool definitions
@@ -82,9 +85,9 @@ foxcode/
 ### Production Mode (CC Plugin Marketplace)
 - **Install**: `claude /plugin install korchasa/foxcode` - clones repo to `~/.claude/plugins/cache/`, copies `foxcode/` dir as plugin
 - **MCP config**: `foxcode/.mcp.json` - same command but uses `${CLAUDE_PLUGIN_ROOT}` (plugin cache dir) instead of relative path. Dependencies installed at runtime (not cached)
-- **Extension**: user runs `/foxcode:foxcode-install` command which launches Firefox via `npx web-ext run` using marketplace clone path (`~/.claude/plugins/marketplaces/korchasa/extension/`) with persistent profile in `.foxcode/firefox-profile/`
+- **Extension**: user runs `/foxcode:run-project-profile` which launches Firefox via `npx web-ext run` using marketplace clone path (`~/.claude/plugins/marketplaces/korchasa/extension/`) with persistent profile in `.foxcode/firefox-profile/`
 - **Claude Code**: `claude --dangerously-load-development-channels plugin:foxcode@korchasa` (required while channels are in research preview)
-- **Workflow**: install once -> launch Firefox via `/foxcode:foxcode-run` -> open sidebar
+- **Workflow**: install once -> launch Firefox via `/foxcode:run-project-profile` or `/foxcode:run-user-profile` -> open sidebar
 
 ### Key Differences
 - **MCP server path resolution**: dev uses relative `foxcode/channel/` from repo root; prod uses `${CLAUDE_PLUGIN_ROOT}/channel/` (absolute, expanded by CC plugin system)
