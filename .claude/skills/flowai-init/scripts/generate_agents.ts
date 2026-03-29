@@ -1,7 +1,7 @@
 /**
- * generate_agents.ts — Project analysis tool for flowai-init.
+ * generate_agents.ts - Project analysis tool for flowai-init.
  *
- * No external dependencies — uses only Deno built-ins and jsr: imports.
+ * No external dependencies - uses only Deno built-ins and jsr: imports.
  *
  * Run:
  *   deno run --allow-read generate_agents.ts <dir>
@@ -190,7 +190,7 @@ async function analyzeProject(rootDir: string): Promise<AnalysisResult> {
         joined.includes("documents/AGENTS.md") &&
         joined.includes("scripts/AGENTS.md");
     } catch {
-      // malformed JSON — treat as no globs
+      // malformed JSON - treat as no globs
     }
   }
 

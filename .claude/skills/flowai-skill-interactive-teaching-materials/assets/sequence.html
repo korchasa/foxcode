@@ -353,7 +353,7 @@
           to: "Auth Server",
           preview: "GET /authorize",
           description:
-            "Client redirects the user's browser to the authorization server with a PKCE code challenge. This starts the flow — the user will authenticate directly with the auth server, never exposing credentials to the client.",
+            "Client redirects the user's browser to the authorization server with a PKCE code challenge. This starts the flow - the user will authenticate directly with the auth server, never exposing credentials to the client.",
           details: `<h4>Redirect Parameters</h4>
 <pre>GET /authorize?response_type=code
   &amp;client_id=spa_client_01
@@ -362,8 +362,8 @@
   &amp;state=af0ifjsldkj
   &amp;code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
   &amp;code_challenge_method=S256</pre>
-<p><code>code_challenge</code> is <code>base64url(SHA-256(code_verifier))</code>. The client stores the random <code>code_verifier</code> in its session — only the hash travels through the browser, preventing interception even if the redirect is compromised.</p>
-<p><code>state</code> is a random string echoed back in step 4 — protects against CSRF.</p>`,
+<p><code>code_challenge</code> is <code>base64url(SHA-256(code_verifier))</code>. The client stores the random <code>code_verifier</code> in its session - only the hash travels through the browser, preventing interception even if the redirect is compromised.</p>
+<p><code>state</code> is a random string echoed back in step 4 - protects against CSRF.</p>`,
         },
         {
           name: "Login Page",
@@ -371,14 +371,14 @@
           to: "Client",
           preview: "200 OK (HTML form)",
           description:
-            "The authorization server presents its own login UI. The client application never sees the user's credentials — this is the core security property of the authorization code flow.",
+            "The authorization server presents its own login UI. The client application never sees the user's credentials - this is the core security property of the authorization code flow.",
           details: `<h4>What the server validates first</h4>
 <ul>
 <li><code>client_id</code> exists and is not revoked</li>
 <li><code>redirect_uri</code> exactly matches a pre-registered callback URL</li>
 <li>Requested <code>scope</code> values are within the client's allowed scopes</li>
 </ul>
-<p>If any check fails, the server shows an error page directly — it does NOT redirect back, to prevent open-redirect attacks.</p>`,
+<p>If any check fails, the server shows an error page directly - it does NOT redirect back, to prevent open-redirect attacks.</p>`,
         },
         {
           name: "User Authenticates",
@@ -386,14 +386,14 @@
           to: "Auth Server",
           preview: "POST /login (credentials)",
           description:
-            "User submits credentials directly to the auth server. Multi-factor authentication happens here if configured — the OAuth flow pauses until all factors are verified.",
+            "User submits credentials directly to the auth server. Multi-factor authentication happens here if configured - the OAuth flow pauses until all factors are verified.",
           details: `<h4>Authentication Request</h4>
 <pre>POST /login
 Content-Type: application/x-www-form-urlencoded
 
 username=alice&amp;password=***&amp;csrf_token=xyz789</pre>
 <p>This is a direct browser-to-server POST. After successful authentication, the server may prompt for consent if the requested scopes haven't been approved before.</p>
-<p>The consent screen shows exactly which permissions the app is requesting — the user can selectively deny scopes.</p>`,
+<p>The consent screen shows exactly which permissions the app is requesting - the user can selectively deny scopes.</p>`,
         },
         {
           name: "Authorization Code",
@@ -407,8 +407,8 @@ username=alice&amp;password=***&amp;csrf_token=xyz789</pre>
 Location: https://app.example.com/callback
   ?code=SplxlOBeZQQYbYS6WxSbIA
   &amp;state=af0ifjsldkj</pre>
-<p>The authorization code is single-use and short-lived (typically 30-60 seconds). It is bound to the <code>client_id</code> and <code>redirect_uri</code> — it cannot be used by a different client.</p>
-<p>The client MUST verify that <code>state</code> matches the value sent in step 1. A mismatch means CSRF — abort the flow.</p>`,
+<p>The authorization code is single-use and short-lived (typically 30-60 seconds). It is bound to the <code>client_id</code> and <code>redirect_uri</code> - it cannot be used by a different client.</p>
+<p>The client MUST verify that <code>state</code> matches the value sent in step 1. A mismatch means CSRF - abort the flow.</p>`,
         },
         {
           name: "Token Exchange",
@@ -416,7 +416,7 @@ Location: https://app.example.com/callback
           to: "Auth Server",
           preview: "POST /token (code + verifier)",
           description:
-            "Client exchanges the authorization code for tokens. This is a back-channel request (server-to-server), not through the browser — the code_verifier proves the same client that started the flow is completing it.",
+            "Client exchanges the authorization code for tokens. This is a back-channel request (server-to-server), not through the browser - the code_verifier proves the same client that started the flow is completing it.",
           details: `<h4>Token Request</h4>
 <pre>POST /token
 Content-Type: application/x-www-form-urlencoded
@@ -426,7 +426,7 @@ grant_type=authorization_code
 &amp;redirect_uri=https://app.example.com/callback
 &amp;client_id=spa_client_01
 &amp;code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk</pre>
-<p>The server hashes <code>code_verifier</code> and compares with the <code>code_challenge</code> from step 1. This is the PKCE proof — even without a client secret, it prevents stolen authorization codes from being exchanged by an attacker.</p>`,
+<p>The server hashes <code>code_verifier</code> and compares with the <code>code_challenge</code> from step 1. This is the PKCE proof - even without a client secret, it prevents stolen authorization codes from being exchanged by an attacker.</p>`,
         },
         {
           name: "Tokens Issued",
@@ -443,9 +443,9 @@ grant_type=authorization_code
   "refresh_token": "8xLOxBtZp8",
   "id_token":      "eyJhbGciOiJSUzI1NiJ9.eyJpc3MiOi..."
 }</pre>
-<p><strong>access_token</strong> — short-lived (1 hour), used for API calls. Typically a JWT with claims.</p>
-<p><strong>refresh_token</strong> — long-lived (days/months), used to get new access tokens without re-authentication. Store securely, never expose to the browser.</p>
-<p><strong>id_token</strong> — JWT with user identity claims (sub, name, email). OpenID Connect extension. Validated by the client, never sent to resource servers.</p>`,
+<p><strong>access_token</strong> - short-lived (1 hour), used for API calls. Typically a JWT with claims.</p>
+<p><strong>refresh_token</strong> - long-lived (days/months), used to get new access tokens without re-authentication. Store securely, never expose to the browser.</p>
+<p><strong>id_token</strong> - JWT with user identity claims (sub, name, email). OpenID Connect extension. Validated by the client, never sent to resource servers.</p>`,
         },
         {
           name: "API Request",
@@ -453,13 +453,13 @@ grant_type=authorization_code
           to: "Resource Server",
           preview: "GET /api (Bearer token)",
           description:
-            "Client calls the protected API with the access token in the Authorization header. The token is opaque to the client — it doesn't parse or validate it.",
+            "Client calls the protected API with the access token in the Authorization header. The token is opaque to the client - it doesn't parse or validate it.",
           details: `<h4>Authorized Request</h4>
 <pre>GET /api/v1/user/profile
 Host: api.example.com
 Authorization: Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOi...
 Accept: application/json</pre>
-<p>The token goes in the <code>Authorization</code> header, never in query parameters — URLs get logged by proxies and appear in browser history.</p>
+<p>The token goes in the <code>Authorization</code> header, never in query parameters - URLs get logged by proxies and appear in browser history.</p>
 <p>If the token is expired, the resource server returns <code>401</code> and the client uses the refresh token to get a new access token (back to Auth Server, no user interaction needed).</p>`,
         },
         {
@@ -468,14 +468,14 @@ Accept: application/json</pre>
           to: "Client",
           preview: "200 OK (user data)",
           description:
-            "Resource server validates the JWT, checks scopes, and returns the requested data. The full chain is complete — user authenticated without the client ever seeing their password.",
+            "Resource server validates the JWT, checks scopes, and returns the requested data. The full chain is complete - user authenticated without the client ever seeing their password.",
           details: `<h4>JWT Validation Steps</h4>
 <ol>
 <li>Fetch auth server's public key from <code>/.well-known/jwks.json</code> (cached)</li>
 <li>Verify JWT signature (RS256)</li>
-<li>Check <code>exp</code> claim — reject expired tokens</li>
-<li>Check <code>aud</code> claim — token was issued for this resource server</li>
-<li>Check <code>scope</code> — includes permissions required for this endpoint</li>
+<li>Check <code>exp</code> claim - reject expired tokens</li>
+<li>Check <code>aud</code> claim - token was issued for this resource server</li>
+<li>Check <code>scope</code> - includes permissions required for this endpoint</li>
 </ol>
 <h4>Response</h4>
 <pre>HTTP/1.1 200 OK

@@ -216,7 +216,7 @@ function validateCursorRule(content: string, _isLegacy = false): string[] {
 
   // Body should not be empty
   if (!body.trim()) {
-    errors.push("Rule body is empty — add rule content after frontmatter");
+    errors.push("Rule body is empty - add rule content after frontmatter");
   }
 
   return errors;

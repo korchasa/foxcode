@@ -26,21 +26,21 @@
 - Project Name: FoxCode
 
 ## Project Vision
-Firefox WebExtension providing browser UI for active Claude Code sessions. Real-time bidirectional messaging, page context injection, and browser context tools — via MCP Channel Plugin communicating over WebSocket.
+Firefox WebExtension providing browser UI for active Claude Code sessions. Real-time bidirectional messaging, page context injection, and browser context tools - via MCP Channel Plugin communicating over WebSocket.
 
 ## Project tooling Stack
-- **Extension**: JavaScript (ES6+), HTML, CSS — Firefox WebExtension API (Manifest V2)
-- **Channel Plugin**: Node.js (ES modules) — MCP server with `claude/channel` capability
+- **Extension**: JavaScript (ES6+), HTML, CSS - Firefox WebExtension API (Manifest V2)
+- **Channel Plugin**: Node.js (ES modules) - MCP server with `claude/channel` capability
 - **Dependencies**: `@modelcontextprotocol/sdk`, `ws` (WebSocket)
 - **CLI**: Claude Code CLI v2.1.80+ (`@anthropic-ai/claude-code`)
 - **Platform**: Cross-platform (macOS primary)
 
 ## Architecture
-- **Channel Plugin** (`foxcode/channel/server.mjs`) — MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
-- **WebExtension Sidebar** (`extension/sidebar/`) — Chat UI: message rendering, text input
-- **Background Script** (`extension/background/background.js`) — WebSocket connection management, message routing, tool request handling
-- **Content Script** (`extension/content/content-script.js`) — DOM access, `api.eval()` in page main world
-- **Flow**: Sidebar → Background → WebSocket → Channel Plugin → MCP stdio → Claude Code
+- **Channel Plugin** (`foxcode/channel/server.mjs`) - MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
+- **WebExtension Sidebar** (`extension/sidebar/`) - Chat UI: message rendering, text input
+- **Background Script** (`extension/background/background.js`) - WebSocket connection management, message routing, tool request handling
+- **Content Script** (`extension/content/content-script.js`) - DOM access, `api.eval()` in page main world
+- **Flow**: Sidebar -> Background -> WebSocket -> Channel Plugin -> MCP stdio -> Claude Code
 
 ## Repository Structure
 
@@ -68,29 +68,29 @@ foxcode/
 ├── documents/            # Project docs (SRS, SDS, whiteboards)
 ├── scripts/              # Dev scripts (check.sh, test.sh, dev.sh)
 ├── .mcp.json             # Dev-mode MCP config (local server.mjs)
-└── AGENTS.md             # This file (CLAUDE.md → symlink)
+└── AGENTS.md             # This file (CLAUDE.md -> symlink)
 ```
 
 ## Launch Modes
 
 ### Development Mode (local repo)
-- **MCP config**: root `.mcp.json` — runs `cd foxcode/channel && npm install && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"`, path is relative to repo root
-- **Extension**: loaded via `web-ext run --source-dir extension/` (see `scripts/dev.sh`) or manually via `about:debugging` → Load Temporary Add-on → `extension/manifest.json`
+- **MCP config**: root `.mcp.json` - runs `cd foxcode/channel && npm install && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"`, path is relative to repo root
+- **Extension**: loaded via `web-ext run --source-dir extension/` (see `scripts/dev.sh`) or manually via `about:debugging` -> Load Temporary Add-on -> `extension/manifest.json`
 - **Claude Code**: standard session from repo root; `.mcp.json` auto-detected, no special flags needed
-- **Workflow**: edit code → reload extension in Firefox → test immediately
+- **Workflow**: edit code -> reload extension in Firefox -> test immediately
 
 ### Production Mode (CC Plugin Marketplace)
-- **Install**: `claude /plugin install korchasa/foxcode` — clones repo to `~/.claude/plugins/cache/`, copies `foxcode/` dir as plugin
-- **MCP config**: `foxcode/.mcp.json` — same command but uses `${CLAUDE_PLUGIN_ROOT}` (plugin cache dir) instead of relative path. Dependencies installed at runtime (not cached)
+- **Install**: `claude /plugin install korchasa/foxcode` - clones repo to `~/.claude/plugins/cache/`, copies `foxcode/` dir as plugin
+- **MCP config**: `foxcode/.mcp.json` - same command but uses `${CLAUDE_PLUGIN_ROOT}` (plugin cache dir) instead of relative path. Dependencies installed at runtime (not cached)
 - **Extension**: user runs `/foxcode:foxcode-install` command which launches Firefox via `npx web-ext run` using marketplace clone path (`~/.claude/plugins/marketplaces/korchasa/extension/`) with persistent profile in `.foxcode/firefox-profile/`
 - **Claude Code**: `claude --dangerously-load-development-channels plugin:foxcode@korchasa` (required while channels are in research preview)
-- **Workflow**: install once → launch Firefox via `/foxcode:foxcode-run` → open sidebar
+- **Workflow**: install once -> launch Firefox via `/foxcode:foxcode-run` -> open sidebar
 
 ### Key Differences
 - **MCP server path resolution**: dev uses relative `foxcode/channel/` from repo root; prod uses `${CLAUDE_PLUGIN_ROOT}/channel/` (absolute, expanded by CC plugin system)
 - **Extension source**: dev uses `./extension/` from working dir; prod uses marketplace clone at `~/.claude/plugins/marketplaces/korchasa/extension/`
 - **Firefox profile**: dev uses ephemeral `web-ext` temp profile; prod uses persistent `.foxcode/firefox-profile/` in project dir
-- **CC launch flags**: dev — none; prod — `--dangerously-load-development-channels` required
+- **CC launch flags**: dev - none; prod - `--dangerously-load-development-channels` required
 - **WebSocket port**: both modes use same port range `8787–8886` (BASE_PORT=8787, PORT_RANGE=100), with random start + saved port in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var. Extension discovers active server by probing the entire range in batches
 
 ## Key Decisions
@@ -102,27 +102,27 @@ foxcode/
 - CC Plugin Marketplace for distribution: native install/update/versioning, auto-loads MCP server
 - Channel inside plugin dir (`foxcode/channel/`): bundled with plugin, no npm package. MCP server auto-installs deps on first run via `sh -c "npm install && node server.mjs"`
 - CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported
-- Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy — only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
+- Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
 - Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
-- Channels in research preview: third-party plugins not in Anthropic allowlist → `--dangerously-load-development-channels plugin:foxcode@korchasa` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools).
+- Channels in research preview: third-party plugins not in Anthropic allowlist -> `--dangerously-load-development-channels plugin:foxcode@korchasa` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools).
 - Port range scanning (8787–8886): server picks random port, persists in `~/.foxcode/port`. Extension scans range in batches to discover servers. Multiple CC sessions coexist.
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
-- When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` — it may `cd` or modify env before `node` starts.
+- When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
 
 ## Planning Rules
 
-- **Environment Side-Effects**: Changes to infra/DB/external services → plan MUST include migration/sync/deploy steps.
+- **Environment Side-Effects**: Changes to infra/DB/external services -> plan MUST include migration/sync/deploy steps.
 - **Verification Steps**: Plan MUST include specific verification commands (tests, validation tools, connectivity checks).
-- **Functionality Preservation**: Refactoring/modifications → run existing tests before/after; add new tests if coverage missing.
-- **Data-First**: Integration with external APIs/processes → inspect protocol & data formats BEFORE planning.
-- **Architectural Validation**: Complex logic changes → visualize event sequence (sequence diagram/pseudocode).
-- **Variant Analysis**: Non-obvious path → propose variants with Pros/Cons/Risks per variant + Trade-offs across variants. Quality > quantity. 1 variant OK if path is clear.
+- **Functionality Preservation**: Refactoring/modifications -> run existing tests before/after; add new tests if coverage missing.
+- **Data-First**: Integration with external APIs/processes -> inspect protocol & data formats BEFORE planning.
+- **Architectural Validation**: Complex logic changes -> visualize event sequence (sequence diagram/pseudocode).
+- **Variant Analysis**: Non-obvious path -> propose variants with Pros/Cons/Risks per variant + Trade-offs across variants. Quality > quantity. 1 variant OK if path is clear.
 - **User Decision Gate**: Do NOT detail implementation plan until user explicitly selects a variant.
 - **Plan Persistence**: After variant selection, save the detailed plan to `documents/whiteboards/<YYYY-MM-DD>-<slug>.md` using GODS format. Chat-only plans are lost between sessions.
 - **Proactive Resolution**: Before asking user, exhaust available resources (codebase, docs, web) to find the answer autonomously.
 - **Verify Before Claiming Risk**: During critique/review, check verifiable facts (npm registry, GitHub releases, file existence, API docs) with tools before listing them as risks or open questions.
-- **Verify Config Syntax**: Before using placeholders/variables in config files — check tool documentation for supported syntax. Do NOT write unverified syntax to files.
-- **Distribution Audit**: When changing packaging/distribution — inspect target environment contents (plugin cache, Docker image, npm package) BEFORE implementing.
+- **Verify Config Syntax**: Before using placeholders/variables in config files - check tool documentation for supported syntax. Do NOT write unverified syntax to files.
+- **Distribution Audit**: When changing packaging/distribution - inspect target environment contents (plugin cache, Docker image, npm package) BEFORE implementing.
 
 ## CODE DOCS
 

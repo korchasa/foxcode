@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * FoxCode — Channel plugin for Firefox extension.
+ * FoxCode - Channel plugin for Firefox extension.
  *
  * MCP server that bridges Claude Code ↔ Firefox extension via WebSocket.
  * - Declares claude/channel capability for bidirectional messaging
- * - Exposes reply tool for CC → browser responses
- * - Exposes evalInBrowser tool for CC → browser automation (JS execution with ~30 API helpers)
+ * - Exposes reply tool for CC -> browser responses
+ * - Exposes evalInBrowser tool for CC -> browser automation (JS execution with ~30 API helpers)
  * - WebSocket server on localhost for extension connection
  */
 
@@ -37,7 +37,7 @@ let channelTestResolve = null
 const { wss, port: PORT } = await createWebSocketServer(WebSocketServer, explicitPort)
 const clients = new Set()
 
-/** Pending browser tool requests: request_id → {resolve, reject, timer} */
+/** Pending browser tool requests: request_id -> {resolve, reject, timer} */
 const pendingToolRequests = new Map()
 const TOOL_TIMEOUT_MS = 30_000
 
@@ -108,7 +108,7 @@ function handleExtensionMessage(msg, ws) {
       break
     }
     case 'message': {
-      // Channel test ack from browser — resolve pending verify
+      // Channel test ack from browser - resolve pending verify
       if (msg.text === 'pong') {
         if (channelTestResolve) {
           channelTestResolve(true)
@@ -116,7 +116,7 @@ function handleExtensionMessage(msg, ws) {
         }
         break
       }
-      // FR-2: User message from browser → forward to CC via channel notification
+      // FR-2: User message from browser -> forward to CC via channel notification
       const { content, meta } = buildChannelMeta(msg)
       process.stderr.write(`foxcode: notify channel content=${content.slice(0, 100)}\n`)
       mcp.notification({
@@ -150,9 +150,9 @@ const mcp = new Server(
     instructions: [
       'Messages from the Firefox browser arrive as <channel source="foxcode" chat_id="web" message_id="..." tab_url="..." tab_title="...">.',
       'The tab_url and tab_title attributes show which page the user is currently viewing.',
-      'The browser user reads the Firefox sidebar, not this terminal. Anything you want them to see MUST go through the reply tool — your transcript output never reaches the browser UI.',
+      'The browser user reads the Firefox sidebar, not this terminal. Anything you want them to see MUST go through the reply tool - your transcript output never reaches the browser UI.',
       'Use evalInBrowser tool to execute JS in browser with full browser automation API (click, fill, navigate, snapshot, etc.).',
-      PORT ? `Browser extension connects to ws://localhost:${PORT}.` : 'No WebSocket port available — browser extension cannot connect.',
+      PORT ? `Browser extension connects to ws://localhost:${PORT}.` : 'No WebSocket port available - browser extension cannot connect.',
     ].join('\n'),
   },
 )

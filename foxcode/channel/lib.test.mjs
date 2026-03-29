@@ -221,7 +221,7 @@ describe('createWebSocketServer', () => {
     const { wss, port } = await createWebSocketServer(WebSocketServer, null)
 
     // Cannot control BASE_PORT in test env, so use explicit port test instead:
-    // Occupy a known port, then request it explicitly → should fail gracefully
+    // Occupy a known port, then request it explicitly -> should fail gracefully
     const result = await createWebSocketServer(WebSocketServer, blockedPort)
     assert.equal(result.wss, null)
     assert.equal(result.port, null)

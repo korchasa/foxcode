@@ -16,7 +16,7 @@
     "ghcr.io/devcontainers/features/github-cli:1": {}
     // Stack-specific features added here (e.g., Deno feature)
     // Secondary stack features added here (e.g., Node feature for Deno+Node projects)
-    // AI CLI features added here (e.g., opencode — from registry; Claude Code installed via postCreateCommand)
+    // AI CLI features added here (e.g., opencode - from registry; Claude Code installed via postCreateCommand)
     // Discovered features from project scan (Step 2) added here
   },
 
@@ -53,7 +53,7 @@
     // Global skills bind mount (if enabled)
   ],
 
-  // Runs on HOST before container creation (macOS only — extracts Keychain tokens)
+  // Runs on HOST before container creation (macOS only - extracts Keychain tokens)
   "initializeCommand": "security find-generic-password -s 'Claude Code-credentials' -w > ~/.claude-auth-staging.json 2>/dev/null || echo '{}' > ~/.claude-auth-staging.json",
 
   "postCreateCommand": "{{dependency_install_command}}",
@@ -180,7 +180,7 @@ Docker named volumes are created with root ownership before `remoteUser` takes e
 
 ### Auth forwarding (Claude Code)
 
-Auth tokens live in `~/.claude/.credentials.json` inside the config volume. On first container creation (empty volume), tokens are copied from the host Keychain staging file. On subsequent rebuilds, the volume already has tokens — copy is skipped.
+Auth tokens live in `~/.claude/.credentials.json` inside the config volume. On first container creation (empty volume), tokens are copied from the host Keychain staging file. On subsequent rebuilds, the volume already has tokens - copy is skipped.
 
 **initializeCommand** (runs on host, macOS only):
 ```jsonc
@@ -194,4 +194,4 @@ Auth tokens live in `~/.claude/.credentials.json` inside the config volume. On f
 
 See [auth-forwarding.md](auth-forwarding.md) for full architecture details and warnings.
 
-**WARNING**: Do NOT set `CLAUDE_CONFIG_DIR` in `remoteEnv` — it redirects where Claude looks for `.credentials.json`, breaking the volume auth strategy.
+**WARNING**: Do NOT set `CLAUDE_CONFIG_DIR` in `remoteEnv` - it redirects where Claude looks for `.credentials.json`, breaking the volume auth strategy.

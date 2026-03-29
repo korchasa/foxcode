@@ -1,5 +1,5 @@
 /**
- * FoxCode — Result serializer for tool responses.
+ * FoxCode - Result serializer for tool responses.
  * Converts JS values to string representation for MCP transport.
  * Strings pass through unchanged; objects are JSON-serialized.
  */

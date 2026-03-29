@@ -248,7 +248,7 @@ Deno.test("init: --skip-existing returns path when directory exists", async () =
 });
 
 // ===========================================================================
-// packageCommand — minimal (not exported, depends on `zip` CLI)
+// packageCommand - minimal (not exported, depends on `zip` CLI)
 // ===========================================================================
 
 Deno.test("package: validate_command is importable by package_command", async () => {

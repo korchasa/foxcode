@@ -17,15 +17,15 @@ get committed.
 <context>
 The user has completed a coding task and wants a single command to review and
 commit. This command inlines both workflows:
-1. **Phase 1 — Review** (from `flowai-review`): QA + code review, produces verdict
-2. **Phase 2 — Commit** (from `flowai-commit`): documentation audit, verification,
+1. **Phase 1 - Review** (from `flowai-review`): QA + code review, produces verdict
+2. **Phase 2 - Commit** (from `flowai-commit`): documentation audit, verification,
    atomic grouping, commit
 
 The gate logic prevents committing code that has critical issues.
 
 NOTE: The step_by_step sections of Phase 1 and Phase 2 are kept in sync with
 flowai-review/SKILL.md and flowai-commit/SKILL.md respectively. The sync check
-script (scripts/check-skill-sync.ts) verifies this — if you change one, update
+script (scripts/check-skill-sync.ts) verifies this - if you change one, update
 the other.
 </context>
 
@@ -35,9 +35,9 @@ the other.
 1. **Two Phases**: Execute Phase 1 (review) fully before considering Phase 2
    (commit). Never interleave.
 2. **Gate Logic**: After Phase 1, check the verdict. Only **Approve** proceeds
-   to Phase 2. **Request Changes** or **Needs Discussion** → output the review
+   to Phase 2. **Request Changes** or **Needs Discussion** -> output the review
    report and STOP. Do not commit.
-3. **No partial commit**: If Phase 1 itself fails (errors, crashes), STOP — do
+3. **No partial commit**: If Phase 1 itself fails (errors, crashes), STOP - do
    not proceed to Phase 2.
 4. **Transparency**: Output both review findings and commit results to the user.
 5. **Planning**: Use a task management tool (e.g., `todo_write`, `todowrite`)
@@ -60,7 +60,7 @@ the other.
      or `git log --oneline <base>..HEAD` + `git diff <base>..HEAD` for
      branch-based changes.
    - **Untracked files**: `git diff` does NOT show untracked files. Check
-     `git status` output from step 1 — for each untracked file, read its
+     `git status` output from step 1 - for each untracked file, read its
      content directly and include it in the review scope.
    - Read the original user request and the plan (whiteboard in `documents/whiteboards/` / task list).
    - Look for project conventions in `AGENTS.md` and config files.
@@ -83,7 +83,7 @@ the other.
      added in this diff.
    - **Deleted directories**: If the diff deletes an entire skill, agent, or
      module directory (not just individual files), flag as
-     `[warning] Entire directory deleted — confirm intentional` and ask the
+     `[warning] Entire directory deleted - confirm intentional` and ask the
      user to verify before proceeding.
 
 5. **Code Review: Design & Architecture**
@@ -114,7 +114,7 @@ the other.
      stale comments.
    - **Complexity**: Flag functions > 40 lines or cyclomatic complexity spikes
      introduced in this diff.
-   - **Clarity**: Flag clarity sacrificed for brevity — nested ternaries, dense
+   - **Clarity**: Flag clarity sacrificed for brevity - nested ternaries, dense
      one-liners, overly compact expressions. Explicit code is preferred over
      clever short forms.
 
@@ -122,7 +122,7 @@ the other.
    - If the project has a check command (`deno task check`, `npm run lint`,
      `make check`, etc.), run it and include results.
    - If no check command is found, explicitly note "No automated checks
-     configured" in the report — do not silently skip.
+     configured" in the report - do not silently skip.
    - If tests exist, run them and report failures.
 
 9. **Final Report**
@@ -132,13 +132,13 @@ the other.
    ## Review: [Approve | Request Changes | Needs Discussion]
 
    ### QA Findings
-   - [severity] file:line — description
+   - [severity] file:line - description
 
    ### Code Review Findings
-   - [severity] file:line — description
+   - [severity] file:line - description
 
    ### Automated Checks
-   - [pass|fail|skipped] command — summary
+   - [pass|fail|skipped] command - summary
 
    ### Summary
    - Requirements covered: X/Y
@@ -155,13 +155,13 @@ the other.
 ### Verdict Gate
 
 After completing the review report above:
-- If verdict is `## Review: Approve` → proceed to Phase 2 below.
+- If verdict is `## Review: Approve` -> proceed to Phase 2 below.
 - If verdict is `## Review: Request Changes` or `## Review: Needs Discussion`
-  → output the full review report to the user and **STOP**. Do NOT proceed.
-- If the review phase crashed or produced no verdict → report the error and
+  -> output the full review report to the user and **STOP**. Do NOT proceed.
+- If the review phase crashed or produced no verdict -> report the error and
   **STOP**.
 
-### Phase 2 — Commit
+### Phase 2 - Commit
 
 <step_by_step>
 
@@ -169,11 +169,11 @@ After completing the review report above:
    - Use a task management tool (e.g., todo write) to create a plan based on these steps.
    - Run `git status` to identify ALL changes: modified (unstaged), staged, and **untracked** files.
    - If working directory is clean (no changes at all), report "Nothing to commit" and STOP.
-2. **Documentation Audit & Compression** _(mandatory — do NOT skip)_
+2. **Documentation Audit & Compression** _(mandatory - do NOT skip)_
    - **Check each doc file against the diff** (if `./documents` exists):
-     - `requirements.md` — check diff for new/changed/removed functional or non-functional requirements. If found → update. If not → note "no requirement changes".
-     - `design.md` — check diff for new/changed/removed components, data structures, APIs, or architecture decisions. If found → update. If not → note "no design changes".
-     - `AGENTS.md` — check diff for changes to project rules, agent definitions, or conventions. If found → update. If not → note "no agent rule changes".
+     - `requirements.md` - check diff for new/changed/removed functional or non-functional requirements. If found -> update. If not -> note "no requirement changes".
+     - `design.md` - check diff for new/changed/removed components, data structures, APIs, or architecture decisions. If found -> update. If not -> note "no design changes".
+     - `AGENTS.md` - check diff for changes to project rules, agent definitions, or conventions. If found -> update. If not -> note "no agent rule changes".
    - **Apply Compression Rules**:
      - Use **combined extractive + abstractive summarization** (preserve all facts, minimize words).
      - Use compact formats: lists, tables, YAML, or Mermaid diagrams.
@@ -182,11 +182,11 @@ After completing the review report above:
    - **Output Documentation Audit Report** (always, even if no updates needed):
      ```
      ### Documentation Audit
-     - requirements.md: [updated | no changes — <reason>]
-     - design.md: [updated | no changes — <reason>]
-     - AGENTS.md: [updated | no changes — <reason>]
+     - requirements.md: [updated | no changes - <reason>]
+     - design.md: [updated | no changes - <reason>]
+     - AGENTS.md: [updated | no changes - <reason>]
      ```
-   - **Gate**: If code changes exist but zero documents were updated, re-examine the diff — new exports, new functions, changed signatures, or new modules almost always require a `design.md` update. Only proceed without updates if you can justify it in the audit report.
+   - **Gate**: If code changes exist but zero documents were updated, re-examine the diff - new exports, new functions, changed signatures, or new modules almost always require a `design.md` update. Only proceed without updates if you can justify it in the audit report.
 3. **Pre-commit Verification**
    - Check for project check command: `deno task check`, `npm run lint`, `make check`, etc. (inspect `deno.json`, `package.json`, `Makefile`).
    - If found, run it. If verification **fails**, report the error and **STOP**. Do NOT proceed to commit.
@@ -210,7 +210,7 @@ After completing the review report above:
 6. **Verify Clean State**
    - Run `git status` to confirm all changes are committed.
    - If uncommitted changes remain, investigate and report to the user.
-7. **Session Complexity Check → Suggest Reflect**
+7. **Session Complexity Check -> Suggest Reflect**
    - After all commits are done, analyze the current conversation for complexity signals:
      - Errors or failed attempts occurred (test failures, lint errors, build errors).
      - Agent retried the same action multiple times.

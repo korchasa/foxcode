@@ -25,7 +25,7 @@ If `connectedClients > 0`:
 Call the `ping` tool. If both `forward` and `reverse` are `true`:
 > Everything is working. Ready to go.
 
-Stop here — no need to launch Firefox.
+Stop here - no need to launch Firefox.
 
 If `forward` is `false` or `reverse` is `false`, continue to Step 3.
 

@@ -34,7 +34,7 @@ The project must support these commands in `deno.json`:
 8. **Sequential Prerequisites**: If the project has build/codegen steps whose output is needed by subsequent checks, those steps MUST complete before parallel checks start.
 9. **Buffered Output**: Each parallel command's stdout/stderr MUST be buffered (piped, not inherited) to prevent interleaving.
 10. **Real-Time Progress**: Print a status line when each command starts and when it finishes (pass/fail).
-11. **Output Ordering**: After all checks complete, print buffered output of passed checks first, then ALL failed checks at the end — for easy debugging.
+11. **Output Ordering**: After all checks complete, print buffered output of passed checks first, then ALL failed checks at the end - for easy debugging.
 12. **No Output Loss**: ALL stdout and stderr from every check MUST be printed regardless of success/failure.
 
 ## Workflow

@@ -4,3 +4,4 @@ channel/node_modules/
 .claude/settings.local.json
 documents/whiteboards/
 .DS_Store
+demo-project/

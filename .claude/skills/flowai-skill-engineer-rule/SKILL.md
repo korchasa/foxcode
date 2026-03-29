@@ -6,15 +6,15 @@ license: Based on https://github.com/anthropics/skills
 
 # Rule Creator
 
-This skill guides through creating persistent rules — instructions that automatically apply to AI agent sessions, enforcing coding standards, project conventions, and file-specific patterns.
+This skill guides through creating persistent rules - instructions that automatically apply to AI agent sessions, enforcing coding standards, project conventions, and file-specific patterns.
 
 ## About Rules
 
 Rules are markdown files with metadata that provide persistent context to AI agents. They differ from skills in that rules are **automatically injected** into every relevant session without explicit invocation.
 
 Rules serve two purposes:
-1. **Always-apply rules** — universal standards for every conversation (coding style, architecture decisions, project conventions)
-2. **Conditional rules** — file-specific patterns triggered when matching files are open (TypeScript conventions for `*.ts`, React patterns for `*.tsx`)
+1. **Always-apply rules** - universal standards for every conversation (coding style, architecture decisions, project conventions)
+2. **Conditional rules** - file-specific patterns triggered when matching files are open (TypeScript conventions for `*.ts`, React patterns for `*.tsx`)
 
 ## IDE Detection and Rule Placement
 
@@ -97,7 +97,7 @@ Rule content here...
 | Field | Type | Description |
 |-------|------|-------------|
 | `description` | string | What the rule does (used for agent discovery when `alwaysApply: false`) |
-| `globs` | string | File pattern — rule applies when matching files are in context |
+| `globs` | string | File pattern - rule applies when matching files are in context |
 | `alwaysApply` | boolean | If `true`, applies to every session regardless of files |
 
 ### Claude Code
@@ -153,10 +153,10 @@ Global user rules: `~/.config/opencode/AGENTS.md`. Falls back to `~/.claude/CLAU
 ### Structure
 
 Every rule should contain:
-1. **Clear title** — what aspect it covers
-2. **Brief context** — why this rule exists (1-2 sentences max)
-3. **The rules themselves** — concrete, actionable instructions
-4. **Examples** — good/bad code patterns when applicable
+1. **Clear title** - what aspect it covers
+2. **Brief context** - why this rule exists (1-2 sentences max)
+3. **The rules themselves** - concrete, actionable instructions
+4. **Examples** - good/bad code patterns when applicable
 
 ### Naming
 
@@ -265,7 +265,7 @@ alwaysApply: true
 
 # Architecture
 
-- Domain logic in `src/domain/` — no framework imports
-- API handlers in `src/api/` — thin, delegate to domain
-- Shared types in `src/types/` — no runtime code
+- Domain logic in `src/domain/` - no framework imports
+- API handlers in `src/api/` - thin, delegate to domain
+- Shared types in `src/types/` - no runtime code
 ```

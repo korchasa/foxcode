@@ -5,14 +5,14 @@ description: Guide for creating effective Subagents (custom agent definitions). 
 
 # Subagent Creator
 
-This skill guides through creating effective Subagents — custom agent definitions that provide specialized AI assistants with focused system prompts.
+This skill guides through creating effective Subagents - custom agent definitions that provide specialized AI assistants with focused system prompts.
 
 ## About Subagents
 
 Subagents are specialized AI assistants that extend agent capabilities with:
-1. **Focused behavior** — custom system prompts for specific domains or tasks
-2. **Context isolation** — separate conversations that preserve your main context
-3. **Reusable configurations** — shareable agent definitions across projects or users
+1. **Focused behavior** - custom system prompts for specific domains or tasks
+2. **Context isolation** - separate conversations that preserve your main context
+3. **Reusable configurations** - shareable agent definitions across projects or users
 
 ## IDE Detection and Subagent Placement
 
@@ -36,10 +36,10 @@ Subagents work across multiple IDEs. Before creating a subagent, determine the c
 ### Detection Strategy
 
 1. Check for IDE-specific markers in the project:
-   - `.cursor/` directory → Cursor
-   - `.claude/` directory → Claude Code
-   - `.opencode/` directory or `opencode.json` → OpenCode
-2. If multiple detected or none → ask the user
+   - `.cursor/` directory -> Cursor
+   - `.claude/` directory -> Claude Code
+   - `.opencode/` directory or `opencode.json` -> OpenCode
+2. If multiple detected or none -> ask the user
 3. Ask: personal subagent (user-level) or project subagent (shared via repo)?
 
 **IMPORTANT**: Never create subagents in `~/.cursor/agents-cursor/` (reserved for Cursor internals) or other IDE-reserved directories.
@@ -50,8 +50,8 @@ Subagents work across multiple IDEs. Before creating a subagent, determine the c
 
 Each subagent should excel at **one specific task**.
 
-- Good: `code-reviewer` — focused on reviewing code quality
-- Bad: `helper` — too broad, overlaps with default agent
+- Good: `code-reviewer` - focused on reviewing code quality
+- Bad: `helper` - too broad, overlaps with default agent
 
 ### Clear Delegation Triggers
 

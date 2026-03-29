@@ -1,5 +1,5 @@
 /**
- * FoxCode — Sidebar UI.
+ * FoxCode - Sidebar UI.
  * Connects to background script, renders messages, handles input.
  */
 
@@ -251,8 +251,8 @@ function addToolResultMessage(msg) {
 /**
  * Extract a short project label from server telemetry.
  * Uses projectDir (FOXCODE_PROJECT_DIR) when available, falls back to pluginRoot.
- * e.g. "/Users/foo/www/4ra" → "4ra"
- * e.g. "/home/foo/www/sandbox/foxcode" → "sandbox/foxcode"
+ * e.g. "/Users/foo/www/4ra" -> "4ra"
+ * e.g. "/home/foo/www/sandbox/foxcode" -> "sandbox/foxcode"
  */
 function projectLabel(server) {
   const path = server.projectDir || server.pluginRoot

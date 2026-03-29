@@ -71,7 +71,7 @@ npx web-ext run \
   --firefox="$(which firefox || echo '/Applications/Firefox.app/Contents/MacOS/firefox')"
 ```
 
-Explain to the user: A separate Firefox window will open with FoxCode pre-installed. Your existing Firefox stays untouched. The profile is stored in `.foxcode/firefox-profile/` — logins, cookies, and settings persist between sessions. Open the sidebar via **View > Sidebar > FoxCode**.
+Explain to the user: A separate Firefox window will open with FoxCode pre-installed. Your existing Firefox stays untouched. The profile is stored in `.foxcode/firefox-profile/` - logins, cookies, and settings persist between sessions. Open the sidebar via **View > Sidebar > FoxCode**.
 
 ---
 

@@ -69,8 +69,8 @@ Hooks defined in `hooks.json`. Priority (highest to lowest): Enterprise > Team (
 |-------|------|---------|-------------|
 | `command` | string | required | Shell command or script path |
 | `type` | `"command"` \| `"prompt"` | `"command"` | Execution type |
-| `timeout` | number (seconds) | — | Max execution time |
-| `matcher` | string/object | — | Regex filter for when hook fires |
+| `timeout` | number (seconds) | - | Max execution time |
+| `matcher` | string/object | - | Regex filter for when hook fires |
 | `failClosed` | boolean | `false` | Block action if hook fails |
 | `loop_limit` | number \| null | `5` | Max auto-followups (stop/subagentStop only). null = unlimited |
 
@@ -123,8 +123,8 @@ All hooks receive: `conversation_id`, `generation_id`, `model`, `hook_event_name
 
 Cursor supports loading Claude Code hooks from `.claude/settings.json` (requires "Third-party skills" enabled in Settings > Features).
 
-Event mapping: `PreToolUse` → `preToolUse`, `PostToolUse` → `postToolUse`, `UserPromptSubmit` → `beforeSubmitPrompt`, `Stop` → `stop`, `SubagentStop` → `subagentStop`, `SessionStart` → `sessionStart`, `SessionEnd` → `sessionEnd`, `PreCompact` → `preCompact`.
+Event mapping: `PreToolUse` -> `preToolUse`, `PostToolUse` -> `postToolUse`, `UserPromptSubmit` -> `beforeSubmitPrompt`, `Stop` -> `stop`, `SubagentStop` -> `subagentStop`, `SessionStart` -> `sessionStart`, `SessionEnd` -> `sessionEnd`, `PreCompact` -> `preCompact`.
 
-Tool name mapping: `Bash` → `Shell`, `Read` → `Read`, `Write` → `Write/Edit`, `Grep` → `Grep`, `Task` → `Task`. No Cursor equivalent for `Glob`, `WebFetch`, `WebSearch`.
+Tool name mapping: `Bash` -> `Shell`, `Read` -> `Read`, `Write` -> `Write/Edit`, `Grep` -> `Grep`, `Task` -> `Task`. No Cursor equivalent for `Glob`, `WebFetch`, `WebSearch`.
 
 Unsupported Claude Code features: `Notification`, `PermissionRequest` events.

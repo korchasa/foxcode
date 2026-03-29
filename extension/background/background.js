@@ -1,5 +1,5 @@
 /**
- * FoxCode — Background script.
+ * FoxCode - Background script.
  * Manages WebSocket connection to channel server and routes messages
  * between sidebar, content script, and channel.
  *
@@ -8,7 +8,7 @@
 
 /* global browser, WebSocket */
 
-// browser-api.js and dom-helpers.js are ES modules — background script (Manifest V2)
+// browser-api.js and dom-helpers.js are ES modules - background script (Manifest V2)
 // cannot use import. We load them via importScripts() isn't available either.
 // Instead, the factory and helpers are inlined below via build step or loaded as
 // additional background scripts in manifest.json.
@@ -168,7 +168,7 @@ function connectToPort(port) {
 async function connect() {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return
 
-  // Fast path: probe saved/active port directly — avoids full range scan on reconnect
+  // Fast path: probe saved/active port directly - avoids full range scan on reconnect
   const savedPort = activePort ?? await loadSavedPort()
   if (savedPort) {
     const quick = await probePort(savedPort)

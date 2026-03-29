@@ -7,7 +7,7 @@
  * Output (stdout): JSON { "ok": bool, "result": { "valid": bool, "file": string, "errors": string[] } }
  * Diagnostics: stderr
  *
- * Requires: npx (Node.js) — mmdc is invoked via `npx -y -p @mermaid-js/mermaid-cli mmdc`.
+ * Requires: npx (Node.js) - mmdc is invoked via `npx -y -p @mermaid-js/mermaid-cli mmdc`.
  */
 
 export interface ValidateResult {

@@ -40,7 +40,7 @@ Input sources:
    specific file and line in the diff.
 3. **Two roles, one pass**: Produce findings under two categories (QA, Code
    Review) but run them in parallel, not sequentially.
-4. **Verification**: Do not assume it works — read files, run project checks
+4. **Verification**: Do not assume it works - read files, run project checks
    (linter, tests, type-checker) if available.
 5. **Mandatory**: Use a task management tool (e.g., `todo_write`, `todowrite`)
    to track the execution steps of this review.
@@ -67,7 +67,7 @@ Input sources:
      or `git log --oneline <base>..HEAD` + `git diff <base>..HEAD` for
      branch-based changes.
    - **Untracked files**: `git diff` does NOT show untracked files. Check
-     `git status` output from step 1 — for each untracked file, read its
+     `git status` output from step 1 - for each untracked file, read its
      content directly and include it in the review scope.
    - Read the original user request and the plan (whiteboard in `documents/whiteboards/` / task list).
    - Look for project conventions in `AGENTS.md` and config files.
@@ -90,7 +90,7 @@ Input sources:
      added in this diff.
    - **Deleted directories**: If the diff deletes an entire skill, agent, or
      module directory (not just individual files), flag as
-     `[warning] Entire directory deleted — confirm intentional` and ask the
+     `[warning] Entire directory deleted - confirm intentional` and ask the
      user to verify before proceeding.
 
 5. **Code Review: Design & Architecture**
@@ -121,7 +121,7 @@ Input sources:
      stale comments.
    - **Complexity**: Flag functions > 40 lines or cyclomatic complexity spikes
      introduced in this diff.
-   - **Clarity**: Flag clarity sacrificed for brevity — nested ternaries, dense
+   - **Clarity**: Flag clarity sacrificed for brevity - nested ternaries, dense
      one-liners, overly compact expressions. Explicit code is preferred over
      clever short forms.
 
@@ -129,7 +129,7 @@ Input sources:
    - If the project has a check command (`deno task check`, `npm run lint`,
      `make check`, etc.), run it and include results.
    - If no check command is found, explicitly note "No automated checks
-     configured" in the report — do not silently skip.
+     configured" in the report - do not silently skip.
    - If tests exist, run them and report failures.
 
 9. **Final Report**
@@ -139,13 +139,13 @@ Input sources:
    ## Review: [Approve | Request Changes | Needs Discussion]
 
    ### QA Findings
-   - [severity] file:line — description
+   - [severity] file:line - description
 
    ### Code Review Findings
-   - [severity] file:line — description
+   - [severity] file:line - description
 
    ### Automated Checks
-   - [pass|fail|skipped] command — summary
+   - [pass|fail|skipped] command - summary
 
    ### Summary
    - Requirements covered: X/Y

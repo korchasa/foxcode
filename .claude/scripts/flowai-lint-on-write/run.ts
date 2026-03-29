@@ -2,7 +2,7 @@
 
 /**
  * flowai-lint-on-write hook: auto-lint ts/js/py files after Write/Edit.
- * PostToolUse hook — exit 0, stdout JSON with additionalContext on errors.
+ * PostToolUse hook - exit 0, stdout JSON with additionalContext on errors.
  */
 
 /** Determine which linter to use based on file extension. */
@@ -51,13 +51,13 @@ export async function runLint(
       return null;
     }
   } catch {
-    // Linter not found — graceful degradation
+    // Linter not found - graceful degradation
     return null;
   }
   return null;
 }
 
-// --- Entry point (stdin → stdout) ---
+// --- Entry point (stdin -> stdout) ---
 if (import.meta.main) {
   const input = JSON.parse(await new Response(Deno.stdin.readable).text());
   const filePath: string = input?.tool_input?.file_path ??

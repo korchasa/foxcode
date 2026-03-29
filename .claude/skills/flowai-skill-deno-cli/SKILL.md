@@ -54,9 +54,9 @@ Deno is secure by default. When using `deno run` or `deno test`, you **must** ex
 
 Some Deno APIs require explicit opt-in via `--unstable-*` flags or `deno.json` config:
 
-- `Deno.openKv()` → `--unstable-kv` or `"unstable": ["kv"]` in deno.json
-- `Deno.cron()` → `--unstable-cron` or `"unstable": ["cron"]` in deno.json
-- `new Deno.UnsafeWindowSurface()` → `--unstable-webgpu`
+- `Deno.openKv()` -> `--unstable-kv` or `"unstable": ["kv"]` in deno.json
+- `Deno.cron()` -> `--unstable-cron` or `"unstable": ["cron"]` in deno.json
+- `new Deno.UnsafeWindowSurface()` -> `--unstable-webgpu`
 
 When reviewing code, check for unstable API usage and ensure the corresponding flag is set.
 

@@ -13,7 +13,7 @@
 - **STRICT COMPLIANCE**: AGENTS.md, README.md, SRS, SDS.
 - **Workflow**: New/Updated req -> Update SRS -> Update SDS -> Update README (if public-facing changes) -> Implement.
 - **Status**: `[x]` = implemented, `[ ]` = pending.
-- **Evidence**: Every `[x]` acceptance criterion MUST include evidence — file
+- **Evidence**: Every `[x]` acceptance criterion MUST include evidence - file
   paths with line numbers proving implementation. Format:
   `- [x] Criterion text. Evidence: \`path/to/file.ts:42\`, \`other/file.md:10\``
   Without evidence, criterion stays `[ ]`.
@@ -81,7 +81,7 @@
 - Examples: `2026-03-24-add-dark-mode.md`, `2026-03-24-fix-auth-bug.md`.
 - Do NOT reuse another session's whiteboard. Create a new file.
 - Issue or plan in GODS format.
-- Directory is gitignored. Files accumulate — this is expected.
+- Directory is gitignored. Files accumulate - this is expected.
 
 ### GODS Format
 

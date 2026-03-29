@@ -19,15 +19,15 @@ between the "client" and the "executor":
 
 **Structure:**
 
-- **G — Goal:** Why are we performing the task? What is the business goal?
+- **G - Goal:** Why are we performing the task? What is the business goal?
 
-- **O — Overview:** What is happening now? Why did the task arise? What is
+- **O - Overview:** What is happening now? Why did the task arise? What is
   happening around it?
 
-- **D — Definition of Done:** When do we consider the task completed? By what
+- **D - Definition of Done:** When do we consider the task completed? By what
   criteria?
 
-- **S — Solution:** How can the task be solved?
+- **S - Solution:** How can the task be solved?
 
 ---
 
@@ -37,7 +37,7 @@ between the "client" and the "executor":
 
 - **Goal:** Restore the CI/CD pipeline so that deployment delays do not exceed 1
   hour.
-- **Overview:** Updated the Jenkins plugin → 5 builds with errors → version
+- **Overview:** Updated the Jenkins plugin -> 5 builds with errors -> version
   incompatible.
 - **Definition of Done:** All builds pass without errors within a day, tests
   ≥98% successful, team notified.
@@ -49,7 +49,7 @@ between the "client" and the "executor":
 #### 2. Operational Tasks (Platform team)
 
 - **Goal:** Update the monitoring system to reduce false positives.
-- **Overview:** Outdated rules → too many alerts.
+- **Overview:** Outdated rules -> too many alerts.
 - **Definition of Done:** False positives ↓80%, checks passed, documentation
   updated.
 - **Solution:** Use a ready-made runbook and scripts.

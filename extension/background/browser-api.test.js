@@ -387,12 +387,12 @@ describe('createBrowserApi', () => {
       mocks.tabs.create = async ({ url }) => { createCount++; return { id: 50 } }
       mocks.tabs.update = async (id, opts) => { updateCalls.push({ id, ...opts }) }
 
-      // First navigate — creates tab
+      // First navigate - creates tab
       const p1 = api.navigate('https://first.com')
       setTimeout(() => mocks.webNavigation.onCompleted._fire({ tabId: 50, frameId: 0 }), 10)
       await p1
 
-      // Second navigate — reuses managed tab and activates it
+      // Second navigate - reuses managed tab and activates it
       const p2 = api.navigate('https://second.com')
       setTimeout(() => mocks.webNavigation.onCompleted._fire({ tabId: 50, frameId: 0 }), 10)
       await p2
@@ -474,7 +474,7 @@ describe('createBrowserApi', () => {
       // Close managed tab
       await api.closeTab()
 
-      // Second navigate — should create new tab
+      // Second navigate - should create new tab
       const p2 = api.navigate('https://second.com')
       setTimeout(() => mocks.webNavigation.onCompleted._fire({ tabId: 52, frameId: 0 }), 10)
       await p2
@@ -522,7 +522,7 @@ describe('createBrowserApi', () => {
       await api.closeTab(1)
       assert.equal(removedId, 50)
 
-      // Verify managed tab is reset — next click targets active tab
+      // Verify managed tab is reset - next click targets active tab
       let executedOnTabId = null
       mocks.tabs.executeScript = async (tabId) => { executedOnTabId = tabId; return [{ ok: true }] }
       await api.click('#btn')

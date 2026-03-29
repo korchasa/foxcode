@@ -5,11 +5,11 @@ description: Guidelines for writing comprehensive Product Requirements Documents
 
 # How to Write a Product Requirements Document (PRD)
 
-> **CRITICAL**: MUST save the final PRD to a file (e.g., `documents/prd-<slug>.md`). Do NOT only output in chat — always persist to disk.
+> **CRITICAL**: MUST save the final PRD to a file (e.g., `documents/prd-<slug>.md`). Do NOT only output in chat - always persist to disk.
 
 When generating or refining a Product Requirements Document (PRD), follow these
 guidelines to ensure clarity, completeness, and alignment. This rule is designed
-to apply "Prompt Engineering" principles—clarity, constraints, and structure—to
+to apply "Prompt Engineering" principles-clarity, constraints, and structure-to
 documentation.
 
 ## 1. Core Principles
@@ -34,7 +34,7 @@ When asked to write a PRD:
 3. **Drafting**: Use the template below.
 4. **Review**: Check against the "Bad vs Good" examples in Section 4.
 5. **Persist**: MUST write the final PRD to a file (e.g., `documents/prd-<slug>.md`
-   or a path specified by the user). Do NOT only output the PRD in chat — always
+   or a path specified by the user). Do NOT only output the PRD in chat - always
    save it to disk using the file write tool (Write, write_to_file, etc.).
 
 ## 3. PRD Template

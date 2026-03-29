@@ -1,6 +1,6 @@
 /**
  * Pure functions generating injectable JS code strings for DOM operations.
- * No browser API dependency — fully testable in Node.js.
+ * No browser API dependency - fully testable in Node.js.
  *
  * Plain function declarations: global in browser background, importable via test wrapper.
  */

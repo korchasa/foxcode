@@ -21,9 +21,9 @@ The user wants to bootstrap an AI agent's understanding of the project. The agen
 - **Brownfield (Existing Projects)**: Requires discovery, reverse-engineering architecture, and **extracting existing instructions** from `./AGENTS.md` into the appropriate subdirectory files.
 
 **File Structure**: flowai-init produces 3 AGENTS.md files:
-- `./AGENTS.md` — core agent rules, project metadata, planning rules, TDD flow
-- `./documents/AGENTS.md` — documentation system rules (SRS/SDS/GODS formats, compressed style)
-- `./scripts/AGENTS.md` — development commands (standard interface, detected commands)
+- `./AGENTS.md` - core agent rules, project metadata, planning rules, TDD flow
+- `./documents/AGENTS.md` - documentation system rules (SRS/SDS/GODS formats, compressed style)
+- `./scripts/AGENTS.md` - development commands (standard interface, detected commands)
 </context>
 
 ## Rules & Constraints
@@ -114,9 +114,9 @@ The user wants to bootstrap an AI agent's understanding of the project. The agen
 
 6. **Generate AGENTS.md Files**
    - Read template files from `assets/` directory:
-     - `AGENTS.template.md` — reference for `./AGENTS.md`
-     - `AGENTS.documents.template.md` — fallback for `./documents/AGENTS.md`
-     - `AGENTS.scripts.template.md` — fallback for `./scripts/AGENTS.md`
+     - `AGENTS.template.md` - reference for `./AGENTS.md`
+     - `AGENTS.documents.template.md` - fallback for `./documents/AGENTS.md`
+     - `AGENTS.scripts.template.md` - fallback for `./scripts/AGENTS.md`
 
    - **For Greenfield**: Fill templates with interview data. Replace `{{PLACEHOLDERS}}` with actual values.
 

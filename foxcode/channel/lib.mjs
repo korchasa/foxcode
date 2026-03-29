@@ -1,5 +1,5 @@
 /**
- * FoxCode — Channel plugin shared logic.
+ * FoxCode - Channel plugin shared logic.
  * Pure functions and protocol definitions, testable without MCP/WebSocket.
  */
 
@@ -75,7 +75,7 @@ export function hasChannelCapability(clientCapabilities) {
 
 /**
  * Assert that the MCP client (Claude Code) advertises claude/channel support.
- * Throws if the capability is missing — meaning Claude was launched without
+ * Throws if the capability is missing - meaning Claude was launched without
  * --dangerously-load-development-channels plugin:<name>@<marketplace>.
  * @param {object|undefined} clientCapabilities - from mcp.getClientCapabilities()
  */
@@ -201,7 +201,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: 'ping',
-    description: 'Test connectivity: CC → WebSocket → browser → WebSocket → CC. Returns { forward: bool, reverse: bool }.',
+    description: 'Test connectivity: CC -> WebSocket -> browser -> WebSocket -> CC. Returns { forward: bool, reverse: bool }.',
     inputSchema: {
       type: 'object',
       properties: {},
@@ -228,7 +228,7 @@ export const TOOL_DEFINITIONS = [
       'Subsequent operations target this managed tab. closeTab() without args closes it;',
       'next navigate() creates a fresh tab.',
       '',
-      'Usage: write JS code using `api` object. All functions are methods of `api` — call as `api.method()` or destructure first: `const {method} = api`.',
+      'Usage: write JS code using `api` object. All functions are methods of `api` - call as `api.method()` or destructure first: `const {method} = api`.',
       'All selector-based helpers auto-wait for element (poll 100ms, default timeout 2000ms).',
       'Override: pass {timeout: 5000} as last arg.',
       '',
@@ -240,20 +240,20 @@ export const TOOL_DEFINITIONS = [
       '  api.scrollTo(x,y), api.scrollBy(dx,dy)',
       '- Query: api.$(sel,opts?), api.$$(sel,opts?), api.snapshot(sel?,opts?),',
       '  api.getTitle(), api.getUrl(), api.getSelectedText()',
-      '- Eval: api.eval(expr) — execute in page JS context (access page vars, React state)',
+      '- Eval: api.eval(expr) - execute in page JS context (access page vars, React state)',
       '- Navigation: api.navigate(url), api.goBack(), api.goForward(), api.reload()',
-      '  — all await page load',
+      '  - all await page load',
       '- Tabs: api.getTabs(), api.newTab(url?), api.closeTab(idx?), api.selectTab(idx)',
       '  closeTab() without args closes managed tab; with idx closes by index',
       '- Storage: api.localStorage.{list,get,set,delete,clear}(),',
       '  api.sessionStorage.{…}()',
       '- Cookies: api.getCookies(filter?), api.setCookie(details),',
       '  api.deleteCookie(name,url)',
-      '- Window: api.resize(w,h), api.screenshot() → base64',
+      '- Window: api.resize(w,h), api.screenshot() -> base64',
       '- Dialog: api.interceptDialog("accept"|"dismiss")',
       '- Console: api.captureConsole(), api.getConsoleLogs()',
       '',
-      'opts = {timeout: ms} — override auto-wait timeout per call',
+      'opts = {timeout: ms} - override auto-wait timeout per call',
       '',
       'Example:',
       'await api.navigate("https://example.com/login");',

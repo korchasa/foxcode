@@ -46,15 +46,15 @@ Repeating manual actions that could be codified:
 
 ### Target Artifact Taxonomy
 When proposing a fix, classify *where* it belongs:
-- **Project Docs** (AGENTS.md, README, SRS, SDS) — persistent project-wide context, conventions, stack info.
-- **Rule** (glob-triggered IDE rule) — formatting, style, or behavioral constraint scoped to specific files.
-- **Skill** (multi-step workflow) — repeatable procedure the agent can follow.
-- **Command** (one-shot action) — single-purpose shortcut wrapping multiple steps.
-- **Hook** (automated check) — deterministic validation triggered by file save or pre-commit.
-- **Code Comment** — inline explanation of non-obvious logic in source code.
+- **Project Docs** (AGENTS.md, README, SRS, SDS) - persistent project-wide context, conventions, stack info.
+- **Rule** (glob-triggered IDE rule) - formatting, style, or behavioral constraint scoped to specific files.
+- **Skill** (multi-step workflow) - repeatable procedure the agent can follow.
+- **Command** (one-shot action) - single-purpose shortcut wrapping multiple steps.
+- **Hook** (automated check) - deterministic validation triggered by file save or pre-commit.
+- **Code Comment** - inline explanation of non-obvious logic in source code.
 
 ### Undocumented Discoveries
-**Universally useful** knowledge gained during task execution that exists only in the conversation and is not persisted in project docs/rules/instructions. Only facts relevant to most future tasks qualify — discard one-off or task-specific details:
+**Universally useful** knowledge gained during task execution that exists only in the conversation and is not persisted in project docs/rules/instructions. Only facts relevant to most future tasks qualify - discard one-off or task-specific details:
 - **Implicit Conventions**: Patterns, naming rules, or constraints discovered empirically (e.g., "API returns 429 after 10 req/s", "field X must be set before Y").
 - **Environment Quirks**: Non-obvious tooling behavior, version-specific bugs, platform differences found by trial and error.
 - **Architectural Insights**: Discovered dependencies, data flows, or coupling between components not documented anywhere.
@@ -136,23 +136,23 @@ When proposing a fix, classify *where* it belongs:
    - A discovery qualifies if ALL three conditions are met:
      (a) it was essential to solving the task or avoiding an error,
      (b) a future agent starting a new session would not have access to it,
-     (c) it is **universally useful** — applicable to most future tasks in this project, not just the current one.
+     (c) it is **universally useful** - applicable to most future tasks in this project, not just the current one.
    - **Discard** task-specific, one-off, or narrow facts that won't help in other contexts (e.g., "file X had a typo on line 42", "user prefers blue buttons").
    - **Keep** knowledge that affects how the project is built, run, tested, or deployed in general (e.g., "API requires header X for all endpoints", "tests must run sequentially due to shared DB state", "config changes require service restart").
 
 10. **Identify Automation Opportunities**
    Scan the session for repeating manual work that could be codified:
-   - **Repeated workflows**: Was a multi-step sequence performed manually that is likely to recur? → suggest a skill or command.
-   - **Ad-hoc decisions**: Were formatting, naming, or structural choices made without a documented rule? → suggest a rule.
-   - **Manual checks**: Were invariants verified by the agent manually (e.g., "check that file has frontmatter") that a hook could enforce? → suggest a hook.
+   - **Repeated workflows**: Was a multi-step sequence performed manually that is likely to recur? -> suggest a skill or command.
+   - **Ad-hoc decisions**: Were formatting, naming, or structural choices made without a documented rule? -> suggest a rule.
+   - **Manual checks**: Were invariants verified by the agent manually (e.g., "check that file has frontmatter") that a hook could enforce? -> suggest a hook.
    - Only include items that would save effort across multiple future tasks.
 
 11. **Cross-Session Pattern Analysis**
    If session history was loaded in step 3:
    - For each issue found in steps 4-10, check if a **similar issue** appeared in previous sessions.
    - Classify each issue as:
-     - **Recurring** (appeared in 2+ sessions with similar root cause) — requires a systemic fix (rule, hook, skill, or architectural change).
-     - **Isolated** (appeared only in the current session) — may be a one-off; propose a targeted fix but note the lower priority.
+     - **Recurring** (appeared in 2+ sessions with similar root cause) - requires a systemic fix (rule, hook, skill, or architectural change).
+     - **Isolated** (appeared only in the current session) - may be a one-off; propose a targeted fix but note the lower priority.
    - For recurring patterns, include: frequency (N sessions out of M total), pattern signature, and why it keeps happening.
    - Recurring patterns MUST be prioritized above isolated issues in the report.
 
@@ -170,9 +170,9 @@ When proposing a fix, classify *where* it belongs:
    1. **[Process] Retried 3x without strategy change**
       - Artifact: Rule (AGENTS.md)
       - Fix: Add backoff rule
-      - Evidence: steps 5-7 in transcript — same `sed` command repeated
+      - Evidence: steps 5-7 in transcript - same `sed` command repeated
    2. **[Technical] Ignored existing error handling pattern**
-      - Artifact: —
+      - Artifact: -
       - Fix: Check similar code before implementing
       - Evidence: agent wrote try/catch while project uses Result type
    3. **[Missing] Never read AGENTS.md before starting**
@@ -180,10 +180,10 @@ When proposing a fix, classify *where* it belongs:
       - Fix: Add "read project docs first" rule
       - Evidence: agent guessed project stack, got it wrong
    4. **[Redundant] Read entire 2000-line log file**
-      - Artifact: —
+      - Artifact: -
       - Fix: Use grep/search instead of full read
       - Evidence: only line 1842 was relevant
-   5. **[Discovery] API returns 429 after 10 req/s — not documented**
+   5. **[Discovery] API returns 429 after 10 req/s - not documented**
       - Artifact: Project Docs (docs/api.md)
       - Fix: Add rate limit info
       - Evidence: agent hit 429 twice before adjusting request rate
@@ -194,7 +194,7 @@ When proposing a fix, classify *where* it belongs:
    7. **[Recurring] Stale mocks cause TypeError in test fixes (3/3 sessions)**
       - Artifact: Rule (AGENTS.md) + Skill (mock refresh)
       - Fix: Add rule "always regenerate mocks from current interfaces before fixing tests"; create a skill for automated mock refresh
-      - Evidence: sessions 2025-12-01, 2025-12-15, 2026-01-10 — same pattern of trial-and-error mock editing
+      - Evidence: sessions 2025-12-01, 2025-12-15, 2026-01-10 - same pattern of trial-and-error mock editing
       - Priority: HIGH (systemic, not isolated)
 
 13. **Report Findings**

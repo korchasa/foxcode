@@ -2,7 +2,7 @@
   "name": "korchasa",
   "owner": { "name": "korchasa" },
   "metadata": {
-    "description": "FoxCode — Firefox browser UI for Claude Code sessions"
+    "description": "FoxCode - Firefox browser UI for Claude Code sessions"
   },
   "plugins": [
     {

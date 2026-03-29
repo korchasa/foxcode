@@ -2,7 +2,7 @@
 
 /**
  * flowai-test-before-commit hook: block git commit if tests fail.
- * PreToolUse hook — exit 0 = allow, exit 2 = block.
+ * PreToolUse hook - exit 0 = allow, exit 2 = block.
  */
 
 /** Check if the command is a git commit (not echoed or printed). */
@@ -37,7 +37,7 @@ export async function detectRunner(
   return null;
 }
 
-// --- Entry point (stdin → exit code) ---
+// --- Entry point (stdin -> exit code) ---
 if (import.meta.main) {
   const input = JSON.parse(await new Response(Deno.stdin.readable).text());
   const command: string = input?.tool_input?.command ?? "";
@@ -50,7 +50,7 @@ if (import.meta.main) {
 
   const runner = await detectRunner(cwd);
   if (!runner) {
-    // No test runner found — allow commit
+    // No test runner found - allow commit
     Deno.exit(0);
   }
 

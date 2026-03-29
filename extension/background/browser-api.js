@@ -1,5 +1,5 @@
 /**
- * Browser API factory — creates the `api` object injected into evalInBrowser code.
+ * Browser API factory - creates the `api` object injected into evalInBrowser code.
  * Receives browser dependencies via DI for testability.
  *
  * In browser: dom-helpers.js loaded before this file, functions are global.

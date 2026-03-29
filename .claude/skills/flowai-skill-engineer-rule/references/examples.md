@@ -62,9 +62,9 @@ alwaysApply: true
 
 # Layer Boundaries
 
-- `src/domain/` — pure business logic, no framework imports
-- `src/api/` — thin handlers, delegate to domain
-- `src/infra/` — database, external services
+- `src/domain/` - pure business logic, no framework imports
+- `src/api/` - thin handlers, delegate to domain
+- `src/infra/` - database, external services
 - Never import from `api/` or `infra/` in `domain/`
 ```
 
@@ -121,7 +121,7 @@ paths: src/**/*.ts
 # TypeScript Standards
 
 - Strict mode enabled
-- No `any` — use `unknown` + type guards
+- No `any` - use `unknown` + type guards
 - Prefer `interface` over `type` for object shapes
 - Use `readonly` for immutable properties
 ```

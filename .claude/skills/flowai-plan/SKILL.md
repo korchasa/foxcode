@@ -49,10 +49,10 @@ You are autonomous and proactive. You exhaust all available resources (codebase,
    - MUST propose **2+ distinct** implementation approaches for non-trivial tasks.
    - For EACH variant, present: **Pros**, **Cons**, **Risks**, and **Best For** (use cases/constraints it handles).
    - Across all variants, analyze **Trade-offs**: security vs complexity, performance vs maintainability, cost vs features.
-   - **Exception — single variant**: Only offer 1 variant when the task has an obvious path (e.g., "create a text file", "add a config line") with no meaningful trade-offs. Briefly explain why alternatives don't apply.
+   - **Exception - single variant**: Only offer 1 variant when the task has an obvious path (e.g., "create a text file", "add a config line") with no meaningful trade-offs. Briefly explain why alternatives don't apply.
    - Ask user which variant they prefer. Wait for response.
    - When user selects a variant, immediately proceed to fill the Solution section (Step 5). Do NOT stop after receiving the selection.
-5. **Detail Solution (S)** — execute immediately after user selects a variant
+5. **Detail Solution (S)** - execute immediately after user selects a variant
    - Re-read the whiteboard file you created in Step 3.
    - Overwrite the `Solution` section placeholder with concrete implementation steps for the selected variant (follow `### GODS Format` from AGENTS.md).
    - The Solution section MUST contain: files to create/modify, implementation approach, code structure, dependencies, error handling strategy (especially for async/callback conversions), and verification commands.

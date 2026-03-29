@@ -86,7 +86,7 @@ const EXAMPLE_ASSET = `# Example Asset File
 
 Replace with actual asset files (templates, images, fonts, etc.) or delete if not needed.
 
-Asset files are NOT loaded into context — they are used within the output the agent produces.
+Asset files are NOT loaded into context - they are used within the output the agent produces.
 `;
 
 export function titleCaseName(name: string): string {
@@ -131,7 +131,7 @@ export async function initSkill(
       console.error(`Error creating directory: ${e}`);
       return null;
     }
-    // NotFound is expected — directory doesn't exist yet
+    // NotFound is expected - directory doesn't exist yet
   }
 
   try {
@@ -191,7 +191,7 @@ export async function initSkill(
 
   console.error(`\nSkill '${skillName}' initialized at ${skillDir}`);
   console.error("\nNext steps:");
-  console.error("1. Edit SKILL.md — complete TODO items, update description");
+  console.error("1. Edit SKILL.md - complete TODO items, update description");
   console.error(
     "2. Customize or delete example files in scripts/, references/, assets/",
   );

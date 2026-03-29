@@ -10,7 +10,7 @@ This skill provides guidance for creating effective flowai commands.
 
 ## About flowai Commands
 
-Commands are modular, self-contained packages that extend flowai's capabilities by providing specialized knowledge, workflows, and tools. Think of them as "onboarding guides" for specific domains or tasks—they transform flowai from a general-purpose agent into a specialized agent equipped with procedural knowledge that no model can fully possess.
+Commands are modular, self-contained packages that extend flowai's capabilities by providing specialized knowledge, workflows, and tools. Think of them as "onboarding guides" for specific domains or tasks-they transform flowai from a general-purpose agent into a specialized agent equipped with procedural knowledge that no model can fully possess.
 
 ### What Commands Provide
 
@@ -38,10 +38,10 @@ OpenCode supports `$ARGUMENTS`, `$1`-`$N`, `` !`shell command` ``, `@filepath` i
 ### Detection Strategy
 
 1. Check for IDE-specific markers in the project:
-   - `.cursor/` directory → Cursor
-   - `.claude/` directory → Claude Code
-   - `.opencode/` directory or `opencode.json` → OpenCode
-2. If multiple detected or none → ask the user
+   - `.cursor/` directory -> Cursor
+   - `.claude/` directory -> Claude Code
+   - `.opencode/` directory or `opencode.json` -> OpenCode
+2. If multiple detected or none -> ask the user
 3. Ask: personal command (user-level) or project command (shared via repo)?
 
 ## Core Principles
@@ -110,7 +110,7 @@ Documentation and reference material intended to be loaded as needed into contex
 - **Use cases**: Database schemas, API documentation, domain knowledge, company policies, detailed workflow guides
 - **Benefits**: Keeps SKILL.md lean, loaded only when flowai determines it's needed
 - **Best practice**: If files are large (>10k words), include grep search patterns in SKILL.md
-- **Avoid duplication**: Information should live in either SKILL.md or references files, not both. Prefer references files for detailed information unless it's truly core to the command—this keeps SKILL.md lean while making information discoverable without hogging the context window. Keep only essential procedural instructions and workflow guidance in SKILL.md; move detailed reference material, schemas, and examples to references files.
+- **Avoid duplication**: Information should live in either SKILL.md or references files, not both. Prefer references files for detailed information unless it's truly core to the command-this keeps SKILL.md lean while making information discoverable without hogging the context window. Keep only essential procedural instructions and workflow guidance in SKILL.md; move detailed reference material, schemas, and examples to references files.
 
 ##### Assets (`assets/`)
 
