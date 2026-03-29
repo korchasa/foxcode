@@ -3,6 +3,10 @@
  * Pure functions and protocol definitions, testable without MCP/WebSocket.
  */
 
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, dirname } from 'node:path'
+
 /**
  * Sequence counter for message IDs.
  * Exposed as object so tests can reset it.
@@ -86,7 +90,7 @@ export function assertChannelCapability(clientCapabilities, serverName = 'foxcod
 
 /**
  * Build a pong response with server telemetry.
- * @param {{name: string, version: string, pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined}} env
+ * @param {{name: string, version: string, pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined, projectDir: string|undefined}} env
  * @returns {object}
  */
 export function buildPongMessage(env) {
@@ -101,7 +105,82 @@ export function buildPongMessage(env) {
     pendingRequests: env.pendingRequests,
     nodeVersion: env.nodeVersion,
     pluginRoot: env.pluginRoot,
+    projectDir: env.projectDir,
     ts: Date.now(),
+  }
+}
+
+/**
+ * Port range for WebSocket server auto-binding.
+ * Server picks a random start within range to avoid collisions,
+ * then wraps around. Persists last used port in ~/.foxcode/port.
+ */
+export const BASE_PORT = 8787
+export const PORT_RANGE = 100
+
+/** Default path to saved port file. */
+export const PORT_FILE = join(homedir(), '.foxcode', 'port')
+
+/**
+ * Port persistence storage. Replaceable for testing.
+ */
+export const portStorage = {
+  load() {
+    try {
+      const raw = readFileSync(PORT_FILE, 'utf8').trim()
+      const n = Number(raw)
+      return n >= BASE_PORT && n < BASE_PORT + PORT_RANGE ? n : null
+    } catch {
+      return null
+    }
+  },
+  save(port) {
+    mkdirSync(dirname(PORT_FILE), { recursive: true })
+    writeFileSync(PORT_FILE, String(port), 'utf8')
+  },
+}
+
+/**
+ * Create a WebSocketServer bound to an available port in range.
+ * Priority: explicitPort > saved port > random start, wrap around.
+ * @param {typeof import('ws').WebSocketServer} WSSClass - WebSocketServer constructor
+ * @param {number|null} explicitPort - If set, only try this port (FOXCODE_PORT override)
+ * @returns {Promise<{wss: import('ws').WebSocketServer|null, port: number|null}>}
+ */
+export async function createWebSocketServer(WSSClass, explicitPort = null) {
+  if (explicitPort != null) {
+    return tryBindPort(WSSClass, explicitPort)
+  }
+
+  // Build port list: saved port first (if valid), then random-start wrap-around
+  const saved = portStorage.load()
+  const start = saved ?? (BASE_PORT + Math.floor(Math.random() * PORT_RANGE))
+  const ports = []
+  for (let i = 0; i < PORT_RANGE; i++) {
+    ports.push(BASE_PORT + ((start - BASE_PORT + i) % PORT_RANGE))
+  }
+
+  for (const port of ports) {
+    const result = await tryBindPort(WSSClass, port)
+    if (result.wss) {
+      portStorage.save(port)
+      return result
+    }
+  }
+  return { wss: null, port: null }
+}
+
+async function tryBindPort(WSSClass, port) {
+  try {
+    const wss = new WSSClass({ host: '127.0.0.1', port })
+    await new Promise((resolve, reject) => {
+      wss.on('listening', resolve)
+      wss.on('error', reject)
+    })
+    return { wss, port }
+  } catch (err) {
+    if (err.code !== 'EADDRINUSE') throw err
+    return { wss: null, port: null }
   }
 }
 

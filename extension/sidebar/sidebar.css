@@ -84,6 +84,108 @@ body {
   color: var(--text-primary);
 }
 
+/* --- Server bar & picker --- */
+
+.server-bar {
+  flex-shrink: 0;
+  position: relative;
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.server-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.server-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  width: 100%;
+  text-align: left;
+}
+.server-indicator:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.server-indicator::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-connected);
+  flex-shrink: 0;
+}
+
+.server-picker {
+  position: absolute;
+  top: 100%;
+  left: 8px;
+  right: 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 100;
+  padding: 4px;
+}
+.server-picker.hidden { display: none; }
+
+.server-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.server-list-item:hover {
+  background: var(--bg-hover);
+}
+.server-list-item.active {
+  background: var(--bg-hover);
+  border-left: 3px solid var(--accent);
+}
+.server-list-item-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.server-list-item-detail {
+  color: var(--text-meta);
+  font-size: 11px;
+}
+
+.rescan-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.rescan-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 /* --- Disconnected input --- */
 
 #input.disconnected::placeholder {

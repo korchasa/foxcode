@@ -6,6 +6,15 @@
   <link rel="stylesheet" href="sidebar.css">
 </head>
 <body>
+  <div id="server-bar" class="server-bar">
+    <div class="server-bar-row">
+      <button id="server-indicator" class="server-indicator" title="Switch server">Scanning...</button>
+      <button id="rescan-btn" class="rescan-btn" title="Rescan servers">&#x21bb;</button>
+    </div>
+    <div id="server-picker" class="server-picker hidden">
+      <div id="server-list" class="server-list"></div>
+    </div>
+  </div>
   <div id="connection-error" class="connection-error">
     <div class="connection-error-title">No connection to Claude Code</div>
     <div class="connection-error-hint">Start Claude Code with FoxCode channel:</div>

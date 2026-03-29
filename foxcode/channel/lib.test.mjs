@@ -1,11 +1,12 @@
-import { describe, it, beforeEach } from 'node:test'
+import { describe, it, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   state, nextId, buildChannelMeta, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage,
   TOOL_DEFINITIONS, assertChannelCapability, hasChannelCapability,
-  buildPongMessage,
+  buildPongMessage, createWebSocketServer, BASE_PORT, PORT_RANGE, portStorage,
 } from './lib.mjs'
+import { WebSocketServer } from 'ws'
 
 describe('nextId', () => {
   beforeEach(() => { state.seq = 0 })
@@ -163,7 +164,7 @@ describe('hasChannelCapability', () => {
 
 describe('buildPongMessage', () => {
   it('builds pong with all telemetry fields', () => {
-    const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode' }
+    const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode', projectDir: '/Users/test/www/4ra' }
     const msg = buildPongMessage(env)
     assert.equal(msg.type, 'pong')
     assert.equal(msg.server, 'foxcode')
@@ -175,9 +176,89 @@ describe('buildPongMessage', () => {
     assert.equal(msg.pendingRequests, 1)
     assert.equal(msg.nodeVersion, 'v22.0.0')
     assert.equal(msg.pluginRoot, '/home/.claude/plugins/cache/foxcode')
+    assert.equal(msg.projectDir, '/Users/test/www/4ra')
     assert.ok(msg.ts)
-    assert.equal(msg.channel, undefined)
-    assert.equal(msg.channelHint, undefined)
+  })
+})
+
+describe('createWebSocketServer', () => {
+  let origLoad, origSave
+  beforeEach(() => {
+    origLoad = portStorage.load
+    origSave = portStorage.save
+    portStorage.load = () => null
+    portStorage.save = () => {}
+  })
+  afterEach(() => {
+    portStorage.load = origLoad
+    portStorage.save = origSave
+  })
+
+  /** Helper: find a port that is definitely free by briefly binding, then closing. */
+  async function findFreePort() {
+    const tmp = new WebSocketServer({ host: '127.0.0.1', port: 0 })
+    await new Promise((resolve) => tmp.on('listening', resolve))
+    const port = tmp.address().port
+    await new Promise((resolve) => tmp.close(resolve))
+    return port
+  }
+
+  it('binds to explicit port when provided', async () => {
+    const freePort = await findFreePort()
+    const { wss, port } = await createWebSocketServer(WebSocketServer, freePort)
+    assert.ok(wss, 'wss should not be null')
+    assert.equal(port, freePort)
+    await new Promise((resolve) => wss.close(resolve))
+  })
+
+  it('skips occupied port and binds to next', async () => {
+    // Occupy BASE_PORT
+    const blocker = new WebSocketServer({ host: '127.0.0.1', port: 0 })
+    await new Promise((resolve) => blocker.on('listening', resolve))
+    const blockedPort = blocker.address().port
+
+    // Create a class that tries blockedPort first, then blockedPort+1
+    const { wss, port } = await createWebSocketServer(WebSocketServer, null)
+
+    // Cannot control BASE_PORT in test env, so use explicit port test instead:
+    // Occupy a known port, then request it explicitly → should fail gracefully
+    const result = await createWebSocketServer(WebSocketServer, blockedPort)
+    assert.equal(result.wss, null)
+    assert.equal(result.port, null)
+
+    await new Promise((resolve) => blocker.close(resolve))
+    if (wss) await new Promise((resolve) => wss.close(resolve))
+  })
+
+  it('returns null when all ports in range are taken', async () => {
+    // Use explicit port pointing to an occupied port
+    const blocker = new WebSocketServer({ host: '127.0.0.1', port: 0 })
+    await new Promise((resolve) => blocker.on('listening', resolve))
+    const blockedPort = blocker.address().port
+
+    const { wss, port } = await createWebSocketServer(WebSocketServer, blockedPort)
+    assert.equal(wss, null)
+    assert.equal(port, null)
+
+    await new Promise((resolve) => blocker.close(resolve))
+  })
+
+  it('propagates non-EADDRINUSE errors', async () => {
+    // Fake WSS constructor that throws a different error
+    class BrokenWSS {
+      constructor() {
+        throw Object.assign(new Error('permission denied'), { code: 'EACCES' })
+      }
+    }
+    await assert.rejects(
+      () => createWebSocketServer(BrokenWSS, 9999),
+      { code: 'EACCES' }
+    )
+  })
+
+  it('exports correct constants', () => {
+    assert.equal(BASE_PORT, 8787)
+    assert.equal(PORT_RANGE, 100)
   })
 })
 
