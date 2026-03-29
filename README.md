@@ -11,7 +11,8 @@ FoxCode is a two-part system: a **Claude Code plugin** (MCP channel server on No
 - **Chat in sidebar** - send/receive messages to your Claude Code session without switching to the terminal
 - **Page context** - Claude Code sees the current tab URL and title with every message from the browser
 - **Browser automation** - Claude Code controls the browser via `evalInBrowser`: click, fill forms, navigate, take screenshots, read DOM (~30 API helpers)
-- **Multi-session support** - multiple Claude Code sessions can run FoxCode simultaneously; the extension discovers and switches between them
+- **Connection diagnostics** - sidebar shows port, params source, error details, and retry timer when disconnected
+- **Channel detection** - automatically detects if Claude Code was launched with channel support; warns when sidebar→CC messaging won't work
 
 ## Getting Started
 
@@ -43,7 +44,7 @@ Launch FoxCode with one of two modes:
 └─────────────┘                 └───────────────────┘            └─────────────┘
 ```
 
-The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension scans the full range to discover running servers.
+The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension connects via URL hash params (project profile), saved port, or manual settings — no port scanning.
 
 ## Components
 
@@ -56,8 +57,8 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 - `reply(text)` - send a message to the browser sidebar
 - `evalInBrowser(code)` - execute JS with browser automation API (click, fill, navigate, snapshot, screenshot, cookies, tabs, etc.)
-- `status()` - check connection status and active tab info
-- `ping()` - verify extension connectivity
+- `status()` - server telemetry: port, uptime, clients, channelsDetected, launchMode, client info
+- `ping()` - verify bidirectional connectivity (CC → browser → CC)
 
 ## Launch Flows
 
@@ -97,7 +98,7 @@ sequenceDiagram
 
 ### User Profile (`/foxcode:run-user-profile`)
 
-Extension loaded into user's own Firefox via about:debugging. No port in URL — extension falls back to saved port or full range scan. Re-launch via `/foxcode:run-user-profile`.
+Extension loaded into user's own Firefox via about:debugging. No port in URL — extension uses saved port from previous session or manual settings form. Re-launch via `/foxcode:run-user-profile`.
 
 ```mermaid
 sequenceDiagram
@@ -109,83 +110,71 @@ sequenceDiagram
 
     U->>CC: Start session
     CC->>MCP: Launch (stdio)
-    MCP->>MCP: Bind port (8787–8886)
+    MCP->>MCP: Bind port, detect channels
 
     U->>CC: /foxcode:run-user-profile
-    CC-->>U: Instructions for manual loading
+    CC->>MCP: status → get port, channelsDetected
+    CC-->>U: Instructions + port/password
 
     U->>FF: Open about:debugging
     U->>FF: Load Temporary Add-on → manifest.json
     FF->>EXT: Load extension
 
     EXT->>EXT: background.js: connect()
-    EXT->>EXT: getPortFromTabs() → no #foxcode-port in any tab
-    EXT->>EXT: loadSavedPort() from browser.storage.local
+    EXT->>EXT: getParamsFromTabs() → no URL hash params
 
     alt Saved port exists
-        EXT->>MCP: Probe saved port
-        MCP-->>EXT: Pong → connect
+        EXT->>MCP: Connect to saved port
+        MCP-->>EXT: Connected
     else No saved port
-        EXT->>EXT: Full scan: ports 8787–8886 (batches of 20)
-        loop Each batch
-            EXT->>MCP: Probe ports
-            MCP-->>EXT: Pong from active server(s)
-        end
-        EXT->>MCP: Connect to first found
+        EXT-->>U: Show settings form (manual port/password)
+        U->>EXT: Enter port + password
+        EXT->>MCP: Connect
     end
 
-    MCP-->>EXT: Connection established
-    EXT-->>U: Sidebar ready, connected
+    MCP-->>EXT: pong (channelsDetected, server info)
+    EXT-->>U: Sidebar ready, shows server info
 ```
 
 ### Key differences
 
-- **Project Profile**: isolated Firefox, port known upfront (URL hash) → zero scan, instant connect. Persistent project-local profile. Re-launch via `/foxcode:run-project-profile`
-- **User Profile**: user's own Firefox, no port hint → probe saved port → full range scan (up to ~7s). Temporary add-on, re-load after Firefox restart
-- **Reconnect**: both flows use the same reconnect logic (saved port → full scan) with exponential backoff
+- **Project Profile**: isolated Firefox, port known upfront (URL hash) → instant connect. Persistent project-local profile
+- **User Profile**: user's own Firefox, no port hint → probe saved port or manual settings form. Temporary add-on, re-load after Firefox restart
+- **Reconnect**: both flows use saved params with exponential backoff (3s → 30s max)
+- **Channel detection**: both skills check `channelsDetected` from `status` tool and warn if channels not enabled
 
 ## Troubleshooting
 
-### Extension shows "No servers found"
+### Sidebar shows "No connection" with diagnostics
 
-1. **Check MCP server is running.** In Claude Code, run `/mcp` - foxcode should appear with status `✔ connected`.
-2. **Check port availability.** The server binds to a port in 8787–8886. Verify it's listening:
-   ```bash
-   lsof -i :8787-8886 | grep node
-   ```
-3. **Reload the extension.** After updating FoxCode, reload in `about:debugging` -> This Firefox -> FoxCode -> Reload.
+The sidebar displays diagnostic info: port, params source, error, and retry timer. Use this to identify the issue:
 
-### MCP server fails to start (status: ✘ failed)
+- **Error: "Cannot connect to ws://127.0.0.1:PORT"** — MCP server not running or wrong port. Check `/mcp` in Claude Code.
+- **Error: "Connection refused or dropped"** — Server was running but stopped. CC may have exited.
+- **Source: "URL hash params"** — Port came from launch URL (project profile mode). If wrong, re-run `/foxcode:run-project-profile`.
+- **Source: "saved from previous session"** — Using stale port. Click the connection indicator → enter correct port/password manually.
 
-1. **Port conflict.** If another process occupies the entire range, the server can't bind. Check:
-   ```bash
-   lsof -i :8787-8886
-   ```
-   Kill stale foxcode processes if needed: `kill <PID>`.
-2. **Reset saved port.** The server remembers its last port in `~/.foxcode/port`. Remove it to pick a new random port:
-   ```bash
-   rm ~/.foxcode/port
-   ```
+### Sidebar shows "Channels not enabled"
+
+The MCP server detected that Claude Code was **not** launched with channel support. Sidebar input is disabled because messages can't reach CC.
+
+**Fix:** Restart Claude Code with the channels flag:
+```bash
+claude --dangerously-load-development-channels plugin:foxcode@korchasa
+```
+For dev mode:
+```bash
+claude --mcp-config .mcp.json --dangerously-load-development-channels server:foxcode
+```
+
+Note: CC → Browser tools (`reply`, `evalInBrowser`) still work without channels. Only Browser → CC messaging requires channels.
+
+### MCP server fails to start
+
+1. **Port conflict.** Server binds to a port in 8787–8886. Check: `lsof -i :8787-8886 | grep node`
+2. **Reset saved port:** `rm ~/.foxcode/port`
 3. **Force a specific port.** Set `FOXCODE_PORT` env var in `.mcp.json`:
    ```json
    {"mcpServers": {"foxcode": {"command": "...", "env": {"FOXCODE_PORT": "8800"}}}}
    ```
-4. **Check dependencies.** Ensure channel deps are installed:
-   ```bash
-   cd foxcode/channel && npm install
-   ```
-
-### Extension connected but wrong project
-
-When multiple Claude Code sessions use FoxCode simultaneously, the extension shows a server indicator in the sidebar header. Click it to open the server picker and switch to the correct session. Use the ↻ button to rescan for servers.
-
-### Channel capability not loaded
-
-If MCP tools appear in `/mcp` but Claude doesn't receive browser messages, ensure the channel flag is set:
-```bash
-claude --dangerously-load-development-channels plugin:foxcode@korchasa
-```
-For dev mode with `.mcp.json`:
-```bash
-claude --mcp-config .mcp.json --dangerously-load-development-channels server:foxcode
-```
+4. **Check dependencies:** `cd foxcode/channel && npm install`

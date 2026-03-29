@@ -87,15 +87,21 @@
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
 - [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/skills/run-project-profile/SKILL.md`
-- [x] `status` tool returns server telemetry (port, clients, uptime) without browser. Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS status), `foxcode/channel/server.mjs` (status handler)
+- [x] `status` tool returns server telemetry (port, clients, uptime, launchMode, channelsDetected, client) without browser. Evidence: `foxcode/channel/server.mjs:210-229` (status handler)
 - [x] `ping` tool verifies bidirectional connectivity (CC -> browser -> CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
-- [x] `/foxcode:run-project-profile` flow: status -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/run-project-profile/SKILL.md`
-- [x] `/foxcode:run-user-profile` flow: status -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/run-user-profile/SKILL.md`
-- [x] Extension connects via URL hash params (`foxcode-port` + `foxcode-password`) or manual sidebar settings form. No port scanning. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
+- [x] `/foxcode:run-project-profile` flow: status (incl. channelsDetected check) -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/run-project-profile/SKILL.md`
+- [x] `/foxcode:run-user-profile` flow: status (incl. channelsDetected check) -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/run-user-profile/SKILL.md`
+- [x] Extension connects via URL hash params (`foxcode-port` + `foxcode-password`) or saved params or manual sidebar settings form. No port scanning. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
+- [x] Channel detection: MCP server detects `--dangerously-load-development-channels` in CC process args via process tree walk at startup (ps on macOS/Linux, PowerShell on Windows). Result in `status` tool and `pong` message. Evidence: `foxcode/channel/lib.mjs:200-234` (detectChannels), `foxcode/channel/server.mjs:32` (CHANNELS_DETECTED)
+- [x] Skills warn when channels not detected: sidebar messages won't reach CC, but CC→Browser tools work. Evidence: `foxcode/skills/run-project-profile/SKILL.md` Step 1, `foxcode/skills/run-user-profile/SKILL.md` Step 1
 
 ### 4.3 NF-3: Reliability [very important]
-- [x] Auto-reconnect on connection loss. Evidence: `extension/background/background.js:140-152` (scheduleReconnect with backoff)
-- [x] Graceful degradation when CC not running. Evidence: `extension/sidebar/sidebar.js:82-98` (status indicator)
+- [x] Auto-reconnect on connection loss with exponential backoff (3s → 30s max). Evidence: `extension/background/background.js:140-152` (scheduleReconnect)
+- [x] Graceful degradation when CC not running: diagnostic panel shows port, params source, error, retry timer. Evidence: `extension/sidebar/sidebar.js:97-133` (setStatus, updateInputState, updateDiag)
+- [x] Channels warning: sidebar shows banner + disables input when channelsDetected=false. Evidence: `extension/sidebar/sidebar.js:289-300` (updateActiveServerInfo), `extension/sidebar/sidebar.html:23-26`
+- [x] Input state managed with priority: disconnected > no channels > normal. Single source of truth via `updateInputState()`. Evidence: `extension/sidebar/sidebar.js:98-112`
+- [x] Background sends enriched status (port, source, error, reconnectIn) to sidebar. Evidence: `extension/background/background.js:179-188` (broadcastStatus)
+- [x] Background pings server on sidebar connect to get fresh pong with server details. Evidence: `extension/background/background.js:255-260`
 - [ ] No message loss during normal operation - not verified
 - [x] No interference with CC terminal workflow. Evidence: tested manually
 
