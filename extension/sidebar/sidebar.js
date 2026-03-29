@@ -89,11 +89,14 @@ function setStatus(connected) {
     inputEl.placeholder = 'Ask a question about this page...'
     inputEl.disabled = false
     connectionErrorEl.classList.add('hidden')
+    serverIndicatorEl.classList.add('connected')
   } else {
     inputEl.classList.add('disconnected')
     inputEl.placeholder = 'No connection...'
     inputEl.disabled = true
     connectionErrorEl.classList.remove('hidden')
+    serverIndicatorEl.classList.remove('connected')
+    serverIndicatorEl.textContent = 'No connection'
   }
 }
 
@@ -263,6 +266,12 @@ function projectLabel(server) {
   return segments.length > 2 ? segments.slice(-2).join('/') : rel
 }
 
+function serverStatusText(server) {
+  const label = projectLabel(server)
+  const uptimeMin = Math.floor((server.uptime || 0) / 60)
+  return `${label} :${server.port} | v${server.version} | up ${uptimeMin}m`
+}
+
 function updateServerList(servers, activePort) {
   knownServers = servers
   currentActivePort = activePort
@@ -276,7 +285,7 @@ function updateServerList(servers, activePort) {
 
   // Update indicator text
   const active = servers.find(s => s.port === activePort) || servers[0]
-  serverIndicatorEl.textContent = projectLabel(active)
+  serverIndicatorEl.textContent = serverStatusText(active)
 
   // Only show picker toggle if multiple servers
   serverIndicatorEl.style.cursor = servers.length > 1 ? 'pointer' : 'default'
@@ -312,7 +321,7 @@ function updateActiveServerInfo(pong) {
   if (active) {
     Object.assign(active, pong)
   }
-  serverIndicatorEl.textContent = projectLabel(pong)
+  serverIndicatorEl.textContent = serverStatusText(pong)
 }
 
 // Toggle picker on indicator click

@@ -124,8 +124,11 @@ body {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--status-connected);
+  background: var(--status-disconnected);
   flex-shrink: 0;
+}
+.server-indicator.connected::before {
+  background: var(--status-connected);
 }
 
 .server-picker {
