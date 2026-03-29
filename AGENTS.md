@@ -117,6 +117,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Project Profile skill builds `about:blank#foxcode-port=PORT&foxcode-password=PASS` URL for instant connection. User Profile uses saved port from `browser.storage.local` or manual sidebar settings form. Multiple CC sessions coexist (different ports, shared password)
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
 - When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
+- CC v2.1.87+ sends identical `clientCapabilities` in MCP handshake regardless of `--dangerously-load-development-channels` flag. Channel support **cannot** be detected via MCP protocol. Workaround: `detectChannels()` in `lib.mjs` walks parent process tree at startup (ps on macOS/Linux, PowerShell on Windows) looking for the flag in CC process args.
 
 ## Planning Rules
 

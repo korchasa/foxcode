@@ -6,13 +6,19 @@ Bidirectional bridge between Claude Code and Firefox. Chat with Claude Code from
 
 FoxCode is a two-part system: a **Claude Code plugin** (MCP channel server on Node.js) and a **Firefox WebExtension** (sidebar UI + browser automation), connected via WebSocket on localhost.
 
-## What it does
+## Usage Patterns
 
-- **Chat in sidebar** - send/receive messages to your Claude Code session without switching to the terminal
-- **Page context** - Claude Code sees the current tab URL and title with every message from the browser
-- **Browser automation** - Claude Code controls the browser via `evalInBrowser`: click, fill forms, navigate, take screenshots, read DOM (~30 API helpers)
-- **Connection diagnostics** - sidebar shows port, params source, error details, and retry timer when disconnected
-- **Channel detection** - automatically detects if Claude Code was launched with channel support; warns when sidebar→CC messaging won't work
+### Talk to Claude Code about what you see in the browser
+
+Working on a project and found a bug on the page? Open the Firefox sidebar and describe it — Claude Code receives the tab URL, title, and your message in the context of the current project session. No copy-pasting URLs into the terminal.
+
+### Let Claude Code test your project in the browser
+
+Claude Code can click, fill forms, navigate, take screenshots, read DOM via `evalInBrowser` (~30 API helpers). Ask it to verify a fix, check a form flow, or inspect the rendered output — all while it has access to your project's code.
+
+### Give Claude Code browser context for debugging
+
+Claude Code sees the current page automatically. Useful when describing frontend issues: instead of explaining what's on screen, just point Claude Code at the page and let it inspect the DOM or take a snapshot alongside the project source.
 
 ## Getting Started
 
@@ -32,6 +38,14 @@ Launch FoxCode with one of two modes:
 
 - `/foxcode:run-project-profile` — launch in isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
 - `/foxcode:run-user-profile` — load extension into your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
+
+## Features
+
+- **Chat in sidebar** - send/receive messages to your Claude Code session
+- **Page context** - Claude Code sees the current tab URL and title with every message
+- **Browser automation** - click, fill forms, navigate, take screenshots, read DOM (~30 API helpers)
+- **Connection diagnostics** - sidebar shows port, params source, error details, and retry timer when disconnected
+- **Channel detection** - detects if Claude Code was launched with channel support; warns when sidebar→CC messaging won't work
 
 ## Architecture
 

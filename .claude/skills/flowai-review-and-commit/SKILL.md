@@ -170,10 +170,12 @@ After completing the review report above:
    - Run `git status` to identify ALL changes: modified (unstaged), staged, and **untracked** files.
    - If working directory is clean (no changes at all), report "Nothing to commit" and STOP.
 2. **Documentation Audit & Compression** _(mandatory - do NOT skip)_
-   - **Check each doc file against the diff** (if `./documents` exists):
-     - `requirements.md` - check diff for new/changed/removed functional or non-functional requirements. If found -> update. If not -> note "no requirement changes".
+   - **Requirement sources**: Requirements come from TWO sources: (1) the git diff (new exports, changed signatures, new modules imply requirements), (2) the conversation history (user messages requesting behavior = requirements, e.g. "X should do Y", "add Z", "make it so that..."). Check BOTH sources.
+   - **Check each doc file** (if `./documents` exists):
+     - `requirements.md` - check diff AND conversation history for new/changed/removed functional or non-functional requirements. If found -> update. If not -> note "no requirement changes".
      - `design.md` - check diff for new/changed/removed components, data structures, APIs, or architecture decisions. If found -> update. If not -> note "no design changes".
      - `AGENTS.md` - check diff for changes to project rules, agent definitions, or conventions. If found -> update. If not -> note "no agent rule changes".
+     - `README.md` - check diff for changes visible to end users (new features, changed behavior, updated setup/troubleshooting). If found -> update. If not -> note "no user-facing changes".
    - **Apply Compression Rules**:
      - Use **combined extractive + abstractive summarization** (preserve all facts, minimize words).
      - Use compact formats: lists, tables, YAML, or Mermaid diagrams.
@@ -185,8 +187,9 @@ After completing the review report above:
      - requirements.md: [updated | no changes - <reason>]
      - design.md: [updated | no changes - <reason>]
      - AGENTS.md: [updated | no changes - <reason>]
+     - README.md: [updated | no changes - <reason>]
      ```
-   - **Gate**: If code changes exist but zero documents were updated, re-examine the diff - new exports, new functions, changed signatures, or new modules almost always require a `design.md` update. Only proceed without updates if you can justify it in the audit report.
+   - **Gate**: If code changes exist but zero documents were updated, re-examine the diff AND conversation history - new exports, new functions, changed signatures, new modules, or user-requested behavior almost always require a `design.md` or `requirements.md` update. Only proceed without updates if you can justify it in the audit report.
 3. **Pre-commit Verification**
    - Check for project check command: `deno task check`, `npm run lint`, `make check`, etc. (inspect `deno.json`, `package.json`, `Makefile`).
    - If found, run it. If verification **fails**, report the error and **STOP**. Do NOT proceed to commit.
