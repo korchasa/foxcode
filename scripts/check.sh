@@ -29,5 +29,6 @@ node --check foxcode/channel/lib.mjs && echo "foxcode/channel/lib.mjs: syntax OK
 echo "--- Tests ---"
 node --test foxcode/channel/lib.test.mjs
 node --test extension/sidebar/markdown.test.js
+node --test extension/background/url-port.test.js
 
 echo "=== check complete ==="

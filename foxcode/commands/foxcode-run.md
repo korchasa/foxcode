@@ -49,13 +49,14 @@ Check that Firefox is installed:
 If not found:
 > Firefox is required. Install from https://www.mozilla.org/firefox/
 
-Launch Firefox:
+Launch Firefox (use `$PORT` from Step 1 status response):
 ```bash
 mkdir -p .foxcode/firefox-profile
 npx web-ext run \
   --source-dir "$EXT_DIR" \
   --firefox-profile .foxcode/firefox-profile \
   --keep-profile-changes \
+  --start-url "about:blank#foxcode-port=$PORT" \
   --firefox="$(which firefox || echo '/Applications/Firefox.app/Contents/MacOS/firefox')"
 ```
 

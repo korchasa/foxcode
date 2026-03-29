@@ -22,6 +22,7 @@
       "background/dom-helpers.js",
       "background/browser-api.js",
       "background/serialize.js",
+      "background/url-port.js",
       "background/background.js"
     ]
   },

@@ -39,7 +39,8 @@ graph LR
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 
 ### 3.2 Background Script (`extension/background/`)
-- **`background.js`** - Port discovery (scans 8787–8886 in batches of 20), WebSocket connection, message routing, EVAL_CODE handler. Supports `select-server`/`rescan` commands from sidebar. Persists last selected port in `browser.storage.local`
+- **`background.js`** - Port discovery, WebSocket connection, message routing, EVAL_CODE handler. Supports `select-server`/`rescan` commands from sidebar. Persists last selected port in `browser.storage.local`. Connect priority: URL port > saved port > full scan
+- **`url-port.js`** - Parses `foxcode-port` from tab URL hash (set via `web-ext run --start-url "about:blank#foxcode-port=PORT"`). Enables instant connection without port scanning. Falls back gracefully when no matching tab found
 - **`browser-api.js`** - Factory creating `api` object with ~30 async helpers (DI for testability)
 - **`dom-helpers.js`** - Pure functions generating injectable JS code (buildWaitAndAct, selectors, etc.)
 - **Execution model:** Agent code runs via `new Function('api', code)(browserApi)` in background (persistent, survives navigation). DOM ops delegated to tabs via `executeScript`. Navigation via `webNavigation.onCompleted`.
@@ -61,7 +62,7 @@ graph LR
 
 ## 4. Data
 - **Entities:** Message (id, from, text, ts, replyTo?), ToolUse (id, tool, params, ts), ToolResult (id, tool, content, ts)
-- **Port persistence:** Server saves last port to `~/.foxcode/port` (file). Extension saves last selected port to `browser.storage.local`
+- **Port persistence:** Server saves last port to `~/.foxcode/port` (file). Extension saves last selected port to `browser.storage.local`. Launch scripts pass port via `--start-url "about:blank#foxcode-port=PORT"` for instant connection
 - **Session data:** Messages, tool results - in-memory, session-scoped
 
 ## 5. Logic

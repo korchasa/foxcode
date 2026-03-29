@@ -62,12 +62,15 @@ mkdir -p .foxcode/firefox-profile
 
 Suggest adding `.foxcode/` to `.gitignore` if not already there.
 
+Call the `status` MCP tool to get the current server port (`$PORT`).
+
 Run:
 ```bash
 npx web-ext run \
   --source-dir "$EXT_DIR" \
   --firefox-profile .foxcode/firefox-profile \
   --keep-profile-changes \
+  --start-url "about:blank#foxcode-port=$PORT" \
   --firefox="$(which firefox || echo '/Applications/Firefox.app/Contents/MacOS/firefox')"
 ```
 

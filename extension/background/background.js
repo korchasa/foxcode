@@ -163,10 +163,22 @@ function connectToPort(port) {
 }
 
 /**
- * Main connect flow: try saved/active port first (fast path), full scan only on failure.
+ * Main connect flow: URL port > saved/active port > full scan.
  */
 async function connect() {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return
+
+  // URL path: port passed via web-ext --start-url "about:blank#foxcode-port=PORT"
+  const urlPort = await getPortFromTabs(() => browser.tabs.query({}))
+  if (urlPort) {
+    const quick = await probePort(urlPort)
+    if (quick) {
+      discoveredServers = [quick]
+      if (sidebarPort) sidebarPort.postMessage({ type: 'servers', list: discoveredServers, activePort })
+      connectToPort(urlPort)
+      return
+    }
+  }
 
   // Fast path: probe saved/active port directly - avoids full range scan on reconnect
   const savedPort = activePort ?? await loadSavedPort()
