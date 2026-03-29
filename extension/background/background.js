@@ -158,11 +158,24 @@ function connectToPort(port) {
 }
 
 /**
- * Main connect flow: discover servers, auto-connect or notify sidebar for picker.
+ * Main connect flow: try saved/active port first (fast path), full scan only on failure.
  */
 async function connect() {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return
 
+  // Fast path: probe saved/active port directly — avoids full range scan on reconnect
+  const savedPort = activePort ?? await loadSavedPort()
+  if (savedPort) {
+    const quick = await probePort(savedPort)
+    if (quick) {
+      discoveredServers = [quick]
+      if (sidebarPort) sidebarPort.postMessage({ type: 'servers', list: discoveredServers, activePort })
+      connectToPort(savedPort)
+      return
+    }
+  }
+
+  // Slow path: full range scan
   discoveredServers = await discoverServers()
   if (sidebarPort) sidebarPort.postMessage({ type: 'servers', list: discoveredServers, activePort })
 
@@ -172,10 +185,7 @@ async function connect() {
     return
   }
 
-  // Auto-connect: prefer saved/active port if still available, else first server
-  const savedPort = activePort ?? await loadSavedPort()
-  const target = (savedPort && discoveredServers.find(s => s.port === savedPort)) || discoveredServers[0]
-  connectToPort(target.port)
+  connectToPort(discoveredServers[0].port)
 }
 
 /**

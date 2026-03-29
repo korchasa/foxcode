@@ -167,6 +167,20 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
   const args = (req.params.arguments ?? {})
   try {
     switch (req.params.name) {
+      case 'status': {
+        const status = {
+          port: PORT,
+          projectDir: process.env.FOXCODE_PROJECT_DIR || process.cwd(),
+          uptime: process.uptime(),
+          connectedClients: clients.size,
+          pendingRequests: pendingToolRequests.size,
+          nodeVersion: process.version,
+          serverVersion: pluginMeta.version,
+          pid: process.pid,
+          pluginRoot: process.env.CLAUDE_PLUGIN_ROOT || null,
+        }
+        return { content: [{ type: 'text', text: JSON.stringify(status) }] }
+      }
       case 'ping': {
         const VERIFY_TIMEOUT_MS = 5000
         // Forward path: send test message to browser via WebSocket

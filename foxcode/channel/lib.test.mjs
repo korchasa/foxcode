@@ -263,10 +263,16 @@ describe('createWebSocketServer', () => {
 })
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has 3 tools (ping, reply, evalInBrowser)', () => {
-    assert.equal(TOOL_DEFINITIONS.length, 3)
+  it('has 4 tools (status, ping, reply, evalInBrowser)', () => {
+    assert.equal(TOOL_DEFINITIONS.length, 4)
     const names = TOOL_DEFINITIONS.map(t => t.name)
-    assert.deepEqual(names, ['ping', 'reply', 'evalInBrowser'])
+    assert.deepEqual(names, ['status', 'ping', 'reply', 'evalInBrowser'])
+  })
+
+  it('status has no required params', () => {
+    const tool = TOOL_DEFINITIONS.find(t => t.name === 'status')
+    assert.ok(tool)
+    assert.equal(tool.inputSchema.required, undefined)
   })
 
   it('all tools have name, description, inputSchema', () => {

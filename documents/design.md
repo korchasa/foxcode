@@ -27,11 +27,12 @@ graph LR
 - **`server.mjs`** — MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT → terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
 - **`lib.mjs`** — Shared logic: ID generation, message builders, tool definitions, port management (`createWebSocketServer`, `portStorage`). File I/O limited to `portStorage` (load/save `~/.foxcode/port`)
 - **`validator.mjs`** — Code syntax validation (async-aware via `new Function` wrapper)
-- **Capabilities:** `claude/channel` (notifications), `tools` (ping, reply, evalInBrowser)
-- **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. Replaces broken `clientCapabilities` check (CC doesn't advertise `claude/channel` in caps). Command `/foxcode:foxcode-ping` wraps the tool.
+- **Capabilities:** `claude/channel` (notifications), `tools` (status, ping, reply, evalInBrowser)
+- **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. `/foxcode:foxcode-run` calls `status` then `ping` as part of unified launch flow.
 - **Port binding:** Auto-binds to first available port in range 8787–8886. Priority: `FOXCODE_PORT` env → saved port (`~/.foxcode/port`) → random start with wrap-around. Saved on successful bind. Null-safe: runs without WebSocket if all ports taken (MCP stdio still works)
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:{port}` (extension, dynamic port)
 - **Tools exposed:**
+  - `status()` — server telemetry (port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion, pid, pluginRoot). Always works, no browser required
   - `ping()` — test bidirectional connectivity (CC → browser → CC)
   - `reply(text, reply_to?)` — send CC response to browser
   - `evalInBrowser(code, timeout?)` — execute JS in browser with full API. Validates syntax, sends to extension via WebSocket, returns serialized result

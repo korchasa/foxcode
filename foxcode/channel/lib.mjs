@@ -192,6 +192,14 @@ export const CHANNEL_TEST_MARKER = 'ping'
 
 export const TOOL_DEFINITIONS = [
   {
+    name: 'status',
+    description: 'Get server status and telemetry. Always works, does not require browser connection. Returns port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
     name: 'ping',
     description: 'Test connectivity: CC → WebSocket → browser → WebSocket → CC. Returns { forward: bool, reverse: bool }.',
     inputSchema: {

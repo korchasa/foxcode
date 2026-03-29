@@ -93,9 +93,10 @@
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
 - [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/commands/foxcode-run.md`
+- [x] `status` tool returns server telemetry (port, clients, uptime) without browser. Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS status), `foxcode/channel/server.mjs` (status handler)
 - [x] `ping` tool verifies bidirectional connectivity (CC → browser → CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
-- [x] `/foxcode:foxcode-ping` command wraps ping tool with user-facing diagnostics. Evidence: `foxcode/commands/foxcode-ping.md`
-- [x] `/foxcode:foxcode-run` Step 3 calls ping after Firefox launch. Evidence: `foxcode/commands/foxcode-run.md`
+- [x] `/foxcode:foxcode-run` unified flow: status check → ping → launch Firefox if needed → verify. Evidence: `foxcode/commands/foxcode-run.md`
+- [x] Extension fast-path connect: probes saved port first, full scan only on failure. Evidence: `extension/background/background.js:165-176`
 
 ### 4.3 NF-3: Reliability [very important]
 - [x] Auto-reconnect on connection loss. Evidence: `extension/background/background.js:46-54` (scheduleReconnect with backoff)
