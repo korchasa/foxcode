@@ -7,13 +7,13 @@
 </head>
 <body>
   <div id="server-bar" class="server-bar">
-    <div class="server-bar-row">
-      <button id="server-indicator" class="server-indicator" title="Switch server">Scanning...</button>
-      <button id="rescan-btn" class="rescan-btn" title="Rescan servers">&#x21bb;</button>
-    </div>
-    <div id="server-picker" class="server-picker hidden">
-      <div id="server-list" class="server-list"></div>
-    </div>
+    <button id="server-indicator" class="server-indicator" title="Connection settings">No connection</button>
+  </div>
+  <div id="settings-form" class="settings-form hidden">
+    <div class="settings-title">Connection Settings</div>
+    <label class="settings-label">Port <input id="settings-port" type="number" min="1" max="65535" class="settings-input"></label>
+    <label class="settings-label">Password <input id="settings-password" type="text" class="settings-input"></label>
+    <button id="settings-connect" class="settings-connect-btn">Connect</button>
   </div>
   <div id="connection-error" class="connection-error">
     <div class="connection-error-title">No connection to Claude Code</div>

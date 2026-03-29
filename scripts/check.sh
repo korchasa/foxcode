@@ -25,10 +25,11 @@ echo "--- JS syntax check ---"
 node --check foxcode/channel/server.mjs && echo "foxcode/channel/server.mjs: syntax OK"
 node --check foxcode/channel/lib.mjs && echo "foxcode/channel/lib.mjs: syntax OK"
 
-# Tests
+# Tests (glob-based discovery)
 echo "--- Tests ---"
-node --test foxcode/channel/lib.test.mjs
-node --test extension/sidebar/markdown.test.js
-node --test extension/background/url-port.test.js
+node --test \
+  foxcode/channel/*.test.mjs \
+  extension/background/*.test.js \
+  extension/sidebar/*.test.js
 
 echo "=== check complete ==="

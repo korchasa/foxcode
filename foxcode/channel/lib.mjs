@@ -4,6 +4,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 
@@ -65,37 +66,17 @@ export function buildToolResultMessage(tool, content) {
 }
 
 /**
- * Check whether the MCP client (Claude Code) advertises claude/channel support.
- * @param {object|undefined} clientCapabilities - from mcp.getClientCapabilities()
- * @returns {boolean}
- */
-export function hasChannelCapability(clientCapabilities) {
-  return !!clientCapabilities?.experimental?.['claude/channel']
-}
-
-/**
- * Assert that the MCP client (Claude Code) advertises claude/channel support.
- * Throws if the capability is missing - meaning Claude was launched without
- * --dangerously-load-development-channels plugin:<name>@<marketplace>.
- * @param {object|undefined} clientCapabilities - from mcp.getClientCapabilities()
- */
-export function assertChannelCapability(clientCapabilities, serverName = 'foxcode') {
-  if (!hasChannelCapability(clientCapabilities)) {
-    throw new Error(
-      'Client does not support claude/channel. ' +
-      `Start Claude Code with: claude --dangerously-load-development-channels plugin:${serverName}@korchasa`
-    )
-  }
-}
-
-/**
  * Build a pong response with server telemetry.
  * @param {{name: string, version: string, pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined, projectDir: string|undefined}} env
  * @returns {object}
  */
+/** Protocol version for WebSocket message format compatibility checks. */
+export const PROTOCOL_VERSION = 1
+
 export function buildPongMessage(env) {
   return {
     type: 'pong',
+    protocol_version: PROTOCOL_VERSION,
     server: env.name,
     version: env.version,
     pid: env.pid,
@@ -140,19 +121,42 @@ export const portStorage = {
   },
 }
 
+/** Default path to saved password file. */
+export const PASSWORD_FILE = join(homedir(), '.foxcode', 'password')
+
 /**
- * Create a WebSocketServer bound to an available port in range.
- * Priority: explicitPort > saved port > random start, wrap around.
- * @param {typeof import('ws').WebSocketServer} WSSClass - WebSocketServer constructor
- * @param {number|null} explicitPort - If set, only try this port (FOXCODE_PORT override)
- * @returns {Promise<{wss: import('ws').WebSocketServer|null, port: number|null}>}
+ * Password persistence storage. Replaceable for testing.
  */
-export async function createWebSocketServer(WSSClass, explicitPort = null) {
+export const passwordStorage = {
+  generate() {
+    return randomBytes(16).toString('hex')
+  },
+  load() {
+    try {
+      const raw = readFileSync(PASSWORD_FILE, 'utf8').trim()
+      return raw.length > 0 ? raw : null
+    } catch {
+      return null
+    }
+  },
+  save(pw) {
+    mkdirSync(dirname(PASSWORD_FILE), { recursive: true, mode: 0o700 })
+    writeFileSync(PASSWORD_FILE, pw, { encoding: 'utf8', mode: 0o600 })
+  },
+}
+
+/**
+ * Find an available port and bind an HTTP server to it.
+ * Same port selection logic as createWebSocketServer but returns httpServer directly.
+ * Avoids TOCTOU race of bind-close-rebind.
+ * @param {number|null} explicitPort - If set, only try this port
+ * @returns {Promise<{httpServer: import('http').Server|null, port: number|null}>}
+ */
+export async function createHttpServer(explicitPort = null) {
   if (explicitPort != null) {
-    return tryBindPort(WSSClass, explicitPort)
+    return tryBindHttpPort(explicitPort)
   }
 
-  // Build port list: saved port first (if valid), then random-start wrap-around
   const saved = portStorage.load()
   const start = saved ?? (BASE_PORT + Math.floor(Math.random() * PORT_RANGE))
   const ports = []
@@ -161,26 +165,36 @@ export async function createWebSocketServer(WSSClass, explicitPort = null) {
   }
 
   for (const port of ports) {
-    const result = await tryBindPort(WSSClass, port)
-    if (result.wss) {
+    const result = await tryBindHttpPort(port)
+    if (result.httpServer) {
       portStorage.save(port)
       return result
     }
   }
-  return { wss: null, port: null }
+  return { httpServer: null, port: null }
 }
 
-async function tryBindPort(WSSClass, port) {
+async function tryBindHttpPort(port) {
+  const { createServer: createHttpSrv } = await import('node:http')
+  const server = createHttpSrv()
   try {
-    const wss = new WSSClass({ host: '127.0.0.1', port })
     await new Promise((resolve, reject) => {
-      wss.on('listening', resolve)
-      wss.on('error', reject)
+      const onError = (err) => {
+        server.removeListener('listening', onListening)
+        reject(err)
+      }
+      const onListening = () => {
+        server.removeListener('error', onError)
+        resolve()
+      }
+      server.once('error', onError)
+      server.once('listening', onListening)
+      server.listen(port, '127.0.0.1')
     })
-    return { wss, port }
+    return { httpServer: server, port }
   } catch (err) {
     if (err.code !== 'EADDRINUSE') throw err
-    return { wss: null, port: null }
+    return { httpServer: null, port: null }
   }
 }
 
@@ -193,7 +207,7 @@ export const CHANNEL_TEST_MARKER = 'ping'
 export const TOOL_DEFINITIONS = [
   {
     name: 'status',
-    description: 'Get server status and telemetry. Always works, does not require browser connection. Returns port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion.',
+    description: 'Get server status and telemetry. Always works, does not require browser connection. Returns port, password, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion.',
     inputSchema: {
       type: 'object',
       properties: {},

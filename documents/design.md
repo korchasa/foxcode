@@ -25,7 +25,7 @@ graph LR
 
 ### 3.1 Channel Plugin (`foxcode/channel/`)
 - **`server.mjs`** - MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT -> terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
-- **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createWebSocketServer`, `portStorage`). File I/O limited to `portStorage` (load/save `~/.foxcode/port`)
+- **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createHttpServer`, `portStorage`), password management (`passwordStorage`). File I/O limited to `portStorage` (`~/.foxcode/port`) and `passwordStorage` (`~/.foxcode/password`)
 - **`validator.mjs`** - Code syntax validation (async-aware via `new Function` wrapper)
 - **Capabilities:** `claude/channel` (notifications), `tools` (status, ping, reply, evalInBrowser)
 - **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. `/foxcode:run-project-profile` and `/foxcode:run-user-profile` call `status` then `ping` as part of launch flow.
@@ -39,8 +39,8 @@ graph LR
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 
 ### 3.2 Background Script (`extension/background/`)
-- **`background.js`** - Port discovery, WebSocket connection, message routing, EVAL_CODE handler. Supports `select-server`/`rescan` commands from sidebar. Persists last selected port in `browser.storage.local`. Connect priority: URL port > saved port > full scan
-- **`url-port.js`** - Parses `foxcode-port` from tab URL hash (set via `web-ext run --start-url "about:blank#foxcode-port=PORT"`). Enables instant connection without port scanning. Falls back gracefully when no matching tab found
+- **`background.js`** - WebSocket connection with token auth, message routing, EVAL_CODE handler. Supports `update-settings` from sidebar. Persists port+password in `browser.storage.local`. Connect priority: URL hash params > saved params > show settings form
+- **`url-params.js`** - Parses `foxcode-port` and `foxcode-password` from tab URL hash (set via `web-ext run --start-url "about:blank#foxcode-port=PORT&foxcode-password=PASS"`). Returns `{port, password}` or null
 - **`browser-api.js`** - Factory creating `api` object with ~30 async helpers (DI for testability)
 - **`dom-helpers.js`** - Pure functions generating injectable JS code (buildWaitAndAct, selectors, etc.)
 - **Execution model:** Agent code runs via `new Function('api', code)(browserApi)` in background (persistent, survives navigation). DOM ops delegated to tabs via `executeScript`. Navigation via `webNavigation.onCompleted`.
@@ -51,7 +51,7 @@ graph LR
 ### 3.3 Sidebar (`extension/sidebar/`)
 - **`markdown.js`** - Pure markdown->HTML renderer (testable without DOM)
 - **`format.js`** - Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
-- **`sidebar.js`** - UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, server picker (indicator + dropdown for multi-session switching, rescan button with spin animation + scan progress in chat via `scan-start`/`scan-progress`/`scan-done` messages)
+- **`sidebar.js`** - UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, connection settings form (port + password inputs, toggled via indicator click)
 - **Interfaces:** port connection to background script
 - **Deps:** Background script
 
@@ -62,7 +62,7 @@ graph LR
 
 ## 4. Data
 - **Entities:** Message (id, from, text, ts, replyTo?), ToolUse (id, tool, params, ts), ToolResult (id, tool, content, ts)
-- **Port persistence:** Server saves last port to `~/.foxcode/port` (file). Extension saves last selected port to `browser.storage.local`. Launch scripts pass port via `--start-url "about:blank#foxcode-port=PORT"` for instant connection
+- **Port persistence:** Server saves last port to `~/.foxcode/port` (file). Extension saves port + password to `browser.storage.local`. Launch scripts pass port + password via `--start-url "about:blank#foxcode-port=PORT&foxcode-password=PASS"` for instant connection
 - **Session data:** Messages, tool results - in-memory, session-scoped
 
 ## 5. Logic
@@ -70,10 +70,10 @@ graph LR
 - **CC -> Browser:** CC calls `reply` tool -> channel -> WebSocket -> background -> sidebar
 - **CC automates browser:** CC calls `evalInBrowser` -> channel validates syntax -> sends `EVAL_CODE` via WebSocket -> background executes via `new Function('api',code)(browserApi)` -> API helpers delegate to `executeScript`/`webNavigation`/`cookies`/etc -> result serialized -> returned to CC
 - **Page main world eval:** `api.eval(expr)` -> background sends `EVAL_IN_PAGE` message to content script -> content script uses `wrappedJSObject.eval()` -> result returned
-- **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `message`, `tool_request`, `tool_response`, `tool_use`, `tool_result`)
+- **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `message`, `tool_request`, `tool_response`, `tool_use`, `tool_result`). `pong` messages include `protocol_version` (integer) for compatibility checks
 
 ## 6. Non-Functional
-- **Fault Tolerance:** Auto-reconnect with exponential backoff (3s -> 30s max) + full port re-scan on each reconnect. Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.
+- **Fault Tolerance:** Auto-reconnect with exponential backoff (3s -> 30s max), retry with saved params (no port scanning). Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.
 - **Sec:** localhost-only WebSocket (`127.0.0.1`), no external traffic
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 
@@ -89,7 +89,7 @@ graph LR
 ## 8. Distribution & Setup
 
 ### Primary: CC Plugin Marketplace
-- **Structure:** `.claude-plugin/marketplace.json` (repo root) -> `plugins/foxcode/` (plugin dir)
+- **Structure:** `.claude-plugin/marketplace.json` (repo root) -> `foxcode/` (plugin dir)
 - **Plugin contents:** `.claude-plugin/plugin.json` (manifest), `.mcp.json` (MCP server config), `skills/run-project-profile/SKILL.md`, `skills/run-user-profile/SKILL.md`
 - **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`sh -c "cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install && node server.mjs"`). Auto-installs deps on first run, loads automatically on plugin enable. No npm package needed.
 - **Launch skills:** `/foxcode:run-project-profile` (isolated Firefox via web-ext) and `/foxcode:run-user-profile` (manual about:debugging). Both self-contained: prereq check, locate extension, cache paths in `.foxcode/config.json`, launch/guide, verify connectivity

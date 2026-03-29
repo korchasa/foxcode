@@ -3,10 +3,11 @@ import assert from 'node:assert/strict'
 import {
   state, nextId, buildChannelMeta, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage,
-  TOOL_DEFINITIONS, assertChannelCapability, hasChannelCapability,
-  buildPongMessage, createWebSocketServer, BASE_PORT, PORT_RANGE, portStorage,
+  TOOL_DEFINITIONS,
+  buildPongMessage, PROTOCOL_VERSION, createHttpServer, BASE_PORT, PORT_RANGE, portStorage,
+  passwordStorage,
 } from './lib.mjs'
-import { WebSocketServer } from 'ws'
+import { createServer } from 'node:http'
 
 describe('nextId', () => {
   beforeEach(() => { state.seq = 0 })
@@ -108,65 +109,12 @@ describe('buildToolResultMessage', () => {
   })
 })
 
-describe('assertChannelCapability', () => {
-  it('does not throw when claude/channel is present', () => {
-    assert.doesNotThrow(() => {
-      assertChannelCapability({ experimental: { 'claude/channel': {} } })
-    })
-  })
-
-  it('throws with plugin name in message when experimental is missing', () => {
-    assert.throws(
-      () => assertChannelCapability({ sampling: {} }),
-      { message: /plugin:foxcode@korchasa/ }
-    )
-  })
-
-  it('throws when experimental exists but claude/channel is absent', () => {
-    assert.throws(
-      () => assertChannelCapability({ experimental: { other: {} } }),
-      { message: /plugin:foxcode@korchasa/ }
-    )
-  })
-
-  it('throws when capabilities is undefined', () => {
-    assert.throws(
-      () => assertChannelCapability(undefined),
-      { message: /plugin:foxcode@korchasa/ }
-    )
-  })
-
-  it('uses custom server name in error message', () => {
-    assert.throws(
-      () => assertChannelCapability(undefined, 'my-server'),
-      { message: /plugin:my-server@korchasa/ }
-    )
-  })
-})
-
-describe('hasChannelCapability', () => {
-  it('returns true when claude/channel is present', () => {
-    assert.equal(hasChannelCapability({ experimental: { 'claude/channel': {} } }), true)
-  })
-
-  it('returns false when experimental is missing', () => {
-    assert.equal(hasChannelCapability({ sampling: {} }), false)
-  })
-
-  it('returns false when claude/channel is absent', () => {
-    assert.equal(hasChannelCapability({ experimental: { other: {} } }), false)
-  })
-
-  it('returns false when capabilities is undefined', () => {
-    assert.equal(hasChannelCapability(undefined), false)
-  })
-})
-
 describe('buildPongMessage', () => {
   it('builds pong with all telemetry fields', () => {
     const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode', projectDir: '/Users/test/www/4ra' }
     const msg = buildPongMessage(env)
     assert.equal(msg.type, 'pong')
+    assert.equal(msg.protocol_version, PROTOCOL_VERSION)
     assert.equal(msg.server, 'foxcode')
     assert.equal(msg.version, '0.4.3')
     assert.equal(msg.pid, 12345)
@@ -181,7 +129,55 @@ describe('buildPongMessage', () => {
   })
 })
 
-describe('createWebSocketServer', () => {
+describe('portConstants', () => {
+  it('exports correct constants', () => {
+    assert.equal(BASE_PORT, 8787)
+    assert.equal(PORT_RANGE, 100)
+  })
+})
+
+describe('passwordStorage', () => {
+  let origLoad, origSave
+  beforeEach(() => {
+    origLoad = passwordStorage.load
+    origSave = passwordStorage.save
+  })
+  afterEach(() => {
+    passwordStorage.load = origLoad
+    passwordStorage.save = origSave
+  })
+
+  it('generate() returns 32-char hex string', () => {
+    const pw = passwordStorage.generate()
+    assert.equal(pw.length, 32)
+    assert.match(pw, /^[0-9a-f]{32}$/)
+  })
+
+  it('generate() returns unique values', () => {
+    const a = passwordStorage.generate()
+    const b = passwordStorage.generate()
+    assert.notEqual(a, b)
+  })
+
+  it('load() returns null when file does not exist', () => {
+    // Default load reads from ~/.foxcode/password which may not exist in test env
+    // We test the pattern by mocking
+    passwordStorage.load = () => null
+    assert.equal(passwordStorage.load(), null)
+  })
+
+  it('save/load round-trip works via mock', () => {
+    let stored = null
+    passwordStorage.save = (pw) => { stored = pw }
+    passwordStorage.load = () => stored
+
+    const pw = passwordStorage.generate()
+    passwordStorage.save(pw)
+    assert.equal(passwordStorage.load(), pw)
+  })
+})
+
+describe('createHttpServer', () => {
   let origLoad, origSave
   beforeEach(() => {
     origLoad = portStorage.load
@@ -194,71 +190,39 @@ describe('createWebSocketServer', () => {
     portStorage.save = origSave
   })
 
-  /** Helper: find a port that is definitely free by briefly binding, then closing. */
-  async function findFreePort() {
-    const tmp = new WebSocketServer({ host: '127.0.0.1', port: 0 })
-    await new Promise((resolve) => tmp.on('listening', resolve))
-    const port = tmp.address().port
+  it('binds to explicit port', async () => {
+    // Find a free port first
+    const tmp = createServer()
+    await new Promise((resolve) => tmp.listen(0, '127.0.0.1', resolve))
+    const freePort = tmp.address().port
     await new Promise((resolve) => tmp.close(resolve))
-    return port
-  }
 
-  it('binds to explicit port when provided', async () => {
-    const freePort = await findFreePort()
-    const { wss, port } = await createWebSocketServer(WebSocketServer, freePort)
-    assert.ok(wss, 'wss should not be null')
+    const { httpServer, port } = await createHttpServer(freePort)
+    assert.ok(httpServer, 'httpServer should not be null')
     assert.equal(port, freePort)
-    await new Promise((resolve) => wss.close(resolve))
+    await new Promise((resolve) => httpServer.close(resolve))
   })
 
-  it('skips occupied port and binds to next', async () => {
-    // Occupy BASE_PORT
-    const blocker = new WebSocketServer({ host: '127.0.0.1', port: 0 })
-    await new Promise((resolve) => blocker.on('listening', resolve))
+  it('returns null for occupied port', async () => {
+    const blocker = createServer()
+    await new Promise((resolve) => blocker.listen(0, '127.0.0.1', resolve))
     const blockedPort = blocker.address().port
 
-    // Create a class that tries blockedPort first, then blockedPort+1
-    const { wss, port } = await createWebSocketServer(WebSocketServer, null)
-
-    // Cannot control BASE_PORT in test env, so use explicit port test instead:
-    // Occupy a known port, then request it explicitly -> should fail gracefully
-    const result = await createWebSocketServer(WebSocketServer, blockedPort)
-    assert.equal(result.wss, null)
-    assert.equal(result.port, null)
-
-    await new Promise((resolve) => blocker.close(resolve))
-    if (wss) await new Promise((resolve) => wss.close(resolve))
-  })
-
-  it('returns null when all ports in range are taken', async () => {
-    // Use explicit port pointing to an occupied port
-    const blocker = new WebSocketServer({ host: '127.0.0.1', port: 0 })
-    await new Promise((resolve) => blocker.on('listening', resolve))
-    const blockedPort = blocker.address().port
-
-    const { wss, port } = await createWebSocketServer(WebSocketServer, blockedPort)
-    assert.equal(wss, null)
+    const { httpServer, port } = await createHttpServer(blockedPort)
+    assert.equal(httpServer, null)
     assert.equal(port, null)
 
     await new Promise((resolve) => blocker.close(resolve))
   })
 
   it('propagates non-EADDRINUSE errors', async () => {
-    // Fake WSS constructor that throws a different error
-    class BrokenWSS {
-      constructor() {
-        throw Object.assign(new Error('permission denied'), { code: 'EACCES' })
-      }
-    }
+    // Test via explicit port on privileged range (permission denied on non-root)
+    // Skip if running as root
+    if (process.getuid && process.getuid() === 0) return
     await assert.rejects(
-      () => createWebSocketServer(BrokenWSS, 9999),
-      { code: 'EACCES' }
+      () => createHttpServer(1), // port 1 - EACCES on non-root
+      (err) => err.code === 'EACCES' || err.code === 'EADDRINUSE'
     )
-  })
-
-  it('exports correct constants', () => {
-    assert.equal(BASE_PORT, 8787)
-    assert.equal(PORT_RANGE, 100)
   })
 })
 

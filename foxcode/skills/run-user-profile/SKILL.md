@@ -20,7 +20,7 @@ Call the `status` MCP tool.
 If the tool call fails:
 > FoxCode MCP server is not running. Make sure `.mcp.json` is configured and Claude Code loaded the foxcode MCP server. Restart Claude Code if needed.
 
-Note the `port` and `connectedClients` from the response.
+Note the `port`, `password`, and `connectedClients` from the response.
 
 ## Step 2: Check browser connection
 
@@ -76,7 +76,9 @@ Tell the user:
 > 3. Select `manifest.json` from: `$EXT_DIR`
 > 4. Open the sidebar: **View > Sidebar > FoxCode** (or Ctrl+B / Cmd+B)
 >
-> The extension will auto-discover the MCP server by scanning ports 8787–8886.
+> Connect to the server using one of these methods:
+> - Open this URL in Firefox: `about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD`
+> - Or enter port (`$PORT`) and password (`$PASSWORD`) in the FoxCode sidebar settings (click the connection indicator).
 >
 > **Note:** Temporary add-ons are removed when Firefox closes. You'll need to re-load each time.
 

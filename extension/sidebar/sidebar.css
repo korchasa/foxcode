@@ -84,20 +84,13 @@ body {
   color: var(--text-primary);
 }
 
-/* --- Server bar & picker --- */
+/* --- Server bar & settings --- */
 
 .server-bar {
   flex-shrink: 0;
-  position: relative;
   padding: 4px 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
-}
-
-.server-bar-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .server-indicator {
@@ -131,74 +124,58 @@ body {
   background: var(--status-connected);
 }
 
-.server-picker {
-  position: absolute;
-  top: 100%;
-  left: 8px;
-  right: 8px;
+.settings-form {
+  padding: 10px 12px;
   background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  z-index: 100;
-  padding: 4px;
-}
-.server-picker.hidden { display: none; }
-
-.server-list-item {
+  border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
+  gap: 6px;
+}
+.settings-form.hidden { display: none; }
+
+.settings-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
   border-radius: 6px;
-  cursor: pointer;
+  padding: 4px 8px;
+  font: inherit;
   font-size: 12px;
   color: var(--text-primary);
 }
-.server-list-item:hover {
-  background: var(--bg-hover);
-}
-.server-list-item.active {
-  background: var(--bg-hover);
-  border-left: 3px solid var(--accent);
-}
-.server-list-item-name {
-  font-weight: 600;
-  font-size: 13px;
-}
-.server-list-item-detail {
-  color: var(--text-meta);
-  font-size: 11px;
+.settings-input:focus {
+  outline: none;
+  border-color: var(--border-input-focus);
 }
 
-.rescan-btn {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: none;
+.settings-connect-btn {
+  background: var(--accent);
+  color: #fff;
   border: none;
   border-radius: 6px;
-  color: var(--text-secondary);
-  font-size: 16px;
-  line-height: 1;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  align-self: flex-end;
 }
-.rescan-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-.rescan-btn.scanning {
-  animation: spin 1s linear infinite;
-  pointer-events: none;
-  opacity: 0.5;
-}
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+.settings-connect-btn:hover {
+  opacity: 0.9;
 }
 
 /* --- Disconnected input --- */
@@ -392,6 +369,15 @@ body {
 .message.tool-result .body {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Send error toast */
+
+.message.send-error {
+  padding: 4px 16px;
+  font-size: 12px;
+  color: var(--status-disconnected);
+  font-style: italic;
 }
 
 /* Thinking indicator */

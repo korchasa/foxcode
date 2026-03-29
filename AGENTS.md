@@ -94,7 +94,7 @@ foxcode/
 - **Extension source**: dev uses `./extension/` from working dir; prod uses marketplace clone at `~/.claude/plugins/marketplaces/korchasa/extension/`
 - **Firefox profile**: dev uses ephemeral `web-ext` temp profile; prod uses persistent `.foxcode/firefox-profile/` in project dir
 - **CC launch flags**: dev - none; prod - `--dangerously-load-development-channels` required
-- **WebSocket port**: both modes use same port range `8787–8886` (BASE_PORT=8787, PORT_RANGE=100), with random start + saved port in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var. Extension discovers active server by probing the entire range in batches
+- **WebSocket port**: both modes use same port range `8787–8886` (BASE_PORT=8787, PORT_RANGE=100), with random start + saved port in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var. Extension connects using port+password from URL hash params or manual sidebar input (no scanning)
 
 ## Key Decisions
 - MCP Channel Plugin over Native Messaging: bidirectional session sync, no subprocess per request
@@ -108,7 +108,7 @@ foxcode/
 - Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
 - Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
 - Channels in research preview: third-party plugins not in Anthropic allowlist -> `--dangerously-load-development-channels plugin:foxcode@korchasa` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools).
-- Port range scanning (8787–8886): server picks random port, persists in `~/.foxcode/port`. Extension scans range in batches to discover servers. Multiple CC sessions coexist.
+- URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Skills build `about:blank#foxcode-port=PORT&foxcode-password=PASS` URL. Extension reads params from URL hash or manual sidebar settings form. No port scanning. Multiple CC sessions coexist (different ports, shared password).
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
 - When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
 

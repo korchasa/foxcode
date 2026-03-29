@@ -44,15 +44,23 @@ function createBrowserApi(deps) {
     return results?.[0] ?? null
   }
 
-  /** Wait for navigation to complete on given tab */
+  const NAVIGATION_TIMEOUT_MS = 30000
+
+  /** Wait for navigation to complete on given tab, with timeout */
   function waitForNavigation(tabId) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
+      let timer = null
       const listener = (details) => {
         if (details.tabId === tabId && details.frameId === 0) {
+          clearTimeout(timer)
           webNavigation.onCompleted.removeListener(listener)
           resolve()
         }
       }
+      timer = setTimeout(() => {
+        webNavigation.onCompleted.removeListener(listener)
+        reject(new Error(`Navigation timed out after ${NAVIGATION_TIMEOUT_MS}ms`))
+      }, NAVIGATION_TIMEOUT_MS)
       webNavigation.onCompleted.addListener(listener)
     })
   }

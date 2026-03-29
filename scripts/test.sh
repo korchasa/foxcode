@@ -3,10 +3,10 @@ set -euo pipefail
 
 echo "=== FoxCode: test ==="
 
-echo "--- Channel lib tests ---"
-node --test foxcode/channel/lib.test.mjs
-
-echo "--- Markdown tests ---"
-node --test extension/sidebar/markdown.test.js
+# Glob-based discovery: run all test files (single source of truth)
+node --test \
+  foxcode/channel/*.test.mjs \
+  extension/background/*.test.js \
+  extension/sidebar/*.test.js
 
 echo "=== all tests passed ==="

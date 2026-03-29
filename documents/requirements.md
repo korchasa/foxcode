@@ -20,24 +20,24 @@
 - **Desc:** Display messages from active CC session in browser sidebar as they appear
 - **Scenario:** User has CC running in terminal -> opens sidebar -> sees live message stream (user prompts, assistant responses, tool calls/results)
 - **Acceptance:**
-  - [x] New messages from CC session appear in sidebar within 1s. Evidence: `foxcode/channel/server.mjs:98-119` (reply tool broadcasts via WebSocket), `extension/sidebar/sidebar.js:57-70` (addMessage renders)
-  - [x] All message types rendered: user, assistant (text), tool use, tool result. Evidence: `extension/sidebar/sidebar.js:117-147` (addMessage: user/assistant), `extension/sidebar/sidebar.js:86-114` (addToolUseMessage, addToolResultMessage), `foxcode/channel/server.mjs:105-126` (broadcasts tool_use/tool_result)
-  - [x] Connection status indicator (connected/disconnected). Evidence: `extension/sidebar/sidebar.js:43-46` (setStatus), `extension/sidebar/sidebar.css:17-19` (.connected/.disconnected)
+  - [x] New messages from CC session appear in sidebar within 1s. Evidence: `foxcode/channel/server.mjs:245-248` (reply tool broadcasts via WebSocket), `extension/sidebar/sidebar.js:166` (addMessage renders)
+  - [x] All message types rendered: user, assistant (text), tool use, tool result. Evidence: `extension/sidebar/sidebar.js:166` (addMessage: user/assistant), `extension/sidebar/sidebar.js:224-253` (addToolUseMessage, addToolResultMessage), `foxcode/channel/server.mjs:256,259` (broadcasts tool_use/tool_result)
+  - [x] Connection status indicator (connected/disconnected). Evidence: `extension/sidebar/sidebar.js:82-98` (setStatus), `extension/sidebar/sidebar.css:35-36,123` (CSS vars + .connected)
 
 ### 3.2 FR-2: Send Messages
 - **Desc:** Send text messages from browser into active CC session
 - **Scenario:** User types message in sidebar input -> message delivered to CC session -> CC processes it -> response visible in both terminal and sidebar
 - **Acceptance:**
-  - [x] Text input in sidebar sends message to CC session. Evidence: `extension/sidebar/sidebar.js:74-86` (form submit), `extension/background/background.js:116-119` (forwards to channel)
-  - [x] Sent message appears in terminal. Evidence: `foxcode/channel/server.mjs:80-89` (mcp.notification with notifications/claude/channel)
+  - [x] Text input in sidebar sends message to CC session. Evidence: `extension/sidebar/sidebar.js:275-289` (form submit), `extension/background/background.js:159` (forwards to channel)
+  - [x] Sent message appears in terminal. Evidence: `foxcode/channel/server.mjs:159-164` (mcp.notification with notifications/claude/channel)
   - [x] Response visible in sidebar via FR-1. Evidence: tested manually
 
-### 3.3 FR-3: Page Context Injection
+### 3.3 FR-3: Page Context Injection [SUPERSEDED by FR-5]
 - **Desc:** Send current page content or selected text as context into CC session
 - **Scenario:** CC requests page content via MCP tool -> content delivered as context to active CC session
 - **Acceptance:**
-  - [x] Page content accessible to CC via `get_page_content` MCP tool. Evidence: `foxcode/channel/server.mjs:105-110` (get_page_content tool), `extension/content/content-script.js:27-73` (extractPageContent)
-  - [x] Content arrives in CC session as user message with clear source attribution. Evidence: `foxcode/channel/server.mjs:91-100` (page_content with [Page: url] prefix)
+  - [x] Page content accessible to CC via `api.snapshot()` and `api.eval()` in `evalInBrowser`. Evidence: `extension/background/browser-api.js:116-198` (DOM helpers), `extension/content/content-script.js:7-21` (eval in page world)
+  - [x] Content arrives in CC session as tool result. Evidence: `foxcode/channel/server.mjs:250-261` (evalInBrowser handler)
 
 ### 3.4 FR-4: Project Context
 - **Desc:** Work from browser in context of a specific project directory
@@ -50,22 +50,22 @@
 - **Desc:** CC executes JS in browser via single `evalInBrowser` MCP tool. Agent writes code using `api` object with ~30 async helpers for DOM, navigation, tabs, cookies, screenshots, storage. Replaces get_page_content/get_selected_text/get_page_url.
 - **Scenario:** CC calls `evalInBrowser({code: "await navigate('...'); await fill('#email','x'); return await snapshot()"})` -> code runs in background script -> DOM ops delegated to tab via executeScript -> result returned to CC
 - **Acceptance:**
-  - [x] `evalInBrowser` MCP tool with `code` (string) + `timeout` (number, optional) params. Evidence: `foxcode/channel/lib.mjs:78-120` (TOOL_DEFINITIONS), `foxcode/channel/server.mjs:148-157` (handler)
-  - [x] Code syntax validated before execution (async-aware). Evidence: `foxcode/channel/validator.mjs:7-12` (validateCode), `foxcode/channel/validator.test.mjs`
-  - [x] Background script executes code via `new Function('api', ...)` with injected API object. Evidence: `extension/background/background.js:139-148`
+  - [x] `evalInBrowser` MCP tool with `code` (string) + `timeout` (number, optional) params. Evidence: `foxcode/channel/lib.mjs:207-293` (TOOL_DEFINITIONS), `foxcode/channel/server.mjs:250-261` (handler)
+  - [x] Code syntax validated before execution (async-aware). Evidence: `foxcode/channel/validator.mjs:5-12` (validateCode), `foxcode/channel/validator.test.mjs`
+  - [x] Background script executes code via `new Function('api', ...)` with injected API object. Evidence: `extension/background/background.js:206-216`
   - [x] API provides DOM helpers (click, fill, type, select, check, hover, waitFor, $, $$, snapshot). Evidence: `extension/background/browser-api.js:87-192`, `extension/background/dom-helpers.js`
   - [x] DOM helpers auto-wait for element (poll 100ms, configurable timeout). Evidence: `extension/background/dom-helpers.js:19-43` (buildWaitAndAct)
   - [x] Navigation helpers await page load via webNavigation.onCompleted. Evidence: `extension/background/browser-api.js:249-259`
   - [x] `navigate()` creates new active tab on first call. Subsequent navigations reuse and activate managed tab. `closeTab()` resets state. Evidence: `extension/background/browser-api.js:18-28,248-259,297-307`, `extension/background/browser-api.test.js:364-548`
   - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:290-313`
   - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:230-240`
-  - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:142-145`
-  - [x] `reply` tool preserved. Evidence: `foxcode/channel/lib.mjs:30-38`
-  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message). Evidence: `foxcode/channel/lib.mjs` (3 tools: ping, reply, evalInBrowser)
+  - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:210-214`
+  - [x] `reply` tool preserved. Evidence: `foxcode/channel/lib.mjs:41-44`
+  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message). Evidence: `foxcode/channel/lib.mjs` (4 tools: status, ping, reply, evalInBrowser)
   - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `extension/manifest.json:6-11,13`
   - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `extension/background/dom-helpers.test.js`, `extension/background/browser-api.test.js`
   - [ ] Integration test: background executes code -> delegates to tab -> returns result (requires Firefox)
-  - [x] MCP instructions describe API reference. Evidence: `foxcode/channel/lib.mjs:82-118` (evalInBrowser description)
+  - [x] MCP instructions describe API reference. Evidence: `foxcode/channel/lib.mjs:237-277` (evalInBrowser description)
 
 ## 4. Non-Functional
 
@@ -91,11 +91,11 @@
 - [x] `ping` tool verifies bidirectional connectivity (CC -> browser -> CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
 - [x] `/foxcode:run-project-profile` flow: status -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/run-project-profile/SKILL.md`
 - [x] `/foxcode:run-user-profile` flow: status -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/run-user-profile/SKILL.md`
-- [x] Extension fast-path connect: probes saved port first, full scan only on failure. Evidence: `extension/background/background.js:165-176`
+- [x] Extension connects via URL hash params (`foxcode-port` + `foxcode-password`) or manual sidebar settings form. No port scanning. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
 
 ### 4.3 NF-3: Reliability [very important]
-- [x] Auto-reconnect on connection loss. Evidence: `extension/background/background.js:46-54` (scheduleReconnect with backoff)
-- [x] Graceful degradation when CC not running. Evidence: `extension/sidebar/sidebar.js:43-46` (status indicator)
+- [x] Auto-reconnect on connection loss. Evidence: `extension/background/background.js:140-152` (scheduleReconnect with backoff)
+- [x] Graceful degradation when CC not running. Evidence: `extension/sidebar/sidebar.js:82-98` (status indicator)
 - [ ] No message loss during normal operation - not verified
 - [x] No interference with CC terminal workflow. Evidence: tested manually
 
@@ -103,8 +103,9 @@
 - [x] Minimal moving parts: 1 MCP server + 1 extension, standard WebSocket protocol
 
 ### 4.5 NF-5: Security
-- [x] All traffic local. Evidence: `foxcode/channel/server.mjs:28` (WebSocketServer host: '127.0.0.1')
-- [x] No credentials stored in extension
+- [x] All traffic local. Evidence: `foxcode/channel/lib.mjs` (createHttpServer binds 127.0.0.1)
+- [x] WebSocket upgrade-level password auth: server generates random password (persisted `~/.foxcode/password`, mode 0600), rejects connections without valid `?token=` param (HTTP 401). Evidence: `foxcode/channel/server.mjs` (upgrade handler), `foxcode/channel/lib.mjs` (passwordStorage)
+- [x] Connection params (port+password) saved in `browser.storage.local` for reconnection. Evidence: `extension/background/background.js` (saveConnectionParams)
 
 ### 4.6 NF-6: Performance
 - [x] Message delivery latency <1s. Evidence: tested manually

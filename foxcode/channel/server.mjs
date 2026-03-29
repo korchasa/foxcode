@@ -19,7 +19,8 @@ import { WebSocketServer } from 'ws'
 import {
   nextId, buildChannelMeta, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
-  buildPongMessage, CHANNEL_TEST_MARKER, createWebSocketServer,
+  buildPongMessage, CHANNEL_TEST_MARKER, createHttpServer,
+  passwordStorage,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 import { createRequire } from 'node:module'
@@ -29,13 +30,37 @@ const pluginMeta = require('../.claude-plugin/plugin.json')
 
 const explicitPort = process.env.FOXCODE_PORT != null ? Number(process.env.FOXCODE_PORT) : null
 
+// --- Password auth ---
+
+const PASSWORD = passwordStorage.load() ?? (() => {
+  const pw = passwordStorage.generate()
+  passwordStorage.save(pw)
+  return pw
+})()
+
 /** Resolver for pending ping test. Set during ping tool call. */
 let channelTestResolve = null
 
-// --- WebSocket server for extension connection ---
+// --- WebSocket server with upgrade-level auth ---
 
-const { wss, port: PORT } = await createWebSocketServer(WebSocketServer, explicitPort)
+const { httpServer, port: PORT } = await createHttpServer(explicitPort)
+const wss = new WebSocketServer({ noServer: true })
 const clients = new Set()
+
+if (httpServer) {
+  httpServer.on('upgrade', (req, socket, head) => {
+    const url = new URL(req.url, 'http://localhost')
+    const token = url.searchParams.get('token')
+    if (token !== PASSWORD) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+      socket.destroy()
+      return
+    }
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit('connection', ws, req)
+    })
+  })
+}
 
 /** Pending browser tool requests: request_id -> {resolve, reject, timer} */
 const pendingToolRequests = new Map()
@@ -44,7 +69,13 @@ const TOOL_TIMEOUT_MS = 30_000
 function broadcast(msg) {
   const data = JSON.stringify(msg)
   for (const ws of clients) {
-    if (ws.readyState === 1) ws.send(data)
+    if (ws.readyState === 1) {
+      try {
+        ws.send(data)
+      } catch {
+        clients.delete(ws)
+      }
+    }
   }
 }
 
@@ -76,9 +107,17 @@ function requestFromBrowser(tool, params = {}) {
   })
 }
 
-if (wss) wss.on('connection', (ws) => {
+if (httpServer) wss.on('connection', (ws) => {
   clients.add(ws)
-  ws.on('close', () => clients.delete(ws))
+  ws.on('close', () => {
+    clients.delete(ws)
+    // Reject all pending tool requests from this disconnected client
+    for (const [id, pending] of pendingToolRequests) {
+      clearTimeout(pending.timer)
+      pendingToolRequests.delete(id)
+      pending.reject(new Error('Browser extension disconnected'))
+    }
+  })
   ws.on('error', () => clients.delete(ws))
   ws.on('message', (raw) => {
     try {
@@ -170,6 +209,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
       case 'status': {
         const status = {
           port: PORT,
+          password: PASSWORD,
           projectDir: process.env.FOXCODE_PROJECT_DIR || process.cwd(),
           uptime: process.uptime(),
           connectedClients: clients.size,
@@ -232,7 +272,8 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
 function shutdown(reason) {
   process.stderr.write(`foxcode: shutdown (${reason})\n`)
   for (const ws of clients) ws.terminate()
-  if (wss) wss.close()
+  if (httpServer) wss.close()
+  if (httpServer) httpServer.close()
   process.exit(0)
 }
 

@@ -14,34 +14,32 @@
 // additional background scripts in manifest.json.
 // For now, we reference createBrowserApi from the global scope (loaded via manifest).
 
-// Must match BASE_PORT/PORT_RANGE in foxcode/channel/lib.mjs (no shared module between Node.js and WebExtension)
-const BASE_PORT = 8787
-const PORT_RANGE = 100
 const RECONNECT_INTERVAL_MS = 3000
 const MAX_RECONNECT_INTERVAL_MS = 30000
-const PROBE_TIMEOUT_MS = 1500
 
-const STORAGE_KEY = 'foxcode_last_port'
+const STORAGE_KEY_PORT = 'foxcode_last_port'
+const STORAGE_KEY_PASSWORD = 'foxcode_last_password'
 
 let ws = null
 let reconnectTimer = null
 let reconnectInterval = RECONNECT_INTERVAL_MS
 let sidebarPort = null
 let activePort = null
+let activePassword = null
 
-/** Last discovered servers list: [{port, server, version, pid, pluginRoot, uptime, ...}] */
-let discoveredServers = []
-
-/** Save selected port to extension storage for persistence across restarts. */
-function savePort(port) {
-  browser.storage.local.set({ [STORAGE_KEY]: port })
+/** Save connection params to extension storage for persistence across restarts. */
+function saveConnectionParams(port, password) {
+  browser.storage.local.set({ [STORAGE_KEY_PORT]: port, [STORAGE_KEY_PASSWORD]: password })
 }
 
-/** Load last selected port from extension storage. Returns port number or null. */
-async function loadSavedPort() {
+/** Load saved connection params from extension storage. Returns {port, password} or null. */
+async function loadSavedParams() {
   try {
-    const result = await browser.storage.local.get(STORAGE_KEY)
-    return result[STORAGE_KEY] ?? null
+    const result = await browser.storage.local.get([STORAGE_KEY_PORT, STORAGE_KEY_PASSWORD])
+    const port = result[STORAGE_KEY_PORT] ?? null
+    const password = result[STORAGE_KEY_PASSWORD] ?? null
+    if (port) return { port, password }
+    return null
   } catch {
     return null
   }
@@ -64,80 +62,29 @@ function getBrowserApi() {
 
 // serializeResult is loaded from serialize.js via manifest.json
 
-// --- Port discovery & WebSocket connection ---
+// --- WebSocket connection ---
 
 /**
- * Probe a single port: open WebSocket, send ping, wait for pong with telemetry.
- * Returns pong data or null on failure/timeout.
+ * Connect to a specific server with port and password (token auth).
  */
-function probePort(port) {
-  return new Promise((resolve) => {
-    let settled = false
-    let probe
-    function settle(result) {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      if (probe && probe.readyState <= WebSocket.OPEN) probe.close()
-      resolve(result)
-    }
-    const timer = setTimeout(() => settle(null), PROBE_TIMEOUT_MS)
-    try {
-      probe = new WebSocket(`ws://127.0.0.1:${port}`)
-    } catch { settle(null); return }
-
-    probe.onopen = () => { probe.send(JSON.stringify({ type: 'ping' })) }
-    probe.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data)
-        if (msg.type === 'pong') settle({ ...msg, port })
-      } catch { /* ignore */ }
-    }
-    probe.onerror = () => settle(null)
-    probe.onclose = () => settle(null)
-  })
-}
-
-/**
- * Scan all ports in range in batches to avoid excessive parallel connections.
- * Returns array of pong objects sorted by port.
- * @param {Object} [options]
- * @param {function} [options.onProgress] - Called with {scanned, total, found} after each batch
- */
-async function discoverServers({ onProgress } = {}) {
-  const BATCH_SIZE = 20
-  const found = []
-  for (let i = 0; i < PORT_RANGE; i += BATCH_SIZE) {
-    const batch = []
-    for (let j = i; j < Math.min(i + BATCH_SIZE, PORT_RANGE); j++) {
-      batch.push(probePort(BASE_PORT + j))
-    }
-    const results = await Promise.all(batch)
-    for (const r of results) if (r) found.push(r)
-    if (onProgress) {
-      onProgress({ scanned: Math.min(i + BATCH_SIZE, PORT_RANGE), total: PORT_RANGE, found: found.length })
-    }
-  }
-  return found.sort((a, b) => a.port - b.port)
-}
-
-/**
- * Connect to a specific port. Sets up message routing and reconnect on close.
- */
-function connectToPort(port) {
+function connectToServer(port, password) {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
     if (activePort === port) return
     ws.close()
   }
 
   try {
-    ws = new WebSocket(`ws://127.0.0.1:${port}`)
+    const url = password
+      ? `ws://127.0.0.1:${port}?token=${encodeURIComponent(password)}`
+      : `ws://127.0.0.1:${port}`
+    ws = new WebSocket(url)
   } catch {
     scheduleReconnect()
     return
   }
   activePort = port
-  savePort(port)
+  activePassword = password
+  saveConnectionParams(port, password)
 
   ws.onopen = () => {
     reconnectInterval = RECONNECT_INTERVAL_MS
@@ -163,64 +110,44 @@ function connectToPort(port) {
 }
 
 /**
- * Main connect flow: URL port > saved/active port > full scan.
+ * Main connect flow: URL params > saved params > show settings.
  */
 async function connect() {
   if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return
 
-  // URL path: port passed via web-ext --start-url "about:blank#foxcode-port=PORT"
-  const urlPort = await getPortFromTabs(() => browser.tabs.query({}))
-  if (urlPort) {
-    const quick = await probePort(urlPort)
-    if (quick) {
-      discoveredServers = [quick]
-      if (sidebarPort) sidebarPort.postMessage({ type: 'servers', list: discoveredServers, activePort })
-      connectToPort(urlPort)
-      return
-    }
-  }
-
-  // Fast path: probe saved/active port directly - avoids full range scan on reconnect
-  const savedPort = activePort ?? await loadSavedPort()
-  if (savedPort) {
-    const quick = await probePort(savedPort)
-    if (quick) {
-      discoveredServers = [quick]
-      if (sidebarPort) sidebarPort.postMessage({ type: 'servers', list: discoveredServers, activePort })
-      connectToPort(savedPort)
-      return
-    }
-  }
-
-  // Slow path: full range scan
-  if (sidebarPort) sidebarPort.postMessage({ type: 'scan-start' })
-  discoveredServers = await discoverServers({
-    onProgress(p) {
-      if (sidebarPort) sidebarPort.postMessage({ type: 'scan-progress', ...p })
-    }
-  })
-  if (sidebarPort) sidebarPort.postMessage({ type: 'scan-done', found: discoveredServers.length })
-  if (sidebarPort) sidebarPort.postMessage({ type: 'servers', list: discoveredServers, activePort })
-
-  if (discoveredServers.length === 0) {
-    broadcastStatus(false)
-    scheduleReconnect()
+  // URL path: params passed via web-ext --start-url "about:blank#foxcode-port=PORT&foxcode-password=PASS"
+  const urlParams = await getParamsFromTabs(() => browser.tabs.query({}))
+  if (urlParams && urlParams.port) {
+    connectToServer(urlParams.port, urlParams.password)
     return
   }
 
-  connectToPort(discoveredServers[0].port)
+  // Saved params from previous session
+  const saved = await loadSavedParams()
+  if (saved) {
+    connectToServer(saved.port, saved.password)
+    return
+  }
+
+  // No params available - sidebar will show settings form
+  if (sidebarPort) sidebarPort.postMessage({ type: 'show-settings' })
 }
 
 /**
  * Schedule a reconnection with exponential backoff.
- * On each reconnect, re-scan all ports (server may have moved).
+ * Only retries with saved params (no scanning).
  */
 function scheduleReconnect() {
   if (reconnectTimer) return
-  reconnectTimer = setTimeout(() => {
+  reconnectTimer = setTimeout(async () => {
     reconnectTimer = null
     reconnectInterval = Math.min(reconnectInterval * 1.5, MAX_RECONNECT_INTERVAL_MS)
-    connect()
+    // Retry with current active params
+    if (activePort) {
+      connectToServer(activePort, activePassword)
+    } else {
+      connect()
+    }
   }, reconnectInterval)
 }
 
@@ -304,30 +231,34 @@ browser.runtime.onConnect.addListener((port) => {
   if (port.name !== 'sidebar') return
   sidebarPort = port
 
-  // Send current connection status and known servers
+  // Send current connection status
   const connected = ws && ws.readyState === WebSocket.OPEN
   port.postMessage({ type: 'status', connected })
-  if (discoveredServers.length > 0) {
-    port.postMessage({ type: 'servers', list: discoveredServers, activePort })
+
+  // If not connected and no active params, prompt settings
+  if (!connected && !activePort) {
+    port.postMessage({ type: 'show-settings' })
   }
 
   port.onMessage.addListener((msg) => {
     switch (msg.type) {
-      case 'message':
-        sendToChannel(msg)
+      case 'message': {
+        const sent = sendToChannel(msg)
+        if (!sent && sidebarPort) {
+          sidebarPort.postMessage({ type: 'send-failed', text: 'Message not delivered — no connection' })
+        }
         break
+      }
       case 'connect':
         connect()
         break
-      case 'select-server':
-        if (msg.port) connectToPort(msg.port)
-        break
-      case 'rescan':
+      case 'update-settings':
         if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
         reconnectInterval = RECONNECT_INTERVAL_MS
         if (ws) { ws.onclose = null; ws.close(); ws = null }
         activePort = null
-        connect()
+        activePassword = null
+        connectToServer(msg.port, msg.password)
         break
     }
   })

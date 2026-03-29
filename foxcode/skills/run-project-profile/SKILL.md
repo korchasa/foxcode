@@ -20,7 +20,7 @@ Call the `status` MCP tool.
 If the tool call fails:
 > FoxCode MCP server is not running. Make sure `.mcp.json` is configured and Claude Code loaded the foxcode MCP server. Restart Claude Code if needed.
 
-Note the `port` and `connectedClients` from the response.
+Note the `port`, `password`, and `connectedClients` from the response.
 
 ## Step 2: Check browser connection
 
@@ -76,7 +76,7 @@ npx web-ext run \
   --source-dir "$EXT_DIR" \
   --firefox-profile .foxcode/firefox-profile \
   --keep-profile-changes \
-  --start-url "about:blank#foxcode-port=$PORT" \
+  --start-url "about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD" \
   --firefox="$FIREFOX"
 ```
 
