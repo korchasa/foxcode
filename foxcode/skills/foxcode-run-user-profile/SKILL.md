@@ -13,28 +13,18 @@ Self-contained launch: prerequisites → locate extension → guide manual loadi
 
 **IMPORTANT:** Detect the user's language from conversation context and communicate in that language throughout.
 
-## Step 1: Check server status and channels
+## Step 1: Check server status
 
 Call the `status` MCP tool.
 
 If the tool call fails:
 > FoxCode MCP server is not running. Make sure `.mcp.json` is configured and Claude Code loaded the foxcode MCP server. Restart Claude Code if needed.
 
-Note the `port`, `password`, `connectedClients`, and `channelsDetected` from the response.
-
-If `channelsDetected` is `false`:
-> ⚠ Channels not detected. Browser → CC messaging will not work (sidebar messages won't reach Claude Code). CC → Browser tools (`reply`, `evalInBrowser`) will work normally.
->
-> To enable bidirectional messaging, restart Claude Code with:
-> `claude --dangerously-load-development-channels plugin:foxcode@korchasa`
->
-> Or, if using an approved plugin on a team/enterprise plan, ensure `channelsEnabled: true` is set in managed settings.
-
-Continue with setup regardless — the extension is still useful for `reply` and `evalInBrowser`.
+Note the `port`, `password`, and `connectedClients` from the response.
 
 ## Step 2: Check browser connection
 
-If `connectedClients > 0`, call the `ping` tool. If both `forward` and `reverse` are `true`:
+If `connectedClients > 0`, call the `ping` tool. If `connected` is `true`:
 > Everything is working. Ready to go.
 
 Stop here. Otherwise continue to Step 3.
@@ -110,15 +100,12 @@ If all 24 attempts exhausted with no connection:
 
 Stop here.
 
-### Verify bidirectional connectivity
+### Verify connectivity
 
 Once `connectedClients > 0`, call the `ping` tool.
 
-If both `forward` and `reverse` are `true`:
-> Bidirectional connectivity confirmed. Ready to go.
+If `connected` is `true`:
+> Connectivity confirmed. Ready to go.
 
-If `forward` is `false`:
+If `connected` is `false`:
 > Browser connected but ping failed. Try reloading the extension in `about:debugging`.
-
-If `forward` is `true` but `reverse` is `false`:
-> Forward path works but browser did not reply. Try reloading the extension in `about:debugging`.

@@ -1,25 +1,19 @@
 /**
  * FoxCode - Sidebar UI.
- * Connects to background script, renders messages, handles input.
+ * Connects to background script, renders messages from Claude Code.
  */
 
 const STORAGE_KEY_PORT = 'foxcode_last_port'
 const STORAGE_KEY_PASSWORD = 'foxcode_last_password'
 
 const messagesEl = document.getElementById('messages')
-const inputEl = document.getElementById('input')
-const formEl = document.getElementById('input-form')
 const serverIndicatorEl = document.getElementById('server-indicator')
 const settingsFormEl = document.getElementById('settings-form')
 const settingsPortEl = document.getElementById('settings-port')
 const settingsPasswordEl = document.getElementById('settings-password')
 const settingsConnectBtn = document.getElementById('settings-connect')
-const channelsWarningEl = document.getElementById('channels-warning')
 
 const messages = new Map()
-let uid = 0
-let thinkingEl = null
-let currentTab = null
 
 // --- Connect to background ---
 
@@ -39,7 +33,6 @@ port.onMessage.addListener((msg) => {
       break
     case 'msg':
       setStatus(true)
-      removeThinking()
       addMessage(msg)
       break
     case 'edit':
@@ -53,32 +46,11 @@ port.onMessage.addListener((msg) => {
       setStatus(true)
       addToolResultMessage(msg)
       break
-    case 'send-failed':
-      removeThinking()
-      showSendError(msg.text || 'Message not delivered — no connection')
-      break
   }
 })
 
 port.onDisconnect.addListener(() => setStatus(false))
 port.postMessage({ type: 'connect' })
-
-// --- Track active tab ---
-
-async function updateCurrentTab() {
-  try {
-    const tabs = await browser.tabs.query({ active: true, currentWindow: true })
-    currentTab = tabs[0] ? { url: tabs[0].url, title: tabs[0].title } : null
-  } catch {
-    currentTab = null
-  }
-}
-
-updateCurrentTab()
-browser.tabs.onActivated.addListener(() => updateCurrentTab())
-browser.tabs.onUpdated.addListener((_id, changeInfo) => {
-  if (changeInfo.title || changeInfo.url) updateCurrentTab()
-})
 
 // --- Status ---
 
@@ -92,24 +64,6 @@ const SOURCE_LABELS = {
 }
 
 let isConnected = false
-let hasChannels = true // assume true until pong says otherwise
-
-/** Single source of truth for input state. Priority: disconnected > no channels > normal. */
-function updateInputState() {
-  if (!isConnected) {
-    inputEl.classList.add('disconnected')
-    inputEl.disabled = true
-    inputEl.placeholder = 'No connection...'
-  } else if (!hasChannels) {
-    inputEl.classList.remove('disconnected')
-    inputEl.disabled = true
-    inputEl.placeholder = 'Channels not enabled — input disabled'
-  } else {
-    inputEl.classList.remove('disconnected')
-    inputEl.disabled = false
-    inputEl.placeholder = 'Ask a question about this page...'
-  }
-}
 
 function setStatus(connected, diag) {
   isConnected = connected
@@ -125,11 +79,8 @@ function setStatus(connected, diag) {
     serverIndicatorEl.classList.remove('connected')
     serverIndicatorEl.textContent = 'No connection'
     serverIndicatorEl.dataset.hasServerInfo = ''
-    hasChannels = true // reset until next pong
-    channelsWarningEl.classList.add('hidden')
     updateDiag(diag)
   }
-  updateInputState()
 }
 
 function updateDiag(diag) {
@@ -168,43 +119,6 @@ settingsConnectBtn.addEventListener('click', () => {
 serverIndicatorEl.addEventListener('click', () => {
   settingsFormEl.classList.toggle('hidden')
 })
-
-// --- Thinking indicator ---
-
-const THINKING_TIMEOUT_MS = 60000
-let thinkingTimer = null
-
-function showThinking() {
-  removeThinking()
-  thinkingEl = document.createElement('div')
-  thinkingEl.className = 'message thinking'
-  thinkingEl.innerHTML = '<div class="thinking-dots"><span>.</span><span>.</span><span>.</span></div>'
-  messagesEl.appendChild(thinkingEl)
-  scrollToBottom()
-  thinkingTimer = setTimeout(() => {
-    removeThinking()
-  }, THINKING_TIMEOUT_MS)
-}
-
-function removeThinking() {
-  if (thinkingTimer) {
-    clearTimeout(thinkingTimer)
-    thinkingTimer = null
-  }
-  if (thinkingEl) {
-    thinkingEl.remove()
-    thinkingEl = null
-  }
-}
-
-function showSendError(text) {
-  const div = document.createElement('div')
-  div.className = 'message send-error'
-  div.textContent = text
-  messagesEl.appendChild(div)
-  scrollToBottom(true)
-  setTimeout(() => div.remove(), 5000)
-}
 
 // --- Messages ---
 
@@ -306,14 +220,6 @@ function updateActiveServerInfo(pong) {
   const uptimeMin = Math.floor((pong.uptime || 0) / 60)
   serverIndicatorEl.textContent = `${label} :${pong.port} | v${pong.version} | up ${uptimeMin}m`
   serverIndicatorEl.dataset.hasServerInfo = '1'
-  if (pong.channelsDetected === false) {
-    hasChannels = false
-    channelsWarningEl.classList.remove('hidden')
-  } else {
-    hasChannels = true
-    channelsWarningEl.classList.add('hidden')
-  }
-  updateInputState()
 }
 
 function projectLabel(server) {
@@ -323,34 +229,3 @@ function projectLabel(server) {
   const segments = rel.replace(/[\\/]+$/, '').split(/[\\/]/)
   return segments.length > 2 ? segments.slice(-2).join('/') : rel
 }
-
-// --- Send message ---
-
-formEl.addEventListener('submit', async (e) => {
-  e.preventDefault()
-  const text = inputEl.value.trim()
-  if (!text) return
-
-  const id = `u-${Date.now()}-${++uid}`
-  addMessage({ id, from: 'user', text, ts: Date.now() })
-
-  port.postMessage({ type: 'message', id, text, tab: currentTab })
-  showThinking()
-
-  inputEl.value = ''
-  inputEl.style.height = ''
-  inputEl.focus()
-})
-
-inputEl.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    formEl.requestSubmit()
-  }
-})
-
-// Auto-resize textarea
-inputEl.addEventListener('input', () => {
-  inputEl.style.height = 'auto'
-  inputEl.style.height = inputEl.scrollHeight + 'px'
-})

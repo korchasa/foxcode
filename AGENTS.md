@@ -26,21 +26,21 @@
 - Project Name: FoxCode
 
 ## Project Vision
-Firefox WebExtension providing browser UI for active Claude Code sessions. Real-time bidirectional messaging, page context injection, and browser context tools - via MCP Channel Plugin communicating over WebSocket.
+Firefox WebExtension providing browser UI for active Claude Code sessions. Message display, browser automation tools - via MCP server communicating over WebSocket. One-way: CC -> Browser only.
 
 ## Project tooling Stack
 - **Extension**: JavaScript (ES6+), HTML, CSS - Firefox WebExtension API (Manifest V2)
-- **Channel Plugin**: Node.js (ES modules) - MCP server with `claude/channel` capability
+- **Channel Plugin**: Node.js (ES modules) - MCP server
 - **Dependencies**: `@modelcontextprotocol/sdk`, `ws` (WebSocket)
 - **CLI**: Claude Code CLI v2.1.80+ (`@anthropic-ai/claude-code`)
 - **Platform**: Cross-platform (macOS primary)
 
 ## Architecture
 - **Channel Plugin** (`foxcode/channel/server.mjs`) - MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
-- **WebExtension Sidebar** (`extension/sidebar/`) - Chat UI: message rendering, text input
+- **WebExtension Sidebar** (`extension/sidebar/`) - Chat UI: message rendering (read-only)
 - **Background Script** (`extension/background/background.js`) - WebSocket connection management, message routing, tool request handling
 - **Content Script** (`extension/content/content-script.js`) - DOM access, `api.eval()` in page main world
-- **Flow**: Sidebar -> Background -> WebSocket -> Channel Plugin -> MCP stdio -> Claude Code
+- **Flow**: Claude Code -> MCP stdio -> Channel Plugin -> WebSocket -> Background -> Sidebar
 
 ## Repository Structure
 
@@ -76,7 +76,7 @@ foxcode/
 
 ## Launch Modes
 
-Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa`. Launch CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` (channels in research preview).
+Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa`.
 
 ### Project Profile (`/foxcode:foxcode-run-project-profile`)
 - Isolated Firefox instance launched via `web-ext run` with project-local profile (`.foxcode/firefox-profile/`)
@@ -99,11 +99,11 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 ### Local Development (contributing to FoxCode)
 - Root `.mcp.json` runs `cd foxcode/channel && npm install && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"` (relative to repo root)
 - Extension loaded via `scripts/dev.sh` (`web-ext run --source-dir extension/`) or manually via `about:debugging`
-- CC: `claude --mcp-config .mcp.json --dangerously-load-development-channels server:foxcode`
+- CC: `claude --mcp-config .mcp.json`
 - Workflow: edit code -> reload extension -> test
 
 ## Key Decisions
-- MCP Channel Plugin over Native Messaging: bidirectional session sync, no subprocess per request
+- MCP server over Native Messaging: no subprocess per request
 - WebSocket on localhost: simple, reliable bridge between Node.js and browser extension
 - Node.js for channel: MCP SDK compatibility, single process
 - Manifest V2: broader Firefox compatibility
@@ -113,11 +113,10 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported
 - Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
 - Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
-- Channels in research preview: third-party plugins not in Anthropic allowlist -> `--dangerously-load-development-channels plugin:foxcode@korchasa` required. Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools)
+- Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools)
 - URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Project Profile skill builds `about:blank#foxcode-port=PORT&foxcode-password=PASS` URL for instant connection. User Profile uses saved port from `browser.storage.local` or manual sidebar settings form. Multiple CC sessions coexist (different ports, shared password)
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
 - When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
-- CC v2.1.87+ sends identical `clientCapabilities` in MCP handshake regardless of `--dangerously-load-development-channels` flag. Channel support **cannot** be detected via MCP protocol. Workaround: `detectChannels()` in `lib.mjs` walks parent process tree at startup (ps on macOS/Linux, PowerShell on Windows) looking for the flag in CC process args.
 
 ## Planning Rules
 

@@ -3,7 +3,6 @@
  * FoxCode - Channel plugin for Firefox extension.
  *
  * MCP server that bridges Claude Code ↔ Firefox extension via WebSocket.
- * - Declares claude/channel capability for bidirectional messaging
  * - Exposes reply tool for CC -> browser responses
  * - Exposes evalInBrowser tool for CC -> browser automation (JS execution with ~30 API helpers)
  * - WebSocket server on localhost for extension connection
@@ -17,10 +16,10 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { WebSocketServer } from 'ws'
 import {
-  nextId, buildChannelMeta, buildReplyMessage,
+  nextId, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
-  buildPongMessage, CHANNEL_TEST_MARKER, createHttpServer,
-  passwordStorage, detectChannels,
+  buildPongMessage, createHttpServer,
+  passwordStorage,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 import { createRequire } from 'node:module'
@@ -29,7 +28,6 @@ const require = createRequire(import.meta.url)
 const pluginMeta = require('../.claude-plugin/plugin.json')
 
 const explicitPort = process.env.FOXCODE_PORT != null ? Number(process.env.FOXCODE_PORT) : null
-const CHANNELS_DETECTED = detectChannels(process.ppid)
 
 // --- Password auth ---
 
@@ -38,9 +36,6 @@ const PASSWORD = passwordStorage.load() ?? (() => {
   passwordStorage.save(pw)
   return pw
 })()
-
-/** Resolver for pending ping test. Set during ping tool call. */
-let channelTestResolve = null
 
 /** Last known client connection info from extension ping. */
 let clientInfo = null
@@ -151,27 +146,8 @@ function handleExtensionMessage(msg, ws) {
         nodeVersion: process.version,
         pluginRoot: process.env.CLAUDE_PLUGIN_ROOT,
         projectDir: process.env.FOXCODE_PROJECT_DIR || process.cwd(),
-        channelsDetected: CHANNELS_DETECTED,
       })
       if (ws.readyState === 1) ws.send(JSON.stringify(pong))
-      break
-    }
-    case 'message': {
-      // Channel test ack from browser - resolve pending verify
-      if (msg.text === 'pong') {
-        if (channelTestResolve) {
-          channelTestResolve(true)
-          channelTestResolve = null
-        }
-        break
-      }
-      // FR-2: User message from browser -> forward to CC via channel notification
-      const { content, meta } = buildChannelMeta(msg)
-      process.stderr.write(`foxcode: notify channel content=${content.slice(0, 100)}\n`)
-      mcp.notification({
-        method: 'notifications/claude/channel',
-        params: { content, meta },
-      })
       break
     }
     case 'tool_response': {
@@ -194,11 +170,8 @@ const mcp = new Server(
   {
     capabilities: {
       tools: {},
-      experimental: { 'claude/channel': {} },
     },
     instructions: [
-      'Messages from the Firefox browser arrive as <channel source="foxcode" chat_id="web" message_id="..." tab_url="..." tab_title="...">.',
-      'The tab_url and tab_title attributes show which page the user is currently viewing.',
       'The browser user reads the Firefox sidebar, not this terminal. Anything you want them to see MUST go through the reply tool - your transcript output never reaches the browser UI.',
       'Use evalInBrowser tool to execute JS in browser with full browser automation API (click, fill, navigate, snapshot, etc.).',
       PORT ? `Browser extension connects to ws://localhost:${PORT}.` : 'No WebSocket port available - browser extension cannot connect.',
@@ -229,30 +202,13 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
           pid: process.pid,
           pluginRoot: process.env.CLAUDE_PLUGIN_ROOT || null,
           launchMode: process.env.CLAUDE_PLUGIN_ROOT ? 'plugin' : 'dev',
-          channelsDetected: CHANNELS_DETECTED,
           client: clientInfo,
         }
         return { content: [{ type: 'text', text: JSON.stringify(status) }] }
       }
       case 'ping': {
-        const VERIFY_TIMEOUT_MS = 5000
-        // Forward path: send test message to browser via WebSocket
-        const forward = hasClients()
-        if (forward) {
-          broadcast(buildReplyMessage(CHANNEL_TEST_MARKER))
-        }
-        // Reverse path: wait for browser's auto-ack via channel notification
-        let reverse = false
-        if (forward) {
-          reverse = await new Promise((resolve) => {
-            channelTestResolve = resolve
-            setTimeout(() => {
-              channelTestResolve = null
-              resolve(false)
-            }, VERIFY_TIMEOUT_MS)
-          })
-        }
-        const result = { forward, reverse }
+        const connected = hasClients()
+        const result = { connected }
         return { content: [{ type: 'text', text: JSON.stringify(result) }] }
       }
       case 'reply': {

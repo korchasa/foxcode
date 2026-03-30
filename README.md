@@ -1,16 +1,12 @@
-# FoxCode - Claude Code <-> Firefox Bridge
+# FoxCode - Claude Code -> Firefox Bridge
 
 > **⚠️ Active Development** - This project is under heavy development. APIs, configuration, and behavior may change without notice. Expect breaking changes between versions.
 
-Bidirectional bridge between Claude Code and Firefox. Chat with Claude Code from the browser sidebar, give it page context, and let it automate the browser - all without leaving Firefox.
+Claude Code to Firefox bridge. See Claude Code messages in the browser sidebar, give it page context, and let it automate the browser - all without leaving Firefox.
 
-FoxCode is a two-part system: a **Claude Code plugin** (MCP channel server on Node.js) and a **Firefox WebExtension** (sidebar UI + browser automation), connected via WebSocket on localhost.
+FoxCode is a two-part system: a **Claude Code plugin** (MCP server on Node.js) and a **Firefox WebExtension** (sidebar UI + browser automation), connected via WebSocket on localhost.
 
 ## Usage Patterns
-
-### Talk to Claude Code about what you see in the browser
-
-Working on a project and found a bug on the page? Open the Firefox sidebar and describe it — Claude Code receives the tab URL, title, and your message in the context of the current project session. No copy-pasting URLs into the terminal.
 
 ### Let Claude Code test your project in the browser
 
@@ -41,11 +37,9 @@ Launch FoxCode with one of two modes:
 
 ## Features
 
-- **Chat in sidebar** - send/receive messages to your Claude Code session
-- **Page context** - Claude Code sees the current tab URL and title with every message
+- **Message display** - see Claude Code replies, tool executions, and results in the browser sidebar
 - **Browser automation** - click, fill forms, navigate, take screenshots, read DOM (~30 API helpers)
 - **Connection diagnostics** - sidebar shows port, params source, error details, and retry timer when disconnected
-- **Channel detection** - detects if Claude Code was launched with channel support; warns when sidebar→CC messaging won't work
 
 ## Architecture
 
@@ -62,7 +56,7 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 ## Components
 
-- **Channel Plugin** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging Claude Code ↔ extension via WebSocket. Installed as a Claude Code plugin, provides MCP tools and the channel capability
+- **Channel Plugin** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging Claude Code -> extension via WebSocket. Installed as a Claude Code plugin, provides MCP tools
 - **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: sidebar chat UI, background script for WebSocket + code execution, content script for DOM access in page context
 - **Run Project Profile Skill** (`foxcode/skills/foxcode-run-project-profile/SKILL.md`) - self-contained: prerequisites, locate extension, launch isolated Firefox via web-ext, verify connectivity
 - **Run User Profile Skill** (`foxcode/skills/foxcode-run-user-profile/SKILL.md`) - self-contained: prerequisites, locate extension, guide manual loading, verify connectivity
@@ -71,8 +65,8 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 - `reply(text)` - send a message to the browser sidebar
 - `evalInBrowser(code)` - execute JS with browser automation API (click, fill, navigate, snapshot, screenshot, cookies, tabs, etc.)
-- `status()` - server telemetry: port, uptime, clients, channelsDetected, launchMode, client info
-- `ping()` - verify bidirectional connectivity (CC → browser → CC)
+- `status()` - server telemetry: port, uptime, clients, launchMode, client info
+- `ping()` - verify connectivity to browser extension
 
 ## Launch Flows
 
@@ -124,10 +118,10 @@ sequenceDiagram
 
     U->>CC: Start session
     CC->>MCP: Launch (stdio)
-    MCP->>MCP: Bind port, detect channels
+    MCP->>MCP: Bind port
 
     U->>CC: /foxcode:foxcode-run-user-profile
-    CC->>MCP: status → get port, channelsDetected
+    CC->>MCP: status → get port
     CC-->>U: Instructions + port/password
 
     U->>FF: Open about:debugging
@@ -146,7 +140,7 @@ sequenceDiagram
         EXT->>MCP: Connect
     end
 
-    MCP-->>EXT: pong (channelsDetected, server info)
+    MCP-->>EXT: pong (server info)
     EXT-->>U: Sidebar ready, shows server info
 ```
 
@@ -155,7 +149,7 @@ sequenceDiagram
 - **Project Profile**: isolated Firefox, port known upfront (URL hash) → instant connect. Persistent project-local profile
 - **User Profile**: user's own Firefox, no port hint → probe saved port or manual settings form. Temporary add-on, re-load after Firefox restart
 - **Reconnect**: both flows use saved params with exponential backoff (3s → 30s max)
-- **Channel detection**: both skills check `channelsDetected` from `status` tool and warn if channels not enabled
+- **Connection**: both skills verify connectivity via `status` + `ping` tools
 
 ## Troubleshooting
 
@@ -167,21 +161,6 @@ The sidebar displays diagnostic info: port, params source, error, and retry time
 - **Error: "Connection refused or dropped"** — Server was running but stopped. CC may have exited.
 - **Source: "URL hash params"** — Port came from launch URL (project profile mode). If wrong, re-run `/foxcode:foxcode-run-project-profile`.
 - **Source: "saved from previous session"** — Using stale port. Click the connection indicator → enter correct port/password manually.
-
-### Sidebar shows "Channels not enabled"
-
-The MCP server detected that Claude Code was **not** launched with channel support. Sidebar input is disabled because messages can't reach CC.
-
-**Fix:** Restart Claude Code with the channels flag:
-```bash
-claude --dangerously-load-development-channels plugin:foxcode@korchasa
-```
-For dev mode:
-```bash
-claude --mcp-config .mcp.json --dangerously-load-development-channels server:foxcode
-```
-
-Note: CC → Browser tools (`reply`, `evalInBrowser`) still work without channels. Only Browser → CC messaging requires channels.
 
 ### MCP server fails to start
 

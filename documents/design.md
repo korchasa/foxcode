@@ -8,14 +8,13 @@
 - **Diagram:**
 ```mermaid
 graph LR
-  S[Sidebar UI] -->|port messages| BG[Background Script]
-  CS[Content Script] -->|EVAL_IN_PAGE| BG
+  CC[Claude Code CLI] -->|reply/evalInBrowser| CH[Channel Plugin]
+  CH -->|WebSocket| BG[Background Script]
+  BG -->|messages| S[Sidebar UI]
   BG -->|executeScript| TAB[Active Tab DOM]
-  BG -->|WebSocket| CH[Channel Plugin]
-  CH -->|MCP stdio| CC[Claude Code CLI]
-  CC -->|reply/evalInBrowser| CH
-  CH -->|WebSocket| BG
-  BG -->|messages| S
+  CS[Content Script] -->|EVAL_IN_PAGE| BG
+  BG -->|tool_response| CH
+  CH -->|MCP stdio| CC
 ```
 - **Subsystems:**
   - Channel Plugin (`foxcode/channel/`): Node.js MCP server, WebSocket bridge
@@ -24,16 +23,16 @@ graph LR
 ## 3. Components
 
 ### 3.1 Channel Plugin (`foxcode/channel/`)
-- **`server.mjs`** - MCP server: WebSocket bridge, tool dispatch, channel notifications, graceful shutdown (stdin close / SIGTERM / SIGINT -> terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
-- **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createHttpServer`, `portStorage`), password management (`passwordStorage`), channel detection (`detectChannels`). File I/O limited to `portStorage` (`~/.foxcode/port`) and `passwordStorage` (`~/.foxcode/password`)
+- **`server.mjs`** - MCP server: WebSocket bridge, tool dispatch, graceful shutdown (stdin close / SIGTERM / SIGINT -> terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
+- **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createHttpServer`, `portStorage`), password management (`passwordStorage`). File I/O limited to `portStorage` (`~/.foxcode/port`) and `passwordStorage` (`~/.foxcode/password`)
 - **`validator.mjs`** - Code syntax validation (async-aware via `new Function` wrapper)
-- **Capabilities:** `claude/channel` (notifications), `tools` (status, ping, reply, evalInBrowser)
-- **Channel verification:** `ping` tool sends test message to browser via WebSocket; extension auto-replies `pong`. Returns `{forward, reverse}` booleans. `/foxcode:foxcode-run-project-profile` and `/foxcode:foxcode-run-user-profile` call `status` then `ping` as part of launch flow.
+- **Capabilities:** `tools` (status, ping, reply, evalInBrowser)
+- **Connectivity check:** `ping` tool checks if browser extension is connected. Returns `{connected: bool}`. Launch skills call `status` then `ping` as part of launch flow.
 - **Port binding:** Auto-binds to first available port in range 8787–8886. Priority: `FOXCODE_PORT` env -> saved port (`~/.foxcode/port`) -> random start with wrap-around. Saved on successful bind. Null-safe: runs without WebSocket if all ports taken (MCP stdio still works)
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:{port}` (extension, dynamic port)
 - **Tools exposed:**
-  - `status()` - server telemetry (port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion, pid, pluginRoot, launchMode, channelsDetected, client). Always works, no browser required. `channelsDetected` indicates if CC was launched with `--dangerously-load-development-channels` (detected via process tree walk at startup). `client` contains `{paramsSource, connectedAt}` from last extension ping
-  - `ping()` - test bidirectional connectivity (CC -> browser -> CC)
+  - `status()` - server telemetry (port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion, pid, pluginRoot, launchMode, client). Always works, no browser required. `client` contains `{paramsSource, connectedAt}` from last extension ping
+  - `ping()` - check if browser extension is connected. Returns `{connected: bool}`
   - `reply(text, reply_to?)` - send CC response to browser
   - `evalInBrowser(code, timeout?)` - execute JS in browser with full API. Validates syntax, sends to extension via WebSocket, returns serialized result
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
@@ -51,7 +50,7 @@ graph LR
 ### 3.3 Sidebar (`extension/sidebar/`)
 - **`markdown.js`** - Pure markdown->HTML renderer (testable without DOM)
 - **`format.js`** - Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
-- **`sidebar.js`** - UI: message rendering (user, assistant, tool_use, tool_result), text input, thinking indicator, connection settings form (port + password inputs, toggled via indicator click). Connection diagnostics panel (port, source, error, retry time). Channels warning banner when `pong.channelsDetected === false`. Input state managed via `updateInputState()` with priority: disconnected > no channels > normal
+- **`sidebar.js`** - UI: message rendering (assistant, tool_use, tool_result), connection settings form (port + password inputs, toggled via indicator click). Connection diagnostics panel (port, source, error, retry time). Read-only display, no user input
 - **Interfaces:** port connection to background script
 - **Deps:** Background script
 
@@ -66,12 +65,10 @@ graph LR
 - **Session data:** Messages, tool results - in-memory, session-scoped
 
 ## 5. Logic
-- **Browser -> CC:** Sidebar input -> background -> WebSocket -> channel -> `notifications/claude/channel` -> CC
 - **CC -> Browser:** CC calls `reply` tool -> channel -> WebSocket -> background -> sidebar
 - **CC automates browser:** CC calls `evalInBrowser` -> channel validates syntax -> sends `EVAL_CODE` via WebSocket -> background executes via `new Function('api',code)(browserApi)` -> API helpers delegate to `executeScript`/`webNavigation`/`cookies`/etc -> result serialized -> returned to CC
 - **Page main world eval:** `api.eval(expr)` -> background sends `EVAL_IN_PAGE` message to content script -> content script uses `wrappedJSObject.eval()` -> result returned
-- **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `message`, `tool_request`, `tool_response`, `tool_use`, `tool_result`). `pong` messages include `protocol_version` (integer) for compatibility checks, `channelsDetected` (boolean) for channel support status
-- **Channel detection:** `detectChannels(pid)` in `lib.mjs` walks parent process tree via `ps` (macOS/Linux) or `powershell Get-CimInstance` (Windows), looking for `--dangerously-load-development-channels` in CC process args. Called once at server startup. Result exposed in `status` tool and `pong` message
+- **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `tool_request`, `tool_response`, `tool_use`, `tool_result`). `pong` messages include `protocol_version` (integer) for compatibility checks
 
 ## 6. Non-Functional
 - **Fault Tolerance:** Auto-reconnect with exponential backoff (3s -> 30s max), retry with saved params (no port scanning). Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.
@@ -79,8 +76,7 @@ graph LR
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 
 ## 7. Constraints
-- **Channels in research preview:** requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag. CC does not advertise `claude/channel` in MCP client capabilities - verification via `ping` tool instead.
-- **Terminal messages invisible:** Messages initiated from terminal don't appear in browser (CC only calls `reply` for channel-initiated messages)
+- **One-way communication:** Sidebar is read-only display. CC sends messages to browser via `reply` tool; no browser-to-CC messaging
 - **CSP unsafe-eval required:** `evalInBrowser` uses `new Function()` in background - needs `"script-src 'self' 'unsafe-eval'"` in manifest CSP. Acceptable: code source is trusted (Claude Code agent)
 - **api.eval() CSP-limited:** Page CSP may block `eval()` via wrappedJSObject on strict sites
 - **No iframe support:** executeScript targets top frame only

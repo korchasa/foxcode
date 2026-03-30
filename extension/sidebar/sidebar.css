@@ -11,7 +11,6 @@ body {
   --bg-primary: #f5f5f5;
   --bg-secondary: #ffffff;
   --bg-input: #ffffff;
-  --bg-composer: #ffffff;
   --bg-tab-card: #f5f5f5;
   --bg-code: #f0f0f0;
   --bg-code-block: #f5f5f5;
@@ -19,7 +18,6 @@ body {
   --border: #e5e5e5;
   --border-input: #e0e0e0;
   --border-input-focus: #c2185b;
-  --border-composer: #e5e5e5;
   --text-primary: #1a1a1a;
   --text-secondary: #888;
   --text-meta: #999;
@@ -27,14 +25,12 @@ body {
   --text-link: #c2185b;
   --text-heading: #1a1a1a;
   --text-blockquote: #666;
-  --text-placeholder: #bbb;
   --accent: #c2185b;
   --scrollbar: #ddd;
   --scrollbar-hover: #bbb;
   --message-hover: #fafafa;
   --status-connected: #4caf50;
   --status-disconnected: #c2185b;
-  --shadow-composer: 0 -1px 6px rgba(0,0,0,0.06);
   --shadow-tab-card: 0 1px 3px rgba(0,0,0,0.08);
 }
 
@@ -44,7 +40,6 @@ body {
     --bg-primary: #1a1a1a;
     --bg-secondary: #222;
     --bg-input: #2a2a2a;
-    --bg-composer: #222;
     --bg-tab-card: #2a2a2a;
     --bg-code: #2a2a2a;
     --bg-code-block: #2a2a2a;
@@ -52,7 +47,6 @@ body {
     --border: #333;
     --border-input: #444;
     --border-input-focus: #e06080;
-    --border-composer: #333;
     --text-primary: #e0e0e0;
     --text-secondary: #888;
     --text-meta: #777;
@@ -60,14 +54,12 @@ body {
     --text-link: #e06080;
     --text-heading: #e0e0e0;
     --text-blockquote: #999;
-    --text-placeholder: #666;
     --accent: #e06080;
     --scrollbar: #444;
     --scrollbar-hover: #666;
     --message-hover: #242424;
     --status-connected: #66bb6a;
     --status-disconnected: #e06080;
-    --shadow-composer: 0 -1px 6px rgba(0,0,0,0.3);
     --shadow-tab-card: 0 1px 3px rgba(0,0,0,0.3);
   }
 }
@@ -178,12 +170,6 @@ body {
   opacity: 0.9;
 }
 
-/* --- Disconnected input --- */
-
-#input.disconnected::placeholder {
-  color: var(--status-disconnected);
-}
-
 /* --- Connection error banner --- */
 
 .connection-error {
@@ -228,32 +214,6 @@ body {
   color: var(--text-meta);
   font-size: 12px;
   margin-top: 4px;
-}
-
-/* --- Channels warning banner --- */
-
-.channels-warning {
-  margin: 8px 12px;
-  padding: 10px 14px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--text-secondary);
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.channels-warning.hidden {
-  display: none;
-}
-
-.channels-warning-title {
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.channels-warning-text {
-  color: var(--text-secondary);
 }
 
 /* --- Messages --- */
@@ -385,72 +345,6 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
 }
-
-/* Send error toast */
-
-.message.send-error {
-  padding: 4px 16px;
-  font-size: 12px;
-  color: var(--status-disconnected);
-  font-style: italic;
-}
-
-/* Thinking indicator */
-
-.message.thinking {
-  color: var(--text-secondary);
-  padding: 4px 16px;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
-}
-
-.thinking-dots span {
-  animation: pulse 1.4s infinite;
-  font-weight: 700;
-  font-size: 18px;
-}
-.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-/* --- Composer --- */
-
-#composer {
-  flex-shrink: 0;
-  padding: 8px 12px 12px;
-  background: var(--bg-primary);
-}
-
-
-/* Input */
-
-#input-form {
-  display: flex;
-  background: var(--bg-composer);
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: 4px 14px;
-  box-shadow: var(--shadow-composer);
-}
-
-#input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  padding: 8px 0;
-  font: inherit;
-  font-size: 14px;
-  resize: none;
-  min-height: 36px;
-  max-height: 120px;
-  overflow-y: auto;
-  line-height: 20px;
-}
-#input::placeholder { color: var(--text-placeholder); }
-#input:focus { outline: none; }
 
 /* --- Scrollbar --- */
 

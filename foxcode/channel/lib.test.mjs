@@ -1,11 +1,11 @@
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  state, nextId, buildChannelMeta, buildReplyMessage,
+  state, nextId, buildReplyMessage,
   buildToolUseMessage, buildToolResultMessage,
   TOOL_DEFINITIONS,
   buildPongMessage, PROTOCOL_VERSION, createHttpServer, BASE_PORT, PORT_RANGE, portStorage,
-  passwordStorage, detectChannels,
+  passwordStorage,
 } from './lib.mjs'
 import { createServer } from 'node:http'
 
@@ -23,39 +23,6 @@ describe('nextId', () => {
     assert.notEqual(a, b)
     assert.match(a, /-1$/)
     assert.match(b, /-2$/)
-  })
-})
-
-describe('buildChannelMeta', () => {
-  beforeEach(() => { state.seq = 0 })
-
-  it('builds meta with required fields', () => {
-    const result = buildChannelMeta({ id: 'test-1', text: 'hello' })
-    assert.equal(result.content, 'hello')
-    assert.equal(result.meta.chat_id, 'web')
-    assert.equal(result.meta.message_id, 'test-1')
-    assert.equal(result.meta.user, 'web')
-    assert.ok(result.meta.ts)
-  })
-
-  it('generates id when not provided', () => {
-    const result = buildChannelMeta({ text: 'hello' })
-    assert.match(result.meta.message_id, /^m\d+-\d+$/)
-  })
-
-  it('includes tab url and title when present', () => {
-    const result = buildChannelMeta({
-      id: 'x', text: 'hi',
-      tab: { url: 'https://example.com', title: 'Example' },
-    })
-    assert.equal(result.meta.tab_url, 'https://example.com')
-    assert.equal(result.meta.tab_title, 'Example')
-  })
-
-  it('omits tab fields when tab is absent', () => {
-    const result = buildChannelMeta({ id: 'x', text: 'hi' })
-    assert.equal(result.meta.tab_url, undefined)
-    assert.equal(result.meta.tab_title, undefined)
   })
 })
 
@@ -111,7 +78,7 @@ describe('buildToolResultMessage', () => {
 
 describe('buildPongMessage', () => {
   it('builds pong with all telemetry fields', () => {
-    const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode', projectDir: '/Users/test/www/4ra', channelsDetected: true }
+    const env = { name: 'foxcode', version: '0.4.3', pid: 12345, port: 8787, uptime: 10.5, clients: 2, pendingRequests: 1, nodeVersion: 'v22.0.0', pluginRoot: '/home/.claude/plugins/cache/foxcode', projectDir: '/Users/test/www/4ra' }
     const msg = buildPongMessage(env)
     assert.equal(msg.type, 'pong')
     assert.equal(msg.protocol_version, PROTOCOL_VERSION)
@@ -125,7 +92,6 @@ describe('buildPongMessage', () => {
     assert.equal(msg.nodeVersion, 'v22.0.0')
     assert.equal(msg.pluginRoot, '/home/.claude/plugins/cache/foxcode')
     assert.equal(msg.projectDir, '/Users/test/www/4ra')
-    assert.equal(msg.channelsDetected, true)
     assert.ok(msg.ts)
   })
 })
@@ -161,8 +127,6 @@ describe('passwordStorage', () => {
   })
 
   it('load() returns null when file does not exist', () => {
-    // Default load reads from ~/.foxcode/password which may not exist in test env
-    // We test the pattern by mocking
     passwordStorage.load = () => null
     assert.equal(passwordStorage.load(), null)
   })
@@ -192,7 +156,6 @@ describe('createHttpServer', () => {
   })
 
   it('binds to explicit port', async () => {
-    // Find a free port first
     const tmp = createServer()
     await new Promise((resolve) => tmp.listen(0, '127.0.0.1', resolve))
     const freePort = tmp.address().port
@@ -217,11 +180,9 @@ describe('createHttpServer', () => {
   })
 
   it('propagates non-EADDRINUSE errors', async () => {
-    // Test via explicit port on privileged range (permission denied on non-root)
-    // Skip if running as root
     if (process.getuid && process.getuid() === 0) return
     await assert.rejects(
-      () => createHttpServer(1), // port 1 - EACCES on non-root
+      () => createHttpServer(1),
       (err) => err.code === 'EACCES' || err.code === 'EADDRINUSE'
     )
   })
@@ -259,20 +220,5 @@ describe('TOOL_DEFINITIONS', () => {
     assert.deepEqual(tool.inputSchema.required, ['code'])
     assert.ok(tool.inputSchema.properties.code)
     assert.ok(tool.inputSchema.properties.timeout)
-  })
-})
-
-describe('detectChannels', () => {
-  it('returns boolean', () => {
-    const result = detectChannels(process.ppid)
-    assert.equal(typeof result, 'boolean')
-  })
-
-  it('returns false for PID 1', () => {
-    assert.equal(detectChannels(1), false)
-  })
-
-  it('returns false for non-existent PID', () => {
-    assert.equal(detectChannels(999999999), false)
   })
 })

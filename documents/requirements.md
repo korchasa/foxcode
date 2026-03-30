@@ -1,13 +1,13 @@
 # SRS
 
 ## 1. Intro
-- **Desc:** FoxCode - Firefox WebExtension providing browser UI for active Claude Code sessions. Real-time message sync, bidirectional communication, and page context injection into running CLI sessions.
+- **Desc:** FoxCode - Firefox WebExtension providing browser UI for active Claude Code sessions. Real-time message display and browser automation tools for running CLI sessions.
 - **Def/Abbr:**
   - CC: Claude Code (CLI tool)
   - Channel: MCP server pushing events into a CC session
 
 ## 2. General
-- **Context:** Developer runs Claude Code in terminal. Wants to see session messages in browser, send messages from browser, and inject page content as context - without leaving the browser or restarting CC.
+- **Context:** Developer runs Claude Code in terminal. Wants to see session messages in browser and let CC automate the browser - without leaving the browser or restarting CC.
 - **Assumptions/Constraints:**
   - Firefox 78.0+ required
   - Claude Code CLI v2.1.80+ installed and running
@@ -24,13 +24,8 @@
   - [x] All message types rendered: user, assistant (text), tool use, tool result. Evidence: `extension/sidebar/sidebar.js:166` (addMessage: user/assistant), `extension/sidebar/sidebar.js:224-253` (addToolUseMessage, addToolResultMessage), `foxcode/channel/server.mjs:256,259` (broadcasts tool_use/tool_result)
   - [x] Connection status indicator (connected/disconnected). Evidence: `extension/sidebar/sidebar.js:82-98` (setStatus), `extension/sidebar/sidebar.css:35-36,123` (CSS vars + .connected)
 
-### 3.2 FR-2: Send Messages
-- **Desc:** Send text messages from browser into active CC session
-- **Scenario:** User types message in sidebar input -> message delivered to CC session -> CC processes it -> response visible in both terminal and sidebar
-- **Acceptance:**
-  - [x] Text input in sidebar sends message to CC session. Evidence: `extension/sidebar/sidebar.js:275-289` (form submit), `extension/background/background.js:159` (forwards to channel)
-  - [x] Sent message appears in terminal. Evidence: `foxcode/channel/server.mjs:159-164` (mcp.notification with notifications/claude/channel)
-  - [x] Response visible in sidebar via FR-1. Evidence: tested manually
+### 3.2 FR-2: Send Messages [REMOVED]
+- **Status:** Removed. Browser sidebar is now read-only display. No user input, no message sending from browser to CC.
 
 ### 3.3 FR-3: Page Context Injection [SUPERSEDED by FR-5]
 - **Desc:** Send current page content or selected text as context into CC session
@@ -86,20 +81,16 @@
 
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
-- [x] Requires `--dangerously-load-development-channels plugin:foxcode@korchasa` flag (channels in research preview). Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
-- [x] `status` tool returns server telemetry (port, clients, uptime, launchMode, channelsDetected, client) without browser. Evidence: `foxcode/channel/server.mjs:210-229` (status handler)
-- [x] `ping` tool verifies bidirectional connectivity (CC -> browser -> CC). Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler), `extension/background/background.js` (auto-reply pong)
-- [x] `/foxcode:foxcode-run-project-profile` flow: status (incl. channelsDetected check) -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
-- [x] `/foxcode:foxcode-run-user-profile` flow: status (incl. channelsDetected check) -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
+- [x] `status` tool returns server telemetry (port, clients, uptime, launchMode, client) without browser. Evidence: `foxcode/channel/server.mjs` (status handler)
+- [x] `ping` tool checks browser extension connectivity. Returns `{connected: bool}`. Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler)
+- [x] `/foxcode:foxcode-run-project-profile` flow: status -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
+- [x] `/foxcode:foxcode-run-user-profile` flow: status -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
 - [x] Extension connects via URL hash params (`foxcode-port` + `foxcode-password`) or saved params or manual sidebar settings form. No port scanning. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
-- [x] Channel detection: MCP server detects `--dangerously-load-development-channels` in CC process args via process tree walk at startup (ps on macOS/Linux, PowerShell on Windows). Result in `status` tool and `pong` message. Evidence: `foxcode/channel/lib.mjs:200-234` (detectChannels), `foxcode/channel/server.mjs:32` (CHANNELS_DETECTED)
-- [x] Skills warn when channels not detected: sidebar messages won't reach CC, but CC→Browser tools work. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md` Step 1, `foxcode/skills/foxcode-run-user-profile/SKILL.md` Step 1
 
 ### 4.3 NF-3: Reliability [very important]
 - [x] Auto-reconnect on connection loss with exponential backoff (3s → 30s max). Evidence: `extension/background/background.js:140-152` (scheduleReconnect)
-- [x] Graceful degradation when CC not running: diagnostic panel shows port, params source, error, retry timer. Evidence: `extension/sidebar/sidebar.js:97-133` (setStatus, updateInputState, updateDiag)
-- [x] Channels warning: sidebar shows banner + disables input when channelsDetected=false. Evidence: `extension/sidebar/sidebar.js:289-300` (updateActiveServerInfo), `extension/sidebar/sidebar.html:23-26`
-- [x] Input state managed with priority: disconnected > no channels > normal. Single source of truth via `updateInputState()`. Evidence: `extension/sidebar/sidebar.js:98-112`
+- [x] Graceful degradation when CC not running: diagnostic panel shows port, params source, error, retry timer. Evidence: `extension/sidebar/sidebar.js` (setStatus, updateDiag)
+- Channels warning and input state management removed (sidebar is read-only, no user input)
 - [x] Background sends enriched status (port, source, error, reconnectIn) to sidebar. Evidence: `extension/background/background.js:179-188` (broadcastStatus)
 - [x] Background pings server on sidebar connect to get fresh pong with server details. Evidence: `extension/background/background.js:255-260`
 - [ ] No message loss during normal operation - not verified
@@ -125,7 +116,7 @@
 - **Criteria:**
   - [x] Extension loads in Firefox without errors
   - [x] Messages from CC terminal visible in sidebar in real-time
-  - [x] Messages sent from sidebar visible in CC terminal
+  - Removed: Messages sent from sidebar (FR-2 removed)
   - [x] Page content/selection delivered to CC session
   - [x] CC can pull browser context from terminal
   - [x] Works with project-specific CC sessions

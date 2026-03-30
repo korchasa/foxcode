@@ -4,9 +4,8 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { execSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
-import { homedir, platform } from 'node:os'
+import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 
 /**
@@ -18,19 +17,6 @@ export const state = { seq: 0 }
 /** Generate a unique message ID. */
 export function nextId() {
   return `m${Date.now()}-${++state.seq}`
-}
-
-/**
- * Build channel notification metadata from an extension message.
- * @param {object} msg - Extension message with id, tab?, text
- * @returns {{content: string, meta: object}}
- */
-export function buildChannelMeta(msg) {
-  const id = msg.id || nextId()
-  const meta = { chat_id: 'web', message_id: id, user: 'web', ts: new Date().toISOString() }
-  if (msg.tab?.url) meta.tab_url = msg.tab.url
-  if (msg.tab?.title) meta.tab_title = msg.tab.title
-  return { content: msg.text, meta }
 }
 
 /**
@@ -88,7 +74,6 @@ export function buildPongMessage(env) {
     nodeVersion: env.nodeVersion,
     pluginRoot: env.pluginRoot,
     projectDir: env.projectDir,
-    channelsDetected: env.channelsDetected ?? false,
     ts: Date.now(),
   }
 }
@@ -201,42 +186,8 @@ async function tryBindHttpPort(port) {
 }
 
 /**
- * Detect if the parent Claude Code process was launched with channel support.
- * Walks up the process tree looking for `--dangerously-load-development-channels` in args.
- * Cross-platform: macOS/Linux use `ps`, Windows uses `wmic`.
- * @param {number} pid - Starting PID (typically process.ppid)
- * @returns {boolean}
- */
-export function detectChannels(pid) {
-  const FLAG = 'dangerously-load-development-channels'
-  try {
-    if (platform() === 'win32') {
-      // powershell works on Win10+; wmic deprecated on Win11+
-      const out = execSync(
-        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object {$_.Name -like '*claude*'} | Select-Object -ExpandProperty CommandLine"`,
-        { encoding: 'utf8', timeout: 5000 },
-      )
-      return out.includes(FLAG)
-    }
-    // macOS / Linux: walk up process tree (single ps call per iteration)
-    let current = pid
-    for (let i = 0; i < 10 && current > 1; i++) {
-      const line = execSync(`ps -o ppid=,args= -p ${current}`, { encoding: 'utf8', timeout: 1000 }).trim()
-      if (/\bclaude\b/.test(line) && line.includes(FLAG)) return true
-      const ppid = Number(line.split(/\s+/)[0])
-      if (isNaN(ppid) || ppid === current) break
-      current = ppid
-    }
-  } catch { /* ps/powershell unavailable or process gone */ }
-  return false
-}
-
-/**
  * MCP tool definitions exposed by the channel plugin.
  */
-/** Marker text for channel connectivity test. Background script auto-replies with 'pong'. */
-export const CHANNEL_TEST_MARKER = 'ping'
-
 export const TOOL_DEFINITIONS = [
   {
     name: 'status',
@@ -248,7 +199,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: 'ping',
-    description: 'Test connectivity: CC -> WebSocket -> browser -> WebSocket -> CC. Returns { forward: bool, reverse: bool }.',
+    description: 'Test connectivity to browser extension. Returns { connected: bool }.',
     inputSchema: {
       type: 'object',
       properties: {},

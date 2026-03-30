@@ -199,10 +199,6 @@ function handleChannelMessage(msg) {
       break
 
     case 'msg':
-      // Channel connectivity test: auto-reply to confirm reverse path
-      if (msg.text === 'ping') {
-        sendToChannel({ type: 'message', text: 'pong', id: `ack-${msg.id}` })
-      }
       if (sidebarPort) sidebarPort.postMessage(msg)
       break
 
@@ -267,13 +263,6 @@ browser.runtime.onConnect.addListener((port) => {
 
   port.onMessage.addListener((msg) => {
     switch (msg.type) {
-      case 'message': {
-        const sent = sendToChannel(msg)
-        if (!sent && sidebarPort) {
-          sidebarPort.postMessage({ type: 'send-failed', text: 'Message not delivered — no connection' })
-        }
-        break
-      }
       case 'connect':
         connect()
         break
