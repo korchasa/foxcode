@@ -75,37 +75,26 @@ Tell the user:
 > 2. Navigate to `about:debugging` → This Firefox → Load Temporary Add-on
 > 3. Select `manifest.json` from: `$EXT_DIR`
 > 4. Open the sidebar: **View > Sidebar > FoxCode** (or Ctrl+B / Cmd+B)
->
-> Connect to the server using one of these methods:
-> - Open this URL in Firefox: `about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD`
-> - Or enter port (`$PORT`) and password (`$PASSWORD`) in the FoxCode sidebar settings (click the connection indicator).
+> 5. Open this URL in Firefox to connect: `about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD`
 >
 > **Note:** Temporary add-ons are removed when Firefox closes. You'll need to re-load each time.
 
-## Step 5: Wait for browser connection
+## Step 5: Wait for user and verify
 
-Poll the `status` MCP tool every ~5 seconds, up to 24 attempts (120 seconds total). User Profile requires manual loading, so allow more time.
+Tell the user:
+> Let me know when you've loaded the extension and opened the URL. I'll verify the connection.
 
-On each poll, check `connectedClients`:
-- If `connectedClients > 0` — proceed to verification below.
-- If `connectedClients == 0` — wait ~5 seconds and retry.
+**Stop here and wait for user response.**
 
-If all 24 attempts exhausted with no connection:
-> Browser did not connect within 120 seconds. Make sure:
-> 1. Extension is loaded in `about:debugging`
-> 2. Sidebar is open: **View > Sidebar > FoxCode** (or Cmd+B / Ctrl+B)
-> 3. Port and password are entered correctly in sidebar settings
->
-> Then run this skill again.
+When user confirms, call the `status` MCP tool. Check `connectedClients`:
 
-Stop here.
-
-### Verify connectivity
-
-Once `connectedClients > 0`, call the `ping` tool.
-
-If `connected` is `true`:
-> Connectivity confirmed. Ready to go.
-
-If `connected` is `false`:
-> Browser connected but ping failed. Try reloading the extension in `about:debugging`.
+- If `connectedClients > 0` — call the `ping` tool:
+  - If `connected` is `true`: > Connectivity confirmed. Ready to go.
+  - If `connected` is `false`: > Browser connected but ping failed. Try reloading the extension in `about:debugging`.
+- If `connectedClients == 0`:
+  > No connection detected. Make sure:
+  > 1. Extension is loaded in `about:debugging`
+  > 2. Sidebar is open: **View > Sidebar > FoxCode** (or Cmd+B / Ctrl+B)
+  > 3. You opened: `about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD`
+  >
+  > Let me know when ready — I'll check again.
