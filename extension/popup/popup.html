@@ -6,10 +6,10 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div id="no-sessions" class="no-sessions">
-    <div class="no-sessions-title">No active sessions</div>
-    <div class="no-sessions-hint">Start a Claude Code session with FoxCode plugin to connect.</div>
-  </div>
+  <header id="header">
+    <div id="no-sessions" class="no-sessions">No active sessions</div>
+    <div id="session-list" class="session-list hidden"></div>
+  </header>
   <div id="messages"></div>
   <script src="format.js"></script>
   <script src="popup.js"></script>

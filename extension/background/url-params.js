@@ -1,11 +1,14 @@
 /**
  * FoxCode - Connection params resolution from browser tab URL.
- * Reads foxcode-port and foxcode-password from URL hash of any open tab.
- * Used with: web-ext run --start-url "about:blank#foxcode-port=PORT&foxcode-password=PASS"
+ * Reads connection params from URL hash of any open tab.
+ * Format: about:blank#PORT:PASSWORD (or just #PORT without password)
  */
 
 /**
- * Parse foxcode-port and foxcode-password from URL hash fragment.
+ * Parse foxcode connection params from URL hash fragment.
+ * Format: #PORT:PASSWORD (password optional: #PORT)
+ * Port must be in range 8787–8886 (FoxCode port range) to avoid false positives.
+ * SYNC: range must match BASE_PORT/PORT_RANGE in foxcode/channel/lib.mjs
  * @param {string} url - Full URL string
  * @returns {{port: number|null, password: string|null}}
  */
@@ -15,14 +18,13 @@ function parseFoxcodeParams(url) {
     const hashIndex = url.indexOf('#')
     if (hashIndex === -1) return { port: null, password: null }
     const hash = url.slice(hashIndex + 1)
-    const params = new URLSearchParams(hash)
-    const rawPort = params.get('foxcode-port')
-    const rawPassword = params.get('foxcode-password')
+    if (!hash) return { port: null, password: null }
+    const colonIndex = hash.indexOf(':')
+    const rawPort = colonIndex === -1 ? hash : hash.slice(0, colonIndex)
+    const rawPassword = colonIndex === -1 ? null : hash.slice(colonIndex + 1)
     let port = null
-    if (rawPort) {
-      const n = parseInt(rawPort, 10)
-      if (!isNaN(n) && n >= 1 && n <= 65535) port = n
-    }
+    const n = parseInt(rawPort, 10)
+    if (!isNaN(n) && n >= 8787 && n <= 8886) port = n
     const password = rawPassword || null
     return { port, password }
   } catch {

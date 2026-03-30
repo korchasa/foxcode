@@ -47,28 +47,53 @@ body {
   color: var(--text-primary);
 }
 
-/* --- No sessions banner --- */
+/* --- Header --- */
+
+#header {
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
 
 .no-sessions {
-  margin: 12px;
-  padding: 14px 16px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.no-sessions.hidden { display: none; }
-
-.no-sessions-title {
-  font-weight: 700;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  padding: 4px 0;
 }
 
-.no-sessions-hint {
-  color: var(--text-meta);
-  font-size: 12px;
+#header .hidden { display: none; }
+
+/* --- Session list in header --- */
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+.session-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.session-dot.connected { background: #34a853; }
+.session-dot.disconnected { background: #ea4335; }
+
+.session-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* --- Messages --- */

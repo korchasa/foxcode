@@ -146,7 +146,7 @@ function connectToServer(port, password, source) {
  * Initial connect flow: URL hash params → saved sessions.
  */
 async function connect() {
-  // URL path: params from tabs with #foxcode-port=
+  // URL path: params from tabs with #PORT:PASSWORD hash
   const urlParams = await getParamsFromTabs(() => browser.tabs.query({}))
   for (const { port, password } of urlParams) {
     connectToServer(port, password, 'url')

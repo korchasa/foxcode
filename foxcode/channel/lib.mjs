@@ -174,6 +174,55 @@ async function tryBindHttpPort(port) {
   }
 }
 
+/** Escape HTML special characters to prevent XSS in generated pages. */
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+/**
+ * Generate informational HTML page served at http://localhost:PORT.
+ * No secrets — purely for humans to verify server is running.
+ * @param {number} port
+ * @param {number} connectedClients
+ * @param {{projectDir?: string, version?: string}} meta
+ * @returns {string}
+ */
+export function buildConnectionPage(port, connectedClients, meta = {}) {
+  const project = escapeHtml(meta.projectDir ? meta.projectDir.split('/').pop() : 'unknown')
+  const connected = connectedClients > 0
+  const statusDot = connected ? '#34a853' : '#888'
+  const statusText = connected
+    ? `Connected (${connectedClients} client${connectedClients > 1 ? 's' : ''})`
+    : 'Waiting for extension'
+  const hint = connected ? '<div class="hint">Extension connected. You can close this tab.</div>' : ''
+  return `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>FoxCode — ${project}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+display:flex;align-items:center;justify-content:center;min-height:100vh;
+background:#f5f5f5;color:#1a1a1a}
+@media(prefers-color-scheme:dark){body{background:#1a1a1a;color:#e0e0e0}}
+.card{text-align:center;padding:40px;max-width:400px}
+h1{font-size:20px;margin-bottom:8px}
+.meta{font-size:13px;color:#888;margin-bottom:16px;font-family:"SF Mono",Monaco,Menlo,monospace}
+.status{font-size:14px;color:#888}
+.hint{font-size:13px;color:#34a853;margin-top:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;
+background:${statusDot};margin-right:6px;vertical-align:middle}
+</style>
+</head><body>
+<div class="card">
+<h1>FoxCode</h1>
+<div class="meta">${project} · :${port} · v${escapeHtml(meta.version || '?')}</div>
+<div class="status"><span class="dot"></span>${statusText}</div>
+${hint}
+</div>
+</body></html>`
+}
+
 /**
  * MCP tool definitions exposed by the channel plugin.
  */

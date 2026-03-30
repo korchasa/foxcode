@@ -92,12 +92,12 @@ sequenceDiagram
 
     U->>CC: /foxcode:foxcode-run-project-profile
     CC->>MCP: status tool → get port
-    CC->>WE: npx web-ext run --start-url "about:blank#foxcode-port=PORT"
+    CC->>WE: npx web-ext run --start-url "http://localhost:PORT"
     WE->>FF: Launch with extension pre-loaded
     FF->>EXT: Load extension automatically
 
     EXT->>EXT: background.js: connect()
-    EXT->>EXT: getPortFromTabs() → parse #foxcode-port from tab URL
+    EXT->>EXT: getPortFromTabs() → parse hash from connection page URL
     Note over EXT: Port found instantly from URL hash
     EXT->>MCP: WebSocket connect to PORT
     MCP-->>EXT: Connection established

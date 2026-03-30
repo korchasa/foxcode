@@ -75,7 +75,7 @@ Tell the user:
 > 2. Navigate to `about:debugging` → This Firefox → Load Temporary Add-on
 > 3. Select `manifest.json` from: `$EXT_DIR`
 > 4. Open the sidebar: **View > Sidebar > FoxCode** (or Ctrl+B / Cmd+B)
-> 5. Open this URL in Firefox to connect: `about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD`
+> 5. Open this URL in Firefox to connect: `http://localhost:$PORT#$PORT:$PASSWORD`
 >
 > **Note:** Temporary add-ons are removed when Firefox closes. You'll need to re-load each time.
 
@@ -95,6 +95,6 @@ When user confirms, call the `status` MCP tool. Check `connectedClients`:
   > No connection detected. Make sure:
   > 1. Extension is loaded in `about:debugging`
   > 2. Sidebar is open: **View > Sidebar > FoxCode** (or Cmd+B / Ctrl+B)
-  > 3. You opened: `about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD`
+  > 3. You opened: `http://localhost:$PORT#$PORT:$PASSWORD`
   >
   > Let me know when ready — I'll check again.

@@ -76,7 +76,7 @@ npx web-ext run \
   --source-dir "$EXT_DIR" \
   --firefox-profile .foxcode/firefox-profile \
   --keep-profile-changes \
-  --start-url "about:blank#foxcode-port=$PORT&foxcode-password=$PASSWORD" \
+  --start-url "http://localhost:${PORT}#${PORT}:${PASSWORD}" \
   --firefox="$FIREFOX"
 ```
 

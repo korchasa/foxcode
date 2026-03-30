@@ -80,7 +80,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 
 ### Project Profile (`/foxcode:foxcode-run-project-profile`)
 - Isolated Firefox instance launched via `web-ext run` with project-local profile (`.foxcode/firefox-profile/`)
-- Port + password passed via URL hash (`about:blank#foxcode-port=PORT&foxcode-password=PASS`) -> instant connection, no scanning
+- Connection URL: `http://localhost:PORT#PORT:PASSWORD` — info page (no secrets in HTML) + hash for extension auto-detect -> instant connection, no scanning
 - Self-contained skill: checks prerequisites (Node.js ≥18, Firefox), locates extension, caches paths in `.foxcode/config.json`, launches Firefox, verifies connectivity via `status` + `ping`
 - Re-launch: run `/foxcode:foxcode-run-project-profile` again
 
@@ -115,7 +115,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
 - Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
 - Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools)
-- URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Skills build `about:blank#foxcode-port=PORT&foxcode-password=PASS` URL. Extension auto-connects via `tabs.onUpdated` listener. Multiple CC sessions coexist (different ports, shared password, N simultaneous WebSocket connections). No manual settings form — connections only via URL hash
+- URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Server serves info page at `http://localhost:PORT` (no secrets in HTML, shows project name + status). Password passed only in URL hash (`#PORT:PASSWORD`) which is never sent to server. Extension auto-connects via `tabs.onUpdated` listener. Multiple CC sessions coexist (different ports, shared password, N simultaneous WebSocket connections). No manual settings form — connections only via URL hash
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
 - When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
 

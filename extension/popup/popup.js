@@ -36,13 +36,40 @@ port.onDisconnect.addListener(() => {
   updateSessionState([])
 })
 
-// --- Session state (no bar, just show/hide no-sessions) ---
+// --- Session state (header with connected clients) ---
+
+const sessionListEl = document.getElementById('session-list')
 
 function updateSessionState(sessionsList) {
   if (sessionsList.length === 0) {
     noSessionsEl.classList.remove('hidden')
+    sessionListEl.classList.add('hidden')
   } else {
     noSessionsEl.classList.add('hidden')
+    sessionListEl.classList.remove('hidden')
+    renderSessionList(sessionsList)
+  }
+}
+
+function renderSessionList(sessionsList) {
+  sessionListEl.replaceChildren()
+  for (const s of sessionsList) {
+    const item = document.createElement('div')
+    item.className = 'session-item'
+
+    const dot = document.createElement('span')
+    dot.className = `session-dot ${s.connected ? 'connected' : 'disconnected'}`
+
+    const label = document.createElement('span')
+    label.className = 'session-label'
+    const dir = s.meta?.projectDir
+    const name = dir ? dir.split('/').pop() : `:${s.port}`
+    label.textContent = s.connected ? name : `${name} (reconnecting…)`
+    label.title = dir || `localhost:${s.port}`
+
+    item.appendChild(dot)
+    item.appendChild(label)
+    sessionListEl.appendChild(item)
   }
 }
 

@@ -12,7 +12,13 @@ if command -v web-ext &>/dev/null; then
   START_URL_ARGS=""
   if [ -f "$PORT_FILE" ]; then
     WS_PORT=$(cat "$PORT_FILE")
-    START_URL_ARGS="--start-url about:blank#foxcode-port=$WS_PORT"
+    URL="http://localhost:$WS_PORT"
+    PASSWORD_FILE="$HOME/.foxcode/password"
+    if [ -f "$PASSWORD_FILE" ]; then
+      WS_PASS=$(cat "$PASSWORD_FILE")
+      URL="$URL#$WS_PORT:$WS_PASS"
+    fi
+    START_URL_ARGS="--start-url $URL"
   fi
   web-ext run --source-dir extension/ $START_URL_ARGS
 else
