@@ -18,16 +18,16 @@ registry at https://containers.dev/features for matching feature IDs.
 
 Registry features exist for some AI CLI tools, but not all are reliable.
 
-- **Claude Code**: Install via `postCreateCommand`: `curl -fsSL https://claude.ai/install.sh | bash`. Do **NOT** use registry features (`ghcr.io/devcontainers-extra/features/claude-code:1`, `ghcr.io/stu-bell/devcontainer-features/claude-code:0`) - they install outdated versions (e.g., 2.1.72) with broken OAuth callback.
+- **Claude Code**: Install via `postCreateCommand`: `curl -fsSL https://claude.ai/install.sh | bash`. Do **NOT** use registry features (`ghcr.io/devcontainers-extra/features/claude-code:1`, `ghcr.io/stu-bell/devcontainer-features/claude-code:0`) — they install outdated versions (e.g., 2.1.72) with broken OAuth callback.
 - **OpenCode**: `ghcr.io/jsburckhardt/devcontainer-features/opencode:1` (via opencode.ai/install)
 - **Cursor CLI**: `ghcr.io/stu-bell/devcontainer-features/cursor-cli:0` (via cursor.com/install)
 - **Gemini CLI**: `ghcr.io/stu-bell/devcontainer-features/gemini-cli:0` (via npm)
 - **GitHub Copilot CLI**: `ghcr.io/devcontainers/features/copilot-cli:1`
 
-For Claude Code, always use the official install script in `postCreateCommand` - it installs the latest version with working OAuth. Config persistence and global skills mounting still require explicit `mounts` configuration (see SKILL.md).
+For Claude Code, always use the official install script in `postCreateCommand` — it installs the latest version with working OAuth. Config persistence and global skills mounting still require explicit `mounts` configuration (see SKILL.md).
 For other AI CLIs, prefer registry features where available.
 
-## Indicator -> Need Mapping
+## Indicator → Need Mapping
 
 The agent scans for these indicators and maps them to a **need** keyword.
 Then searches the registry for a feature matching that need.
@@ -36,46 +36,46 @@ Then searches the registry for a feature matching that need.
 
 Skip if runtime is the primary stack or included in the base image.
 
-- `package.json` (non-primary) -> need: Node.js
-- `requirements.txt` / `pyproject.toml` / `setup.py` (non-primary) -> need: Python
-- `go.mod` (non-primary) -> need: Go
-- `Cargo.toml` (non-primary) -> need: Rust
-- `deno.json` / `deno.jsonc` (non-primary) -> need: Deno
-- `pom.xml` / `build.gradle` / `build.gradle.kts` -> need: Java
+- `package.json` (non-primary) → need: Node.js
+- `requirements.txt` / `pyproject.toml` / `setup.py` (non-primary) → need: Python
+- `go.mod` (non-primary) → need: Go
+- `Cargo.toml` (non-primary) → need: Rust
+- `deno.json` / `deno.jsonc` (non-primary) → need: Deno
+- `pom.xml` / `build.gradle` / `build.gradle.kts` → need: Java
 
 ### Build Tools & Package Managers (auto)
 
-- `pnpm-lock.yaml` / `pnpm-workspace.yaml` -> need: pnpm
-- `bun.lockb` / `bunfig.toml` -> need: Bun
-- `justfile` / `Justfile` -> need: Just (command runner)
-- `.envrc` -> need: direnv
-- `flake.nix` / `shell.nix` / `default.nix` -> need: Nix
+- `pnpm-lock.yaml` / `pnpm-workspace.yaml` → need: pnpm
+- `bun.lockb` / `bunfig.toml` → need: Bun
+- `justfile` / `Justfile` → need: Just (command runner)
+- `.envrc` → need: direnv
+- `flake.nix` / `shell.nix` / `default.nix` → need: Nix
 
 ### Infrastructure & Cloud (suggest)
 
-- `Dockerfile` (in project root, not `.devcontainer/`) / `docker-compose.yml` / `.dockerignore` -> need: Docker-in-Docker
-- `*.tf` / `.terraform.lock.hcl` -> need: Terraform
-- `ansible.cfg` / `playbooks/` / `roles/` / `galaxy.yml` / `molecule/` / `requirements.yml` with `roles`/`collections` -> need: Ansible
-- `k8s/` / `kubernetes/` / `Chart.yaml` / `kustomization.yaml` -> need: kubectl, Helm
-- `serverless.yml` / `samconfig.toml` / `cdk.json` / dependency `aws-sdk`/`boto3` -> need: AWS CLI
-- `azure-pipelines.yml` / `*.bicep` / dependency `@azure/*` -> need: Azure CLI
-- `cloudbuild.yaml` / `app.yaml` (GAE) / dependency `@google-cloud/*` -> need: Google Cloud CLI
+- `Dockerfile` (in project root, not `.devcontainer/`) / `docker-compose.yml` / `.dockerignore` → need: Docker-in-Docker
+- `*.tf` / `.terraform.lock.hcl` → need: Terraform
+- `ansible.cfg` / `playbooks/` / `roles/` / `galaxy.yml` / `molecule/` / `requirements.yml` with `roles`/`collections` → need: Ansible
+- `k8s/` / `kubernetes/` / `Chart.yaml` / `kustomization.yaml` → need: kubectl, Helm
+- `serverless.yml` / `samconfig.toml` / `cdk.json` / dependency `aws-sdk`/`boto3` → need: AWS CLI
+- `azure-pipelines.yml` / `*.bicep` / dependency `@azure/*` → need: Azure CLI
+- `cloudbuild.yaml` / `app.yaml` (GAE) / dependency `@google-cloud/*` → need: Google Cloud CLI
 
 ### Databases (suggest)
 
-- `docker-compose.yml` with `postgres` / `prisma/schema.prisma` with `postgresql` -> need: PostgreSQL
-- `docker-compose.yml` with `redis` / dependency `ioredis`/`redis`/`bull` -> need: Redis
-- dependency `mongoose`/`mongodb`/`pymongo` -> need: MongoDB
+- `docker-compose.yml` with `postgres` / `prisma/schema.prisma` with `postgresql` → need: PostgreSQL
+- `docker-compose.yml` with `redis` / dependency `ioredis`/`redis`/`bull` → need: Redis
+- dependency `mongoose`/`mongodb`/`pymongo` → need: MongoDB
 
-### Testing (suggest - heavy)
+### Testing (suggest — heavy)
 
-- `playwright.config.ts` / dependency `@playwright/test` -> need: Playwright (large, installs browsers)
+- `playwright.config.ts` / dependency `@playwright/test` → need: Playwright (large, installs browsers)
 
 ## Known Feature IDs
 
 Shortcut reference for commonly detected needs. Use these IDs directly instead of searching containers.dev each time. For needs not listed here, search https://containers.dev/features.
 
-- **Terraform**: `ghcr.io/devcontainers/features/terraform:1` - installs Terraform CLI, optionally TFLint and Terragrunt
+- **Terraform**: `ghcr.io/devcontainers/features/terraform:1` — installs Terraform CLI, optionally TFLint and Terragrunt
 - **Ansible**: No official registry feature. Install via `postCreateCommand`: `pip install ansible ansible-lint` (requires Python in base image or as secondary runtime feature). VS Code extension: `redhat.ansible`
 - **Docker-in-Docker**: `ghcr.io/devcontainers/features/docker-in-docker:2`
 - **kubectl + Helm**: `ghcr.io/devcontainers/features/kubectl-helm-minikube:1`
@@ -87,8 +87,8 @@ Shortcut reference for commonly detected needs. Use these IDs directly instead o
 
 These are always added regardless of scan results:
 
-- `ghcr.io/devcontainers/features/common-utils:2` - zsh, basic utilities
-- `ghcr.io/devcontainers/features/github-cli:1` - gh CLI
+- `ghcr.io/devcontainers/features/common-utils:2` — zsh, basic utilities
+- `ghcr.io/devcontainers/features/github-cli:1` — gh CLI
 
 ## Presentation Format
 

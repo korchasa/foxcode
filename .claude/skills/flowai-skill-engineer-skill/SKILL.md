@@ -6,16 +6,16 @@ license: Based on https://github.com/anthropics/skills
 
 # Skill Creator
 
-This skill guides through creating effective Agent Skills - markdown-based packages that teach AI agents specialized workflows, domain knowledge, and procedural capabilities.
+This skill guides through creating effective Agent Skills — markdown-based packages that teach AI agents specialized workflows, domain knowledge, and procedural capabilities.
 
 ## About Skills
 
 Skills are self-contained packages (directory with `SKILL.md`) that extend agent capabilities with:
 
-1. **Specialized workflows** - multi-step procedures for specific domains
-2. **Tool integrations** - instructions for working with specific file formats or APIs
-3. **Domain expertise** - company-specific knowledge, schemas, business logic
-4. **Bundled resources** - scripts, references, and assets for complex tasks
+1. **Specialized workflows** — multi-step procedures for specific domains
+2. **Tool integrations** — instructions for working with specific file formats or APIs
+3. **Domain expertise** — company-specific knowledge, schemas, business logic
+4. **Bundled resources** — scripts, references, and assets for complex tasks
 
 ## IDE Detection and Skill Placement
 
@@ -53,13 +53,13 @@ OpenCode also reads skills from fallback locations: `.claude/skills/`, `.agents/
 ### Detection Strategy
 
 1. Check for IDE-specific markers in the project:
-   - `.cursor/` directory -> Cursor
-   - `.claude/` directory -> Claude Code
-   - `.opencode/` directory or `opencode.json` -> OpenCode
-2. If multiple detected or none -> ask the user
+   - `.cursor/` directory → Cursor
+   - `.claude/` directory → Claude Code
+   - `.opencode/` directory or `opencode.json` → OpenCode
+2. If multiple detected or none → ask the user
 3. Ask: personal skill (user-level) or project skill (shared via repo)?
 
-**IMPORTANT**: Never create skills in `~/.cursor/skills-cursor/` - reserved for Cursor internals.
+**IMPORTANT**: Never create skills in `~/.cursor/skills-cursor/` — reserved for Cursor internals.
 
 ## Core Principles
 
@@ -120,9 +120,9 @@ No README.md, CHANGELOG.md, INSTALLATION_GUIDE.md, or other auxiliary docs. The 
 
 Three-level loading to manage context:
 
-1. **Metadata** (name + description) - always in context (~100 words)
-2. **SKILL.md body** - when skill triggers (<5k words)
-3. **Bundled resources** - as needed (unlimited)
+1. **Metadata** (name + description) — always in context (~100 words)
+2. **SKILL.md body** — when skill triggers (<5k words)
+3. **Bundled resources** — as needed (unlimited)
 
 Keep SKILL.md under 500 lines. Split content into separate files when approaching this limit. Reference them clearly from SKILL.md with guidance on when to read them.
 

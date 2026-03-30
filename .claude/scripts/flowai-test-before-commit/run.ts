@@ -2,14 +2,19 @@
 
 /**
  * flowai-test-before-commit hook: block git commit if tests fail.
- * PreToolUse hook - exit 0 = allow, exit 2 = block.
+ * PreToolUse hook — exit 0 = allow, exit 2 = block.
  */
 
 /** Check if the command is a git commit (not echoed or printed). */
 export function isGitCommit(command: string): boolean {
   if (!command) return false;
-  // Match git commit at start of string or after command separator (&&, ;, |)
-  return /(?:^|[;&|]\s*)git\s+commit\b/.test(command);
+
+  // Strip quoted strings to avoid matching git commit inside echo/printf args
+  const stripped = command.replace(/"[^"]*"|'[^']*'/g, '""');
+
+  // Match: optional leading whitespace or separators (&&, ;, |, subshell),
+  // then git with optional -c flags, then commit subcommand
+  return /(?:^|\(|[;&|])\s*git\s+(?:-c\s+\S+\s+)*commit\b/.test(stripped);
 }
 
 /** Detect test runner by project markers. Returns command + marker or null. */
@@ -37,7 +42,7 @@ export async function detectRunner(
   return null;
 }
 
-// --- Entry point (stdin -> exit code) ---
+// --- Entry point (stdin → exit code) ---
 if (import.meta.main) {
   const input = JSON.parse(await new Response(Deno.stdin.readable).text());
   const command: string = input?.tool_input?.command ?? "";
@@ -50,7 +55,7 @@ if (import.meta.main) {
 
   const runner = await detectRunner(cwd);
   if (!runner) {
-    // No test runner found - allow commit
+    // No test runner found — allow commit
     Deno.exit(0);
   }
 

@@ -22,10 +22,10 @@ This skill helps design and implement event hooks (or plugins). Hooks allow inte
 ### Detection Strategy
 
 1. Check for IDE-specific markers:
-   - `.cursor/` directory -> Cursor
-   - `.claude/` directory -> Claude Code
-   - `.opencode/` directory or `opencode.json` -> OpenCode
-2. If multiple detected or none -> ask the user
+   - `.cursor/` directory → Cursor
+   - `.claude/` directory → Claude Code
+   - `.opencode/` directory or `opencode.json` → OpenCode
+2. If multiple detected or none → ask the user
 
 **IMPORTANT**: After detecting the IDE, read ONLY the corresponding reference file. Do not load all references.
 
@@ -47,25 +47,25 @@ This skill helps design and implement event hooks (or plugins). Hooks allow inte
 | `afterShellExecution` | `PostToolUse` (matcher: `"Bash"`) | `tool.execute.after` |
 | `preToolUse` | `PreToolUse` | `tool.execute.before` |
 | `postToolUse` | `PostToolUse` | `tool.execute.after` |
-| `postToolUseFailure` | `PostToolUseFailure` | `event` -> `tool.execute.after` |
-| `sessionStart` | `SessionStart` | `event` -> `session.created` |
-| `sessionEnd` | `SessionEnd` | `event` -> `session.deleted` |
-| `subagentStart` | `SubagentStart` | - |
-| `subagentStop` | `SubagentStop` | - |
-| `stop` | `Stop` | `event` -> `session.idle` |
+| `postToolUseFailure` | `PostToolUseFailure` | `event` → `tool.execute.after` |
+| `sessionStart` | `SessionStart` | `event` → `session.created` |
+| `sessionEnd` | `SessionEnd` | `event` → `session.deleted` |
+| `subagentStart` | `SubagentStart` | — |
+| `subagentStop` | `SubagentStop` | — |
+| `stop` | `Stop` | `event` → `session.idle` |
 | `preCompact` | `PreCompact` | `experimental.session.compacting` |
-| `afterFileEdit` | `PostToolUse` (matcher: `"Edit\|Write"`) | `event` -> `file.edited` |
+| `afterFileEdit` | `PostToolUse` (matcher: `"Edit\|Write"`) | `event` → `file.edited` |
 | `beforeSubmitPrompt` | `UserPromptSubmit` | `chat.message` |
 | `beforeMCPExecution` | `PreToolUse` (matcher: `"mcp__.*"`) | `tool.execute.before` |
 | `afterMCPExecution` | `PostToolUse` (matcher: `"mcp__.*"`) | `tool.execute.after` |
 | `beforeReadFile` | `PreToolUse` (matcher: `"Read"`) | `tool.execute.before` |
-| - | `PermissionRequest` | `permission.ask` |
-| - | `Notification` | `event` -> various |
-| - | `TeammateIdle` | - |
-| - | `TaskCompleted` | `event` -> `todo.updated` |
-| - | `ConfigChange` | - |
-| - | `InstructionsLoaded` | - |
-| - | `WorktreeCreate` / `WorktreeRemove` | - |
+| — | `PermissionRequest` | `permission.ask` |
+| — | `Notification` | `event` → various |
+| — | `TeammateIdle` | — |
+| — | `TaskCompleted` | `event` → `todo.updated` |
+| — | `ConfigChange` | — |
+| — | `InstructionsLoaded` | — |
+| — | `WorktreeCreate` / `WorktreeRemove` | — |
 
 ## Main Workflow
 
@@ -182,7 +182,7 @@ exit 0
 
 ## OpenCode Plugins
 
-JS/TS modules returning a `Hooks` object. No JSON config - all logic is code.
+JS/TS modules returning a `Hooks` object. No JSON config — all logic is code.
 
 ### Plugin Structure
 
@@ -205,7 +205,7 @@ export default (async ({ project, client, $, directory, worktree }) => {
 ### Distribution
 
 - Local: `.opencode/plugins/*.ts`
-- npm: `opencode.json` -> `"plugin": ["package-name"]`
+- npm: `opencode.json` → `"plugin": ["package-name"]`
 
 ### Full Reference
 
@@ -229,10 +229,10 @@ export default (async ({ client }) => ({
 
 ## Resources
 
-- [hooks_api.md](references/hooks_api.md) - Cursor: full event list, I/O formats, env vars
-- [claude_code_hooks_api.md](references/claude_code_hooks_api.md) - Claude Code: 18 events, 4 hook types, settings.json format
-- [opencode_plugins_api.md](references/opencode_plugins_api.md) - OpenCode: plugin API, hooks, events, tool() helper
-- `assets/hook_template.sh` - Bash script template for command-type hooks
+- [hooks_api.md](references/hooks_api.md) — Cursor: full event list, I/O formats, env vars
+- [claude_code_hooks_api.md](references/claude_code_hooks_api.md) — Claude Code: 18 events, 4 hook types, settings.json format
+- [opencode_plugins_api.md](references/opencode_plugins_api.md) — OpenCode: plugin API, hooks, events, tool() helper
+- `assets/hook_template.sh` — Bash script template for command-type hooks
 
 ## Tips
 

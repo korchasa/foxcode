@@ -6,8 +6,8 @@ Claude Code uses **two separate files** for auth-related data:
 
 | File | Location | Contains | Required for auth? |
 |---|---|---|---|
-| `~/.claude/.credentials.json` | Inside `~/.claude/` dir | OAuth tokens (accessToken, refreshToken, expiresAt, scopes) | **Yes** - sole source of auth |
-| `~/.claude.json` | Home dir root | Account metadata (email, org, display name), feature flags, caches | No - auto-recreated by CLI |
+| `~/.claude/.credentials.json` | Inside `~/.claude/` dir | OAuth tokens (accessToken, refreshToken, expiresAt, scopes) | **Yes** — sole source of auth |
+| `~/.claude.json` | Home dir root | Account metadata (email, org, display name), feature flags, caches | No — auto-recreated by CLI |
 
 ### Platform-Specific Token Storage
 
@@ -16,13 +16,13 @@ Claude Code uses **two separate files** for auth-related data:
 | **macOS** (host) | Keychain service `Claude Code-credentials` | `~/.claude/.credentials.json` (plaintext) |
 | **Linux** (container) | `~/.claude/.credentials.json` (plaintext) | None |
 
-On macOS, `~/.claude/.credentials.json` typically does **not exist** - tokens live in Keychain only. In containers (Linux), plaintext file is the only option.
+On macOS, `~/.claude/.credentials.json` typically does **not exist** — tokens live in Keychain only. In containers (Linux), plaintext file is the only option.
 
 ### Keychain Service Names (macOS)
 
-- `Claude Code-credentials` - OAuth tokens (primary)
-- `Claude Safe Storage` - encryption key for local data
-- `AIR Claude Credentials` - additional credentials
+- `Claude Code-credentials` — OAuth tokens (primary)
+- `Claude Safe Storage` — encryption key for local data
+- `AIR Claude Credentials` — additional credentials
 
 ## Auth in Devcontainer Lifecycle
 
@@ -44,7 +44,7 @@ On macOS, `~/.claude/.credentials.json` typically does **not exist** - tokens li
 
 `devcontainerId` is derived from workspace path. Same path = same volume name = auth persists.
 
-## Auth Forwarding from Host (macOS -> Container)
+## Auth Forwarding from Host (macOS → Container)
 
 When auth is lost (new volume, new workspace), it can be restored automatically by forwarding tokens from the macOS Keychain.
 
@@ -76,22 +76,22 @@ When auth is lost (new volume, new workspace), it can be restored automatically 
 
 ```
 Host (macOS)                          Container (Linux)
-Keychain ──initializeCommand──->  ~/.claude-auth-staging.json (temp file)
+Keychain ──initializeCommand──→  ~/.claude-auth-staging.json (temp file)
                                    │
-                                   ├─ bind,readonly mount ──-> ~/.claude-auth-staging.json
+                                   ├─ bind,readonly mount ──→ ~/.claude-auth-staging.json
                                    │
                                    └─ postCreateCommand copies once:
-                                      ~/.claude-auth-staging.json -> ~/.claude/.credentials.json
+                                      ~/.claude-auth-staging.json → ~/.claude/.credentials.json
                                       (only if .credentials.json doesn't exist in volume)
 ```
 
 ### Behavior
 
-- **First create (empty volume)**: Tokens copied from host Keychain -> auth works immediately
-- **Rebuild (volume has tokens)**: Skip copy (`[ ! -f ... ]` guard) -> existing tokens preserved
-- **Host re-auth**: Delete `~/.claude/.credentials.json` in container + restart -> re-copied from host
-- **Non-macOS host**: `security` command fails silently -> empty staging file -> no copy -> user authenticates via extension UI
-- **Multiple containers**: Each has own volume, own copy of tokens -> no conflicts
+- **First create (empty volume)**: Tokens copied from host Keychain → auth works immediately
+- **Rebuild (volume has tokens)**: Skip copy (`[ ! -f ... ]` guard) → existing tokens preserved
+- **Host re-auth**: Delete `~/.claude/.credentials.json` in container + restart → re-copied from host
+- **Non-macOS host**: `security` command fails silently → empty staging file → no copy → user authenticates via extension UI
+- **Multiple containers**: Each has own volume, own copy of tokens → no conflicts
 
 ## Critical Warnings
 
@@ -102,9 +102,9 @@ Keychain ──initializeCommand──->  ~/.claude-auth-staging.json (temp file
 ### DO NOT bind-mount `~/.claude.json` from host
 
 - Host `~/.claude.json` does NOT contain auth tokens (on macOS, they're in Keychain)
-- Claude CLI writes to `~/.claude.json` constantly - read-only mount causes errors
+- Claude CLI writes to `~/.claude.json` constantly — read-only mount causes errors
 - Read-write mount causes race conditions between host and containers
-- The file is auto-recreated by CLI - losing it is harmless
+- The file is auto-recreated by CLI — losing it is harmless
 
 ### Token Refresh
 
@@ -117,6 +117,6 @@ Keychain ──initializeCommand──->  ~/.claude-auth-staging.json (temp file
 Verified experimentally (2026-03-15):
 
 - **Internal tests**: `claude auth status` with/without each file, `CLAUDE_CONFIG_DIR` override, `HOME` override simulating rebuild
-- **Source analysis**: Extension.js `iv()` function - Keychain primary on macOS, plaintext-only on Linux; `UO()` - `.credentials.json` path = `configDir/.credentials.json`
+- **Source analysis**: Extension.js `iv()` function — Keychain primary on macOS, plaintext-only on Linux; `UO()` — `.credentials.json` path = `configDir/.credentials.json`
 - **Host experiments**: All 6 lifecycle scenarios tested (restart, rebuild, volume delete, new workspace, Keychain extraction, auth forwarding)
 - **Result**: All hypotheses confirmed. Auth forwarding from Keychain works.

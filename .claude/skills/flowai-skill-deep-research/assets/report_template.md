@@ -26,11 +26,11 @@ confidence: high | medium | low
 
 **[FACT]** [Claim with specific data]. [N]
 
-**[FACT]** [Claim]. [N][M] - confirmed by multiple sources.
+**[FACT]** [Claim]. [N][M] — confirmed by multiple sources.
 
-**[FACT]** [Claim]. [N] [unverified - single source]
+**[FACT]** [Claim]. [N] [unverified — single source]
 
-**[SYNTHESIS]** [Agent's analysis or inference based on above facts - no citation.]
+**[SYNTHESIS]** [Agent's analysis or inference based on above facts — no citation.]
 
 #### Contradictions
 
@@ -44,7 +44,7 @@ confidence: high | medium | low
 
 What was searched but not found:
 
-- [Direction or sub-question]: searched "[query 1]", "[query 2]" - no accepted sources found
+- [Direction or sub-question]: searched "[query 1]", "[query 2]" — no accepted sources found
 - [Direction]: found sources but none met acceptance criteria (reason: [e.g., all older than 2020, no primary data])
 
 ## Bibliography
@@ -76,7 +76,7 @@ Each sub-agent saves to `<tmp_dir>/<slug>.md` (system temp directory created by 
 - Date: [YYYY-MM-DD or "unknown"]
 - Why accepted: [one sentence matching acceptance criteria]
 - Key facts:
-  - [Fact 1 - exact quote or close paraphrase]
+  - [Fact 1 — exact quote or close paraphrase]
   - [Fact 2]
 
 ### [N+1] [Source Title]
@@ -84,14 +84,14 @@ Each sub-agent saves to `<tmp_dir>/<slug>.md` (system temp directory created by 
 
 ## Rejected Sources
 
-- [URL] - reason: [e.g., "published 2018, data outdated", "no primary data, opinion only"]
+- [URL] — reason: [e.g., "published 2018, data outdated", "no primary data, opinion only"]
 
 ## Contradictions Found
 
-- [Source A] says X; [Source B] says Y - [brief note on which is more credible or why conflict exists]
+- [Source A] says X; [Source B] says Y — [brief note on which is more credible or why conflict exists]
 
 ## Gaps
 
-- Searched: "[query]" - no relevant results
-- Searched: "[query]" - results found but none met acceptance criteria
+- Searched: "[query]" — no relevant results
+- Searched: "[query]" — results found but none met acceptance criteria
 ```

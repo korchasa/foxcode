@@ -27,7 +27,7 @@ your environment (e.g., `playwright-cli`, Playwright MCP, `WebFetch`, `curl`).
 3. **Observe Before Acting**
    - Always capture page state (accessibility snapshot, DOM, or HTML) before
      interacting. Use structured data (accessibility tree, element refs) over
-     raw screenshots when possible - structured data is better for reasoning.
+     raw screenshots when possible — structured data is better for reasoning.
 
 4. **Interact**
    - Click, fill, type, select using element references from the snapshot.

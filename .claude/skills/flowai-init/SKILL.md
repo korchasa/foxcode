@@ -21,9 +21,9 @@ The user wants to bootstrap an AI agent's understanding of the project. The agen
 - **Brownfield (Existing Projects)**: Requires discovery, reverse-engineering architecture, and **extracting existing instructions** from `./AGENTS.md` into the appropriate subdirectory files.
 
 **File Structure**: flowai-init produces 3 AGENTS.md files:
-- `./AGENTS.md` - core agent rules, project metadata, planning rules, TDD flow
-- `./documents/AGENTS.md` - documentation system rules (SRS/SDS/GODS formats, compressed style)
-- `./scripts/AGENTS.md` - development commands (standard interface, detected commands)
+- `./AGENTS.md` — core agent rules, project metadata, planning rules, TDD flow
+- `./documents/AGENTS.md` — documentation system rules (SRS/SDS/GODS formats, compressed style)
+- `./scripts/AGENTS.md` — development commands (standard interface, detected commands)
 </context>
 
 ## Rules & Constraints
@@ -114,9 +114,9 @@ The user wants to bootstrap an AI agent's understanding of the project. The agen
 
 6. **Generate AGENTS.md Files**
    - Read template files from `assets/` directory:
-     - `AGENTS.template.md` - reference for `./AGENTS.md`
-     - `AGENTS.documents.template.md` - fallback for `./documents/AGENTS.md`
-     - `AGENTS.scripts.template.md` - fallback for `./scripts/AGENTS.md`
+     - `AGENTS.template.md` — reference for `./AGENTS.md`
+     - `AGENTS.documents.template.md` — fallback for `./documents/AGENTS.md`
+     - `AGENTS.scripts.template.md` — fallback for `./scripts/AGENTS.md`
 
    - **For Greenfield**: Fill templates with interview data. Replace `{{PLACEHOLDERS}}` with actual values.
 
@@ -158,11 +158,11 @@ The user wants to bootstrap an AI agent's understanding of the project. The agen
    - **Skill Lookup**: For each stack item, check if a specialized skill exists (e.g., `Deno` -> `flowai-skill-configure-deno-commands`).
    - If specialized skill exists: Read and follow its `SKILL.md`.
    - If NO specialized skill:
-     1. Ask user for preferred scripting language (shell/python/stack-native).
-     2. Analyze existing config files.
-     3. Create standard command interface (`check`, `test`, `dev`, `prod`) in `scripts/`.
-     4. Update project config (e.g., `package.json`) to reference these scripts.
-   - **Skip condition**: If `scripts/` already exists with standard commands and user chose "create missing" -> skip.
+     1. Detect the project's existing command runner (Makefile, package.json scripts, deno.json tasks, justfile, etc.).
+     2. Ask user for preferred approach if none detected.
+     3. Create standard command interface (`check`, `test`, `dev`, `prod`) using the project's native command runner. For example, for Node.js projects add scripts to `package.json`; for Make-based projects add targets to `Makefile`. Do NOT create a `scripts/` directory with wrapper scripts if the project's command runner can handle commands directly.
+     4. Only create helper scripts in a separate directory if the command logic is too complex for inline commands, and follow existing project conventions for script placement.
+   - **Skip condition**: If standard commands already exist in the project's command runner and user chose "create missing" -> skip.
    - **Verify**: Run `check` command to ensure it works.
 
 11. **Devcontainer Setup (Optional)**

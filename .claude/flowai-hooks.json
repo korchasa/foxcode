@@ -4,22 +4,22 @@
     "flowai-lint-on-write": {
       "event": "PostToolUse",
       "matcher": "Write|Edit",
-      "installedAt": "2026-03-28T23:38:08.816Z"
+      "installedAt": "2026-03-30T12:36:44.897Z"
     },
     "flowai-test-before-commit": {
       "event": "PreToolUse",
       "matcher": "Bash",
-      "installedAt": "2026-03-28T23:38:08.816Z"
+      "installedAt": "2026-03-30T12:36:44.897Z"
     },
     "flowai-skill-structure-validate": {
       "event": "PostToolUse",
       "matcher": "Write|Edit",
-      "installedAt": "2026-03-28T23:38:08.816Z"
+      "installedAt": "2026-03-30T12:36:44.897Z"
     },
     "flowai-mermaid-validate": {
       "event": "PostToolUse",
       "matcher": "Write|Edit",
-      "installedAt": "2026-03-28T23:38:08.816Z"
+      "installedAt": "2026-03-30T12:36:44.897Z"
     }
   }
 }

@@ -38,9 +38,9 @@ documentation, web) to understand the problem before asking the user.
 5. **Proactive Resolution**: Follow `Proactive Resolution` rule from `## Planning Rules` in AGENTS.md.
 6. **Stop-Analysis Protocol**: Follow Stop-Analysis rules from `# YOU MUST` in AGENTS.md.
 7. **AGENTS.md Planning Rules**: Follow all rules from `## Planning Rules` section in AGENTS.md.
-8. **Living Document**: Spec status fields are updated during implementation. Implementer MUST update Phase Status (`not-started` -> `in-progress` -> `done`) when starting/completing a phase.
-9. **Phase Size Guard**: Each phase SHOULD contain ≤50 requirements and target ≤5 files per task. If exceeded -> split.
-10. **Implementation Hints Only in Notes**: Spec describes WHAT and WHY. HOW - only in Notes section as implementation hints (patterns, gotchas, references), not as code.
+8. **Living Document**: Spec status fields are updated during implementation. Implementer MUST update Phase Status (`not-started` → `in-progress` → `done`) when starting/completing a phase.
+9. **Phase Size Guard**: Each phase SHOULD contain ≤50 requirements and target ≤5 files per task. If exceeded → split.
+10. **Implementation Hints Only in Notes**: Spec describes WHAT and WHY. HOW — only in Notes section as implementation hints (patterns, gotchas, references), not as code.
 </rules>
 
 ## Instructions
@@ -58,9 +58,9 @@ documentation, web) to understand the problem before asking the user.
 3. **Draft Spec Header**
    - Write to `documents/spec-{name}.md` the following sections:
      - Title and metadata table (Status: Draft, Created/Updated dates)
-     - Goal (business/user value - why are we building this?)
+     - Goal (business/user value — why are we building this?)
      - Overview (current state, why now, relevant context)
-     - Non-Goals (explicit exclusions - critical for AI agents)
+     - Non-Goals (explicit exclusions — critical for AI agents)
      - Architecture & Boundaries (three-tier: Always / Ask First / Never)
      - Definition of Done (measurable acceptance criteria)
    - **CRITICAL**: Do NOT fill Phases yet.

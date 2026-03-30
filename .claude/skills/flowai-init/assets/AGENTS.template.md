@@ -40,12 +40,12 @@
 
 ## Planning Rules
 
-- **Environment Side-Effects**: Changes to infra/DB/external services -> plan MUST include migration/sync/deploy steps.
+- **Environment Side-Effects**: Changes to infra/DB/external services → plan MUST include migration/sync/deploy steps.
 - **Verification Steps**: Plan MUST include specific verification commands (tests, validation tools, connectivity checks).
-- **Functionality Preservation**: Refactoring/modifications -> run existing tests before/after; add new tests if coverage missing.
-- **Data-First**: Integration with external APIs/processes -> inspect protocol & data formats BEFORE planning.
-- **Architectural Validation**: Complex logic changes -> visualize event sequence (sequence diagram/pseudocode).
-- **Variant Analysis**: Non-obvious path -> propose variants with Pros/Cons/Risks per variant + Trade-offs across variants. Quality > quantity. 1 variant OK if path is clear.
+- **Functionality Preservation**: Refactoring/modifications → run existing tests before/after; add new tests if coverage missing.
+- **Data-First**: Integration with external APIs/processes → inspect protocol & data formats BEFORE planning.
+- **Architectural Validation**: Complex logic changes → visualize event sequence (sequence diagram/pseudocode).
+- **Variant Analysis**: Non-obvious path → propose variants with Pros/Cons/Risks per variant + Trade-offs across variants. Quality > quantity. 1 variant OK if path is clear.
 - **User Decision Gate**: Do NOT detail implementation plan until user explicitly selects a variant.
 - **Plan Persistence**: After variant selection, save the detailed plan to `documents/whiteboards/<YYYY-MM-DD>-<slug>.md` using GODS format. Chat-only plans are lost between sessions.
 - **Proactive Resolution**: Before asking user, exhaust available resources (codebase, docs, web) to find the answer autonomously.

@@ -2,7 +2,7 @@
 
 /**
  * flowai-mermaid-validate hook: auto-validate Mermaid diagrams after .md/.mmd edits.
- * PostToolUse hook - exit 0, stdout JSON with additionalContext on errors.
+ * PostToolUse hook — exit 0, stdout JSON with additionalContext on errors.
  */
 
 /** Check if file extension is Mermaid-relevant. */
@@ -56,12 +56,12 @@ export async function validateMermaid(
     }
     return null;
   } catch {
-    // mmdc/npx not available - graceful degradation
+    // mmdc/npx not available — graceful degradation
     return null;
   }
 }
 
-// --- Entry point (stdin -> stdout) ---
+// --- Entry point (stdin → stdout) ---
 if (import.meta.main) {
   const input = JSON.parse(await new Response(Deno.stdin.readable).text());
   const filePath: string = input?.tool_input?.file_path ??

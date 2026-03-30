@@ -38,7 +38,7 @@ Place `.js` or `.ts` files in:
 - Project: `.opencode/plugins/`
 - Global: `~/.config/opencode/plugins/`
 
-Load order: global config -> project config -> global plugin dir -> project plugin dir.
+Load order: global config → project config → global plugin dir → project plugin dir.
 
 ### npm Plugins
 
@@ -53,7 +53,7 @@ List package names in `opencode.json`:
 
 Bun auto-installs at startup. Cached in `~/.cache/opencode/node_modules/`.
 
-For local dependencies, add `.opencode/package.json` - OpenCode runs `bun install` at startup.
+For local dependencies, add `.opencode/package.json` — OpenCode runs `bun install` at startup.
 
 ## Hooks (17 hook points)
 
@@ -66,13 +66,13 @@ Hooks are return object keys. Each receives typed input and returns a value.
 | `tool.execute.before` | Modify tool arguments before execution | Yes (return modified args) |
 | `tool.execute.after` | Transform tool results after execution | No (post-execution) |
 | `tool.definition` | Modify tool definitions sent to LLM | No |
-| `tool` | Register custom tool definitions (map of name -> ToolDefinition) | - |
+| `tool` | Register custom tool definitions (map of name → ToolDefinition) | — |
 | `command.execute.before` | Pre-command execution | Yes |
 | `permission.ask` | Handle permission requests | Yes |
-| `shell.env` | Inject environment variables | - |
+| `shell.env` | Inject environment variables | — |
 | `event` | Generic handler for ALL system events | No |
-| `config` | Configuration processing | - |
-| `auth` | Authentication setup (OAuth, API key) | - |
+| `config` | Configuration processing | — |
+| `auth` | Authentication setup (OAuth, API key) | — |
 
 ### Chat Hooks
 

@@ -1,7 +1,7 @@
 ---
 name: flowai-update
 description: >-
-  Update flowai framework: sync skills/agents, adapt skills to project specifics, and migrate scaffolded project artifacts (AGENTS.md, devcontainer, deno.json, scripts/).
+  Update flowai framework: sync skills/agents, adapt skills to project specifics, and migrate scaffolded project artifacts.
 disable-model-invocation: true
 ---
 
@@ -9,16 +9,16 @@ disable-model-invocation: true
 
 ## Overview
 
-Single entry point for updating the flowai framework in a project. Handles CLI update, skill/agent sync, skill adaptation to project specifics, and migration of scaffolded project artifacts. All migration intelligence comes from `flowai sync` output - no manual discovery needed.
+Single entry point for updating the flowai framework in a project. Handles CLI update, skill/agent sync, skill adaptation to project specifics, and migration of scaffolded project artifacts. All migration intelligence comes from `flowai sync` output — no manual discovery needed.
 
 ## Context
 
 <context>
 flowai generates two types of outputs:
-- **Synced** (skills/, agents/) - updated automatically by `flowai sync`, then adapted to the project
-- **Scaffolded** (AGENTS.md, .devcontainer/, deno.json tasks, scripts/check.ts, documents/) - created once by setup skills (flowai-init, flowai-setup-agent-*, flowai-skill-configure-deno-commands), then owned by the project
+- **Synced** (skills/, agents/) — updated automatically by `flowai sync`, then adapted to the project
+- **Scaffolded** (AGENTS.md, .devcontainer/, documents/, project-specific configs and scripts) — created once by setup skills (flowai-init, flowai-setup-agent-*, stack-specific configure-commands skills), then owned by the project. Exact artifact list varies by project stack and is declared in each pack's `pack.yaml` `scaffolds:` field.
 
-`flowai sync` overwrites skills with upstream versions. This skill detects the overwrite via `git diff HEAD` and re-adapts, merging upstream changes with previous project customizations. Adaptation state is tracked entirely through git history - no extra frontmatter fields needed.
+`flowai sync` overwrites skills with upstream versions. This skill detects the overwrite via `git diff HEAD` and re-adapts, merging upstream changes with previous project customizations. Adaptation state is tracked entirely through git history — no extra frontmatter fields needed.
 
 `flowai sync` outputs an `>>> ACTIONS REQUIRED` section listing exactly which skills changed and which scaffolded artifacts they affect. This skill follows those instructions.
 </context>
@@ -33,7 +33,7 @@ flowai generates two types of outputs:
 5. **Cross-IDE**: Must work for Cursor, Claude Code, and OpenCode projects.
 6. **Mandatory tracking**: Use a task management tool (e.g., todo write) to track execution steps.
 7. **Atomic commit**: Stage synced files + adapted skills + migrated artifacts together in one commit.
-8. **Parallel adaptation**: Launch one `flowai-skill-adapter` subagent per updated skill - all in parallel.
+8. **Parallel adaptation**: Launch one `flowai-skill-adapter` subagent per updated skill — all in parallel.
 </rules>
 
 ## Instructions
@@ -48,7 +48,7 @@ flowai generates two types of outputs:
 
 2. **Sync framework**
    - Run `flowai sync -y --skip-update-check` via shell. Capture the full stdout output.
-     - IMPORTANT: `sync` is a **subcommand** - always `flowai sync [flags]`, never bare `flowai [flags]`.
+     - IMPORTANT: `sync` is a **subcommand** — always `flowai sync [flags]`, never bare `flowai [flags]`.
      - Bare `flowai` is blocked in IDE context and will print a help message instead of syncing.
 
 3. **Re-read self after sync (bootstrap)**
@@ -58,7 +58,7 @@ flowai generates two types of outputs:
 
 4. **Parse sync output**
    - Look for `>>> ACTIONS REQUIRED:` section in the output.
-   - If `>>> NO ACTIONS REQUIRED` appears with no actions section - report "Framework is up to date" and stop.
+   - If `>>> NO ACTIONS REQUIRED` appears with no actions section — report "Framework is up to date" and stop.
    - Extract each numbered action item:
      - **CONFIG MIGRATED**: Note that `.flowai.yaml` needs committing.
      - **SKILLS UPDATED**: Extract skill names and their `(scaffolds: ...)` lists.
@@ -70,12 +70,12 @@ flowai generates two types of outputs:
 5. **Adapt updated skills to project**
    - Collect all skills from SKILLS UPDATED and SKILLS CREATED lists.
    - For each skill, detect the IDE config directory (e.g., `.claude/skills/<name>/`).
-   - Launch one `flowai-skill-adapter` subagent per skill - **all in parallel**. Each subagent receives:
+   - Launch one `flowai-skill-adapter` subagent per skill — **all in parallel**. Each subagent receives:
      - Skill name and path to the skill directory
      - The subagent autonomously reads:
        - Working tree SKILL.md (new upstream version, written by sync)
        - `git show HEAD:<path>/SKILL.md` (previous version with project adaptations, if exists)
-       - Project context from CLAUDE.md -> AGENTS.md (automatic)
+       - Project context from CLAUDE.md → AGENTS.md (automatic)
    - The subagent performs a 3-way merge:
      - Keeps all upstream changes (new rules, steps, corrections)
      - Preserves project-specific adaptations (custom commands, examples, removed irrelevant sections)
@@ -94,16 +94,16 @@ flowai generates two types of outputs:
           git diff --no-index -- .claude/skills/flowai-init/assets/AGENTS.template.md ./AGENTS.md
           ```
         - Primary comparison is **template content vs project artifact**, not just template git history.
-     c. Templates contain `{{PLACEHOLDERS}}` - ignore placeholder sections in the diff. Focus on **framework-originated sections** (rules, planning rules, TDD flow, doc formats, standard interface).
-     d. Determine: does the project artifact contain all substantive content from the template? If yes - no migration needed. If no - record what's missing.
-   - If no gaps found in any artifact - skip to commit.
+     c. Templates contain `{{PLACEHOLDERS}}` — ignore placeholder sections in the diff. Focus on **framework-originated sections** (rules, planning rules, TDD flow, doc formats, standard interface).
+     d. Determine: does the project artifact contain all substantive content from the template? If yes — no migration needed. If no — record what's missing.
+   - If no gaps found in any artifact — skip to commit.
 
 7. **Propose scaffolded changes**
    - For each affected artifact, show **all three**:
-     a. **What changed in template** - cite the diff lines or section names
-     b. **Current project artifact section** - show the outdated version (before/quote)
-     c. **Proposed update** - show the complete updated section with project-specific content preserved (after/quote)
-   - Use diff format or before/after block quotes - make changes visually clear.
+     a. **What changed in template** — cite the diff lines or section names
+     b. **Current project artifact section** — show the outdated version (before/quote)
+     c. **Proposed update** — show the complete updated section with project-specific content preserved (after/quote)
+   - Use diff format or before/after block quotes — make changes visually clear.
    - Clearly explain **why** the change is recommended.
 
 8. **Apply with confirmation**

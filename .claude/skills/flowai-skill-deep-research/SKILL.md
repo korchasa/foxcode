@@ -5,23 +5,23 @@ description: Multi-directional deep research with sub-agents, scoring, source ve
 
 # Deep Research Skill
 
-Multi-stage research: plan -> sequential search (with per-direction review) -> escalate if needed -> synthesize.
+Multi-stage research: plan → sequential search (with per-direction review) → escalate if needed → synthesize.
 
 ## Overview
 
 **Architecture:**
 1. **Planner** (main agent): decomposes topic into non-overlapping research directions, defines search criteria and acceptance criteria per direction
-2. **Worker sub-agents** (sequential, one per direction): search -> evaluate sources -> fetch full content -> save to temp file; after each worker completes, main agent reviews output and decides whether to escalate before launching next worker
+2. **Worker sub-agents** (sequential, one per direction): search → evaluate sources → fetch full content → save to temp file; after each worker completes, main agent reviews output and decides whether to escalate before launching next worker
 3. **Synthesizer** (main agent): reads all temp files, merges findings, writes final report
 
 **Key invariants:**
 - Every factual claim in the report carries a `[N]` citation
 - FACT (from source) vs SYNTHESIS (agent's analysis) are always labeled separately
 - Contradictions between sources are reported, not suppressed
-- Single-source facts are marked `[unverified - single source]`
+- Single-source facts are marked `[unverified — single source]`
 - Gaps (what was searched but not found) are listed explicitly
-- **Worker sub-agents MUST NOT spawn further sub-agents** - all spawning is done by the main agent only
-- **Max directions: 6** - if topic requires more, group related angles into one direction
+- **Worker sub-agents MUST NOT spawn further sub-agents** — all spawning is done by the main agent only
+- **Max directions: 6** — if topic requires more, group related angles into one direction
 
 ---
 
@@ -31,12 +31,12 @@ Before planning, detect the available search/fetch method. Try each in order, st
 
 | Priority | Method | Detection |
 |---|---|---|
-| 1 | Built-in search tool | Check tool list for `websearch` (OpenCode), `WebSearch` (Claude Code), or IDE-native search equivalent - **search must return URLs from a query, not just fetch a known URL** |
+| 1 | Built-in search tool | Check tool list for `websearch` (OpenCode), `WebSearch` (Claude Code), or IDE-native search equivalent — **search must return URLs from a query, not just fetch a known URL** |
 | 2 | `playwright-cli` (headless) | Run `playwright-cli --version` via shell; success = available |
 | 3 | Playwright MCP | Check tool list for `browser_navigate` + `browser_snapshot` tools |
 | 4 | Other MCP search/fetch tools | Check tool list for any MCP tool that accepts a query string and returns results |
 
-**Output of this phase** - two variables passed to every worker:
+**Output of this phase** — two variables passed to every worker:
 
 - `search_method`: short name, e.g. `built-in`, `playwright-cli`, `playwright-mcp`, `mcp_brave`
 - `search_instructions`: a brief how-to for that method (see examples below)
@@ -101,9 +101,9 @@ Create a temporary directory using the system temp facility:
 ```bash
 mktemp -d "${TMPDIR:-/tmp}/deep-research-XXXXXX"
 ```
-Save the returned path as `tmp_dir` - pass it to all workers and use in Phase 4–5.
+Save the returned path as `tmp_dir` — pass it to all workers and use in Phase 4–5.
 
-Output the plan as a markdown list before proceeding. Do not ask for approval - proceed automatically.
+Output the plan as a markdown list before proceeding. Do not ask for approval — proceed automatically.
 
 **Example direction definition:**
 ```
@@ -144,8 +144,8 @@ search_instructions: |
 | Confidence floor | ≥ 1 fact with confidence = high or medium |
 | No fabrication | All facts have traceable source URL |
 
-- **All checks pass** -> launch next direction's worker.
-- **Any check fails** -> run Phase 3 escalation for this direction first, then continue.
+- **All checks pass** → launch next direction's worker.
+- **Any check fails** → run Phase 3 escalation for this direction first, then continue.
 
 **Workers are NOT launched simultaneously.** Sequential execution allows the main agent to adjust remaining directions based on what earlier workers found.
 
@@ -155,7 +155,7 @@ search_instructions: |
 
 Triggered inline during Phase 2 when the main agent's post-worker review fails any check.
 
-**Direction quality score** - computed by main agent after reading each worker's output:
+**Direction quality score** — computed by main agent after reading each worker's output:
 
 | Metric | Weight | How to score |
 |---|---|---|
@@ -172,7 +172,7 @@ Triggered inline during Phase 2 when the main agent's post-worker review fails a
 1. Generate 3 alternative query formulations (different angle: synonym, negation, domain-specific)
 2. Spawn a retry worker with the same prompt template but new queries
 3. Re-score after retry
-4. If score still < 6.0 after one retry: mark direction as `[insufficient data - score: X.X]` in final report; list all queries attempted
+4. If score still < 6.0 after one retry: mark direction as `[insufficient data — score: X.X]` in final report; list all queries attempted
 
 ---
 
@@ -186,11 +186,11 @@ Produce the final report using `assets/report_template.md`.
 - Group findings thematically, not by direction
 - Merge overlapping facts; note if sources agree or conflict
 - Label explicitly:
-  - `**[FACT]**` - directly from source with citation `[N]`
-  - `**[SYNTHESIS]**` - agent's analysis or inference (no citation)
-- Triangulate: facts with 2+ independent sources -> `confidence: high`
-- Single-source facts -> append `[unverified - single source]`
-- Contradictions -> include both sides with their sources, note the conflict
+  - `**[FACT]**` — directly from source with citation `[N]`
+  - `**[SYNTHESIS]**` — agent's analysis or inference (no citation)
+- Triangulate: facts with 2+ independent sources → `confidence: high`
+- Single-source facts → append `[unverified — single source]`
+- Contradictions → include both sides with their sources, note the conflict
 
 **Citation format:** `[N]` inline, full entry in Bibliography section.
 
@@ -207,13 +207,13 @@ Produce the final report using `assets/report_template.md`.
    - If any check fails: stop, print error, do NOT delete `<tmp_dir>/`
 3. **Print executive summary** in chat (3–5 sentences: what was researched, key findings, confidence level, gaps).
 4. **Print report path.**
-5. **Delete** `<tmp_dir>/` directory - only after step 2 passes.
+5. **Delete** `<tmp_dir>/` directory — only after step 2 passes.
 
 **Executive summary format:**
 ```
 Research complete: [topic]
 Key findings: [2–3 sentences]
-Confidence: [high/medium/low] - based on [N] sources across [M] directions
+Confidence: [high/medium/low] — based on [N] sources across [M] directions
 Gaps: [what was not found, if any]
 Full report: [file path]
 ```
@@ -224,7 +224,7 @@ Full report: [file path]
 
 | Situation | Action |
 |---|---|
-| Sub-agent finds 0 accepted sources | Retry with 3 alternative queries; if still 0 -> mark gap |
+| Sub-agent finds 0 accepted sources | Retry with 3 alternative queries; if still 0 → mark gap |
 | Sub-agent fails/crashes | Note in report; continue with remaining directions |
 | Contradictory sources on key fact | Report both sides; do NOT pick one silently |
 | Topic too broad to decompose | Split into sub-topics; cap at 6 directions total; workers MUST NOT spawn sub-workers |

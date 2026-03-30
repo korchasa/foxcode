@@ -433,7 +433,7 @@
 <li>PersistentVolumeClaim not bound</li>
 <li>ResourceQuota exceeded in namespace</li>
 </ul>
-<p>Check with <code>kubectl describe pod &lt;name&gt;</code> - the Events section shows why scheduling failed.</p>`,
+<p>Check with <code>kubectl describe pod &lt;name&gt;</code> — the Events section shows why scheduling failed.</p>`,
         },
         {
           id: "scheduling",
@@ -445,10 +445,10 @@
             "kube-scheduler selects the optimal node through filtering (exclude ineligible) then scoring (rank remaining).",
           details: `<h4>Scoring factors</h4>
 <ul>
-<li>LeastRequestedPriority - spread load across nodes</li>
-<li>NodeAffinityPriority - honor soft affinity preferences</li>
-<li>PodTopologySpread - distribute across zones</li>
-<li>InterPodAffinity - co-locate related pods</li>
+<li>LeastRequestedPriority — spread load across nodes</li>
+<li>NodeAffinityPriority — honor soft affinity preferences</li>
+<li>PodTopologySpread — distribute across zones</li>
+<li>InterPodAffinity — co-locate related pods</li>
 </ul>
 <pre>spec:
   affinity:
@@ -491,7 +491,7 @@
             "If any init container exits with a non-zero code, the pod's restart policy applies. Init containers must all succeed before app containers start.",
           details:
             `<p>A failed init container is the most common cause of pods stuck in <code>Init:CrashLoopBackOff</code>.</p>
-<p>Unlike app containers, init containers always run to completion - they don't have liveness or readiness probes.</p>
+<p>Unlike app containers, init containers always run to completion — they don't have liveness or readiness probes.</p>
 <h4>Debugging</h4>
 <pre>kubectl logs &lt;pod&gt; -c &lt;init-container-name&gt;
 kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
@@ -506,9 +506,9 @@ kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
             "kubelet pulls container images (if not cached) and creates containers via the container runtime (containerd / CRI-O).",
           details: `<h4>Image pull policies</h4>
 <ul>
-<li><code>IfNotPresent</code> - default for tagged images, uses local cache</li>
-<li><code>Always</code> - default for <code>:latest</code>, checks registry every time</li>
-<li><code>Never</code> - only use pre-pulled images on the node</li>
+<li><code>IfNotPresent</code> — default for tagged images, uses local cache</li>
+<li><code>Always</code> — default for <code>:latest</code>, checks registry every time</li>
+<li><code>Never</code> — only use pre-pulled images on the node</li>
 </ul>
 <p><code>ErrImagePull</code> and <code>ImagePullBackOff</code> here usually mean: wrong image name, missing <code>imagePullSecrets</code>, or registry network issues.</p>`,
         },
@@ -519,7 +519,7 @@ kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
           x: 320,
           y: 620,
           description:
-            "All containers are started. The pod is Running but not necessarily Ready - probes haven't been evaluated yet.",
+            "All containers are started. The pod is Running but not necessarily Ready — probes haven't been evaluated yet.",
           details: `<h4>Container lifecycle hooks</h4>
 <pre>lifecycle:
   postStart:
@@ -529,7 +529,7 @@ kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
   preStop:
     exec:
       command: ["/bin/sh", "-c", "sleep 15"]</pre>
-<p><code>postStart</code> runs immediately after creation (parallel with entrypoint - no ordering guarantee). <code>preStop</code> runs before SIGTERM - useful for connection draining.</p>`,
+<p><code>postStart</code> runs immediately after creation (parallel with entrypoint — no ordering guarantee). <code>preStop</code> runs before SIGTERM — useful for connection draining.</p>`,
         },
         {
           id: "probes",
@@ -540,9 +540,9 @@ kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
           description:
             "kubelet evaluates three independent probe types. Startup probe gates liveness/readiness. Liveness failure kills the container. Readiness failure removes from traffic.",
           details: `<ul>
-<li><strong>startupProbe</strong> - disables other probes until app starts (for slow-starting apps)</li>
-<li><strong>livenessProbe</strong> - is the process healthy? Failure triggers container restart</li>
-<li><strong>readinessProbe</strong> - can it serve traffic? Failure removes from Service endpoints</li>
+<li><strong>startupProbe</strong> — disables other probes until app starts (for slow-starting apps)</li>
+<li><strong>livenessProbe</strong> — is the process healthy? Failure triggers container restart</li>
+<li><strong>readinessProbe</strong> — can it serve traffic? Failure removes from Service endpoints</li>
 </ul>
 <pre>livenessProbe:
   httpGet:
@@ -567,7 +567,7 @@ kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
 <li>All readiness probes pass</li>
 <li>All readinessGates (if configured) are True</li>
 </ul>
-<p>A pod can flip between Ready and not-Ready during its lifetime. A failing readiness probe temporarily removes it from traffic rotation without restarting the container - unlike a liveness probe failure.</p>`,
+<p>A pod can flip between Ready and not-Ready during its lifetime. A failing readiness probe temporarily removes it from traffic rotation without restarting the container — unlike a liveness probe failure.</p>`,
         },
         {
           id: "terminating",
@@ -596,7 +596,7 @@ kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
           description:
             "All containers exited with code 0. For Jobs/CronJobs this is the desired end state.",
           details:
-            `<p>For Deployments with <code>restartPolicy: Always</code>, exit code 0 still triggers a restart - the pod is expected to run indefinitely.</p>
+            `<p>For Deployments with <code>restartPolicy: Always</code>, exit code 0 still triggers a restart — the pod is expected to run indefinitely.</p>
 <p>Only Jobs and CronJobs (with <code>restartPolicy: OnFailure</code> or <code>Never</code>) treat this as a final state.</p>`,
         },
         {
@@ -608,9 +608,9 @@ kubectl describe pod &lt;pod&gt; | grep -A 5 "Init Containers"</pre>`,
           description:
             "kubelet evaluates the pod's restartPolicy to decide whether to restart the failed container.",
           details: `<ul>
-<li><code>Always</code> - restart on any exit (default for Deployments, StatefulSets)</li>
-<li><code>OnFailure</code> - restart only on non-zero exit code (common for Jobs)</li>
-<li><code>Never</code> - no restart, let the pod fail (for debugging or one-shot tasks)</li>
+<li><code>Always</code> — restart on any exit (default for Deployments, StatefulSets)</li>
+<li><code>OnFailure</code> — restart only on non-zero exit code (common for Jobs)</li>
+<li><code>Never</code> — no restart, let the pod fail (for debugging or one-shot tasks)</li>
 </ul>
 <p>Restart count is per-container and visible in <code>kubectl get pod</code> RESTARTS column and <code>kubectl describe pod</code>.</p>`,
         },
@@ -655,7 +655,7 @@ kubectl exec -it &lt;pod&gt; -- sh</pre>
           description:
             "Pod enters the scheduler queue. Higher-priority pods are scheduled first and can preempt lower-priority ones.",
           details:
-            `<p>Priority is set via <code>priorityClassName</code>. Preemption evicts lower-priority pods to make room - their owners (Deployments, etc.) recreate them elsewhere.</p>`,
+            `<p>Priority is set via <code>priorityClassName</code>. Preemption evicts lower-priority pods to make room — their owners (Deployments, etc.) recreate them elsewhere.</p>`,
         },
         {
           from: "scheduling",
@@ -664,7 +664,7 @@ kubectl exec -it &lt;pod&gt; -- sh</pre>
           description:
             "Node assigned. kubelet on the target node picks up the pod spec and begins the init phase.",
           details:
-            `<p>The node assignment is recorded in <code>pod.spec.nodeName</code>. Once set, it cannot change - to move a pod, delete and recreate it.</p>`,
+            `<p>The node assignment is recorded in <code>pod.spec.nodeName</code>. Once set, it cannot change — to move a pod, delete and recreate it.</p>`,
         },
         {
           from: "init",
@@ -760,7 +760,7 @@ kubectl exec -it &lt;pod&gt; -- sh</pre>
           fromSide: "top",
           toSide: "left",
           description:
-            "restartPolicy: Always - kubelet restarts the container immediately (or after backoff if repeated).",
+            "restartPolicy: Always — kubelet restarts the container immediately (or after backoff if repeated).",
           details:
             `<p>First restart is immediate. Subsequent rapid restarts trigger exponential backoff (10s, 20s, 40s, ... up to 5 minutes).</p>`,
         },
@@ -793,7 +793,7 @@ kubectl exec -it &lt;pod&gt; -- sh</pre>
           description:
             "For Jobs: backoffLimit exceeded. Pod is marked permanently Failed.",
           details:
-            `<p>Default <code>backoffLimit</code> is 6. After that, the Job is marked Failed and no more pods are created for it. For Deployments, there is no limit - CrashLoopBackOff continues indefinitely.</p>`,
+            `<p>Default <code>backoffLimit</code> is 6. After that, the Job is marked Failed and no more pods are created for it. For Deployments, there is no limit — CrashLoopBackOff continues indefinitely.</p>`,
         },
       ];
       // === END DATA ===

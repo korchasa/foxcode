@@ -52,7 +52,7 @@ Runs a shell command. Input via stdin JSON, output via exit codes + stdout/stder
 }
 ```
 
-- `async: true` - run in background, cannot block or return decisions
+- `async: true` — run in background, cannot block or return decisions
 - Default timeout: 600s (10 minutes)
 
 ### 2. HTTP (`type: "http"`)
@@ -160,7 +160,7 @@ Fires when a permission dialog appears. Matcher: tool name.
 Fires after tool succeeds. Matcher: tool name.
 - Input: `tool_name`, `tool_input`, `tool_response`, `tool_use_id`
 - Output: `additionalContext`, `updatedMCPToolOutput` (MCP only)
-- Cannot undo - tool already ran
+- Cannot undo — tool already ran
 
 #### PostToolUseFailure
 Fires after tool fails. Matcher: tool name.

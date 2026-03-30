@@ -63,7 +63,7 @@ rapidly changing requirements.
 ```markdown
 **Goal:** Restore the CI/CD pipeline so deployment delays do not exceed 1 hour.
 
-**Overview:** Updated Jenkins plugin -> 5 builds with errors -> version incompatible.
+**Overview:** Updated Jenkins plugin → 5 builds with errors → version incompatible.
 
 **Definition of Done:** All builds pass without errors within a day, tests ≥98% successful, team notified.
 
