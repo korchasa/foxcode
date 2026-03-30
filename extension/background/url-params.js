@@ -31,21 +31,27 @@ function parseFoxcodeParams(url) {
 }
 
 /**
- * Query all open tabs for one with #foxcode-port=NNNN in URL.
+ * Query all open tabs for foxcode connection params in URL hash.
+ * Returns all matches (deduplicated by port), not just the first.
  * @param {function} queryTabs - browser.tabs.query({}) wrapper
- * @returns {Promise<{port: number, password: string}|null>} Params or null
+ * @returns {Promise<Array<{port: number, password: string|null}>>}
  */
 async function getParamsFromTabs(queryTabs) {
   try {
     const tabs = await queryTabs()
+    const seen = new Set()
+    const results = []
     for (const tab of tabs) {
       const { port, password } = parseFoxcodeParams(tab.url)
-      if (port) return { port, password }
+      if (port && !seen.has(port)) {
+        seen.add(port)
+        results.push({ port, password })
+      }
     }
+    return results
   } catch {
-    // tabs API unavailable or permission denied
+    return []
   }
-  return null
 }
 
 // Export for Node.js test runner, no-op in browser

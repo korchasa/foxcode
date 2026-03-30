@@ -52,7 +52,7 @@ Launch FoxCode with one of two modes:
 └─────────────┘                 └───────────────────┘            └─────────────┘
 ```
 
-The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension connects via URL hash params (project profile), saved port, or manual settings — no port scanning.
+The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension supports multiple simultaneous connections (one per CC session) — auto-connects via URL hash params, or reconnects to saved sessions. No port scanning, no manual settings.
 
 ## Components
 
@@ -106,7 +106,7 @@ sequenceDiagram
 
 ### User Profile (`/foxcode:foxcode-run-user-profile`)
 
-Extension loaded into user's own Firefox via about:debugging. No port in URL — extension uses saved port from previous session or manual settings form. Re-launch via `/foxcode:foxcode-run-user-profile`.
+Extension loaded into user's own Firefox via about:debugging. No port in URL — extension uses saved sessions from previous run. Re-launch via `/foxcode:foxcode-run-user-profile`.
 
 ```mermaid
 sequenceDiagram
@@ -131,24 +131,23 @@ sequenceDiagram
     EXT->>EXT: background.js: connect()
     EXT->>EXT: getParamsFromTabs() → no URL hash params
 
-    alt Saved port exists
-        EXT->>MCP: Connect to saved port
+    alt Saved sessions exist
+        EXT->>MCP: Connect to saved sessions
         MCP-->>EXT: Connected
-    else No saved port
-        EXT-->>U: Show settings form (manual port/password)
-        U->>EXT: Enter port + password
-        EXT->>MCP: Connect
+    else No saved sessions
+        EXT-->>U: "No active sessions" banner
     end
 
     MCP-->>EXT: pong (server info)
-    EXT-->>U: Sidebar ready, shows server info
+    EXT-->>U: Sidebar ready, shows session bar
 ```
 
 ### Key differences
 
 - **Project Profile**: isolated Firefox, port known upfront (URL hash) → instant connect. Persistent project-local profile
-- **User Profile**: user's own Firefox, no port hint → probe saved port or manual settings form. Temporary add-on, re-load after Firefox restart
-- **Reconnect**: both flows use saved params with exponential backoff (3s → 30s max)
+- **User Profile**: user's own Firefox, no port hint → probe saved sessions. Temporary add-on, re-load after Firefox restart
+- **Multi-session**: extension supports N simultaneous WebSocket connections. Sidebar groups messages by session with color coding
+- **Reconnect**: per-session exponential backoff (3s → 30s max, 10 attempts). Dead sessions auto-removed
 - **Connection**: both skills verify connectivity via `status` + `ping` tools
 
 ## Troubleshooting

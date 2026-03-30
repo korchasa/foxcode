@@ -65,41 +65,45 @@ describe('parseFoxcodeParams', () => {
 })
 
 describe('getParamsFromTabs', () => {
-  it('finds params from matching tab', async () => {
+  it('finds all params from matching tabs', async () => {
     const tabs = [
       { url: 'https://example.com' },
       { url: 'about:blank#foxcode-port=8790&foxcode-password=secret' },
+      { url: 'about:blank#foxcode-port=8801&foxcode-password=other' },
     ]
     const result = await getParamsFromTabs(async () => tabs)
-    assert.deepEqual(result, { port: 8790, password: 'secret' })
+    assert.deepEqual(result, [
+      { port: 8790, password: 'secret' },
+      { port: 8801, password: 'other' },
+    ])
   })
 
-  it('returns null when no tabs have foxcode-port', async () => {
+  it('returns empty array when no tabs have foxcode-port', async () => {
     const tabs = [
       { url: 'https://example.com' },
       { url: 'about:blank' },
     ]
     const result = await getParamsFromTabs(async () => tabs)
-    assert.equal(result, null)
+    assert.deepEqual(result, [])
   })
 
-  it('returns null when tabs list is empty', async () => {
+  it('returns empty array when tabs list is empty', async () => {
     const result = await getParamsFromTabs(async () => [])
-    assert.equal(result, null)
+    assert.deepEqual(result, [])
   })
 
-  it('returns null when queryTabs throws', async () => {
+  it('returns empty array when queryTabs throws', async () => {
     const result = await getParamsFromTabs(async () => { throw new Error('no permission') })
-    assert.equal(result, null)
+    assert.deepEqual(result, [])
   })
 
-  it('returns first matching tab params', async () => {
+  it('deduplicates by port', async () => {
     const tabs = [
       { url: 'about:blank#foxcode-port=8790&foxcode-password=first' },
-      { url: 'about:blank#foxcode-port=8801&foxcode-password=second' },
+      { url: 'about:blank#foxcode-port=8790&foxcode-password=second' },
     ]
     const result = await getParamsFromTabs(async () => tabs)
-    assert.deepEqual(result, { port: 8790, password: 'first' })
+    assert.deepEqual(result, [{ port: 8790, password: 'first' }])
   })
 
   it('returns params with null password when tab has port only', async () => {
@@ -107,6 +111,6 @@ describe('getParamsFromTabs', () => {
       { url: 'about:blank#foxcode-port=8790' },
     ]
     const result = await getParamsFromTabs(async () => tabs)
-    assert.deepEqual(result, { port: 8790, password: null })
+    assert.deepEqual(result, [{ port: 8790, password: null }])
   })
 })

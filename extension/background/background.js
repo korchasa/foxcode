@@ -1,49 +1,54 @@
 /**
  * FoxCode - Background script.
- * Manages WebSocket connection to channel server and routes messages
- * between sidebar, content script, and channel.
+ * Manages multiple WebSocket connections (one per MCP server session)
+ * and routes messages between sidebar, content script, and channel servers.
  *
  * EVAL_CODE handler: executes agent JS code with injected browser API object.
+ * Concurrent eval requests from different sessions are serialized via queue.
  */
 
 /* global browser, WebSocket */
 
-// browser-api.js and dom-helpers.js are ES modules - background script (Manifest V2)
-// cannot use import. We load them via importScripts() isn't available either.
-// Instead, the factory and helpers are inlined below via build step or loaded as
-// additional background scripts in manifest.json.
-// For now, we reference createBrowserApi from the global scope (loaded via manifest).
-
 const RECONNECT_INTERVAL_MS = 3000
 const MAX_RECONNECT_INTERVAL_MS = 30000
+const MAX_RECONNECT_ATTEMPTS = 10
 
-const STORAGE_KEY_PORT = 'foxcode_last_port'
-const STORAGE_KEY_PASSWORD = 'foxcode_last_password'
+const STORAGE_KEY_SESSIONS = 'foxcode_sessions'
 
-let ws = null
-let reconnectTimer = null
-let reconnectInterval = RECONNECT_INTERVAL_MS
+/** @type {Map<number, Session>} port → session */
+const sessions = new Map()
+
 let sidebarPort = null
-let activePort = null
-let activePassword = null
-let paramsSource = null // 'url' | 'saved' | 'manual' | null
-let lastError = null
 
-/** Save connection params to extension storage for persistence across restarts. */
-function saveConnectionParams(port, password) {
-  browser.storage.local.set({ [STORAGE_KEY_PORT]: port, [STORAGE_KEY_PASSWORD]: password })
+/**
+ * @typedef {Object} Session
+ * @property {WebSocket} ws
+ * @property {number} port
+ * @property {string|null} password
+ * @property {string} paramsSource - 'url' | 'saved'
+ * @property {number|null} reconnectTimer
+ * @property {number} reconnectInterval
+ * @property {number} reconnectAttempts
+ * @property {object|null} meta - filled from pong {projectDir, version, pid}
+ * @property {string|null} lastError
+ */
+
+// --- Storage ---
+
+function saveSessions() {
+  const arr = []
+  for (const [port, s] of sessions) {
+    arr.push({ port, password: s.password })
+  }
+  browser.storage.local.set({ [STORAGE_KEY_SESSIONS]: arr })
 }
 
-/** Load saved connection params from extension storage. Returns {port, password} or null. */
-async function loadSavedParams() {
+async function loadSessions() {
   try {
-    const result = await browser.storage.local.get([STORAGE_KEY_PORT, STORAGE_KEY_PASSWORD])
-    const port = result[STORAGE_KEY_PORT] ?? null
-    const password = result[STORAGE_KEY_PASSWORD] ?? null
-    if (port) return { port, password }
-    return null
+    const result = await browser.storage.local.get([STORAGE_KEY_SESSIONS])
+    return result[STORAGE_KEY_SESSIONS] || []
   } catch {
-    return null
+    return []
   }
 }
 
@@ -64,158 +69,195 @@ function getBrowserApi() {
 
 // serializeResult is loaded from serialize.js via manifest.json
 
-// --- WebSocket connection ---
+// --- Multi-session WebSocket connections ---
 
 /**
- * Connect to a specific server with port and password (token auth).
+ * Connect to a specific MCP server. Adds to sessions Map without closing others.
  */
-function connectToServer(port, password) {
-  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
-    if (activePort === port) return
-    ws.close()
+function connectToServer(port, password, source) {
+  const existing = sessions.get(port)
+  if (existing && (existing.ws.readyState === WebSocket.CONNECTING || existing.ws.readyState === WebSocket.OPEN)) {
+    return // already connected or connecting
   }
 
+  let ws
   try {
     const url = password
       ? `ws://127.0.0.1:${port}?token=${encodeURIComponent(password)}`
       : `ws://127.0.0.1:${port}`
     ws = new WebSocket(url)
   } catch {
-    scheduleReconnect()
+    if (existing) {
+      scheduleReconnect(port)
+    }
     return
   }
-  activePort = port
-  activePassword = password
-  saveConnectionParams(port, password)
+
+  const session = existing || {
+    ws: null,
+    port,
+    password,
+    paramsSource: source,
+    reconnectTimer: null,
+    reconnectInterval: RECONNECT_INTERVAL_MS,
+    reconnectAttempts: 0,
+    meta: null,
+    lastError: null,
+  }
+  session.ws = ws
+  session.password = password
+  sessions.set(port, session)
 
   ws.onopen = () => {
-    reconnectInterval = RECONNECT_INTERVAL_MS
-    lastError = null
-    broadcastStatus(true)
-    sendToChannel({ type: 'ping', paramsSource })
+    session.reconnectInterval = RECONNECT_INTERVAL_MS
+    session.reconnectAttempts = 0
+    session.lastError = null
+    saveSessions()
+    broadcastSessionUpdate()
+    ws.send(JSON.stringify({ type: 'ping', paramsSource: source }))
   }
 
   ws.onclose = (event) => {
-    if (!lastError) {
-      lastError = event.code === 1006 ? 'Connection refused or dropped' : `WebSocket closed (${event.code})`
+    if (!session.lastError) {
+      session.lastError = event.code === 1006 ? 'Connection refused or dropped' : `WebSocket closed (${event.code})`
     }
-    broadcastStatus(false)
-    scheduleReconnect()
+    broadcastSessionUpdate()
+    scheduleReconnect(port)
   }
 
   ws.onerror = () => {
-    lastError = `Cannot connect to ws://127.0.0.1:${port}`
+    session.lastError = `Cannot connect to ws://127.0.0.1:${port}`
   }
 
   ws.onmessage = (event) => {
     try {
       const msg = JSON.parse(event.data)
-      handleChannelMessage(msg)
+      handleChannelMessage(msg, port)
     } catch { /* ignore malformed messages */ }
   }
 }
 
 /**
- * Main connect flow: URL params > saved params > show settings.
+ * Initial connect flow: URL hash params → saved sessions.
  */
 async function connect() {
-  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return
-
-  // URL path: params passed via web-ext --start-url "about:blank#foxcode-port=PORT&foxcode-password=PASS"
+  // URL path: params from tabs with #foxcode-port=
   const urlParams = await getParamsFromTabs(() => browser.tabs.query({}))
-  if (urlParams && urlParams.port) {
-    paramsSource = 'url'
-    connectToServer(urlParams.port, urlParams.password)
-    return
+  for (const { port, password } of urlParams) {
+    connectToServer(port, password, 'url')
   }
 
-  // Saved params from previous session
-  const saved = await loadSavedParams()
-  if (saved) {
-    paramsSource = 'saved'
-    connectToServer(saved.port, saved.password)
-    return
-  }
-
-  // No params available - sidebar will show settings form
-  paramsSource = null
-  lastError = 'No connection params: no URL hash, no saved settings'
-  if (sidebarPort) {
-    broadcastStatus(false)
-    sidebarPort.postMessage({ type: 'show-settings' })
-  }
-}
-
-/**
- * Schedule a reconnection with exponential backoff.
- * Only retries with saved params (no scanning).
- */
-function scheduleReconnect() {
-  if (reconnectTimer) return
-  reconnectTimer = setTimeout(async () => {
-    reconnectTimer = null
-    reconnectInterval = Math.min(reconnectInterval * 1.5, MAX_RECONNECT_INTERVAL_MS)
-    // Retry with current active params
-    if (activePort) {
-      connectToServer(activePort, activePassword)
-    } else {
-      connect()
+  // Saved sessions from previous run
+  const saved = await loadSessions()
+  for (const { port, password } of saved) {
+    if (!sessions.has(port)) {
+      connectToServer(port, password, 'saved')
     }
-  }, reconnectInterval)
+  }
+
+  // If nothing found, sidebar shows "no sessions" state
+  if (sessions.size === 0) {
+    broadcastSessionUpdate()
+  }
 }
 
 /**
- * Send a JSON message to the channel server via WebSocket.
- * @param {Object} msg - Message object to serialize and send
- * @returns {boolean} true if sent, false if connection unavailable
+ * Schedule reconnection for a specific session with exponential backoff.
  */
-function sendToChannel(msg) {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(msg))
-    return true
+function scheduleReconnect(port) {
+  const session = sessions.get(port)
+  if (!session || session.reconnectTimer) return
+
+  session.reconnectAttempts++
+  if (session.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+    sessions.delete(port)
+    saveSessions()
+    if (sidebarPort) {
+      sidebarPort.postMessage({ type: 'session-removed', port })
+    }
+    broadcastSessionUpdate()
+    return
   }
-  return false
+
+  session.reconnectTimer = setTimeout(() => {
+    session.reconnectTimer = null
+    session.reconnectInterval = Math.min(session.reconnectInterval * 2, MAX_RECONNECT_INTERVAL_MS)
+    connectToServer(session.port, session.password, session.paramsSource)
+  }, session.reconnectInterval)
 }
 
-function broadcastStatus(connected) {
-  if (sidebarPort) {
-    sidebarPort.postMessage({
-      type: 'status',
-      connected,
-      port: activePort,
-      source: paramsSource,
-      error: connected ? null : lastError,
-      reconnectIn: reconnectTimer ? Math.round(reconnectInterval / 1000) : null,
+function broadcastSessionUpdate() {
+  if (!sidebarPort) return
+  const list = []
+  for (const [port, s] of sessions) {
+    list.push({
+      port,
+      connected: s.ws && s.ws.readyState === WebSocket.OPEN,
+      meta: s.meta,
+      lastError: s.lastError,
+      reconnectIn: s.reconnectTimer ? Math.round(s.reconnectInterval / 1000) : null,
     })
   }
+  sidebarPort.postMessage({ type: 'session-update', sessions: list })
 }
 
 // --- Handle messages from channel server ---
 
-function handleChannelMessage(msg) {
+function handleChannelMessage(msg, sessionPort) {
   switch (msg.type) {
-    case 'pong':
-      if (sidebarPort) sidebarPort.postMessage(msg)
+    case 'pong': {
+      const session = sessions.get(sessionPort)
+      if (session) {
+        session.meta = {
+          projectDir: msg.projectDir,
+          version: msg.version,
+          pid: msg.pid,
+        }
+      }
+      broadcastSessionUpdate()
+      if (sidebarPort) sidebarPort.postMessage({ ...msg, sessionPort })
       break
+    }
 
     case 'msg':
-      if (sidebarPort) sidebarPort.postMessage(msg)
-      break
-
     case 'edit':
     case 'tool_use':
     case 'tool_result':
-      if (sidebarPort) sidebarPort.postMessage(msg)
+      if (sidebarPort) sidebarPort.postMessage({ ...msg, sessionPort })
       break
 
     case 'tool_request':
-      handleToolRequest(msg)
+      handleToolRequest(msg, sessionPort)
       break
   }
 }
 
-async function handleToolRequest(msg) {
+// --- evalInBrowser serialization queue ---
+
+const evalQueue = []
+let evalRunning = false
+
+function handleToolRequest(msg, sessionPort) {
+  evalQueue.push({ msg, sessionPort })
+  processEvalQueue()
+}
+
+async function processEvalQueue() {
+  if (evalRunning || evalQueue.length === 0) return
+  evalRunning = true
+
+  const { msg, sessionPort } = evalQueue.shift()
   const { request_id, tool, params } = msg
+  const session = sessions.get(sessionPort)
+
+  // Skip if session is dead — WS closed, can't respond; server will timeout
+  if (!session || session.ws.readyState !== WebSocket.OPEN) {
+    console.warn(`foxcode: dropping eval request ${request_id} — session :${sessionPort} disconnected`)
+    evalRunning = false
+    processEvalQueue()
+    return
+  }
+
   try {
     let content
     switch (tool) {
@@ -234,12 +276,29 @@ async function handleToolRequest(msg) {
       default:
         content = `unknown tool: ${tool}`
     }
-    sendToChannel({ type: 'tool_response', request_id, content })
+    if (session.ws.readyState === WebSocket.OPEN) {
+      session.ws.send(JSON.stringify({ type: 'tool_response', request_id, content }))
+    }
   } catch (err) {
     const errorResult = { ok: false, error: err.message, stack: err.stack }
-    sendToChannel({ type: 'tool_response', request_id, content: JSON.stringify(errorResult) })
+    if (session.ws.readyState === WebSocket.OPEN) {
+      session.ws.send(JSON.stringify({ type: 'tool_response', request_id, content: JSON.stringify(errorResult) }))
+    }
   }
+
+  evalRunning = false
+  processEvalQueue()
 }
+
+// --- tabs.onUpdated listener for new session URLs ---
+
+browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (!changeInfo.url) return
+  const { port, password } = parseFoxcodeParams(changeInfo.url)
+  if (port) {
+    connectToServer(port, password, 'url')
+  }
+})
 
 // --- Handle messages from sidebar ---
 
@@ -247,34 +306,19 @@ browser.runtime.onConnect.addListener((port) => {
   if (port.name !== 'sidebar') return
   sidebarPort = port
 
-  // Send current connection status
-  const connected = ws && ws.readyState === WebSocket.OPEN
-  port.postMessage({ type: 'status', connected })
+  broadcastSessionUpdate()
 
-  // If connected, request fresh server info so sidebar gets pong with details
-  if (connected) {
-    sendToChannel({ type: 'ping' })
-  }
-
-  // If not connected and no active params, prompt settings
-  if (!connected && !activePort) {
-    port.postMessage({ type: 'show-settings' })
+  // If any session is connected, request fresh server info
+  for (const [, s] of sessions) {
+    if (s.ws && s.ws.readyState === WebSocket.OPEN) {
+      s.ws.send(JSON.stringify({ type: 'ping', paramsSource: s.paramsSource }))
+    }
   }
 
   port.onMessage.addListener((msg) => {
     switch (msg.type) {
       case 'connect':
         connect()
-        break
-      case 'update-settings':
-        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null }
-        reconnectInterval = RECONNECT_INTERVAL_MS
-        if (ws) { ws.onclose = null; ws.close(); ws = null }
-        activePort = null
-        activePassword = null
-        paramsSource = 'manual'
-        lastError = null
-        connectToServer(msg.port, msg.password)
         break
     }
   })

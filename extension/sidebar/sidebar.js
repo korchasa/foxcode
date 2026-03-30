@@ -1,19 +1,36 @@
 /**
  * FoxCode - Sidebar UI.
- * Connects to background script, renders messages from Claude Code.
+ * Connects to background script, renders messages from multiple Claude Code sessions.
+ * Messages are visually grouped by session (port-based color + project label).
  */
 
-const STORAGE_KEY_PORT = 'foxcode_last_port'
-const STORAGE_KEY_PASSWORD = 'foxcode_last_password'
-
 const messagesEl = document.getElementById('messages')
-const serverIndicatorEl = document.getElementById('server-indicator')
-const settingsFormEl = document.getElementById('settings-form')
-const settingsPortEl = document.getElementById('settings-port')
-const settingsPasswordEl = document.getElementById('settings-password')
-const settingsConnectBtn = document.getElementById('settings-connect')
+const sessionListEl = document.getElementById('session-list')
+const noSessionsEl = document.getElementById('no-sessions')
 
 const messages = new Map()
+
+/** Cached session meta from last session-update, keyed by port. */
+const sessionMeta = new Map()
+
+/** Session colors derived from port number. */
+const SESSION_COLORS = [
+  '#c2185b', '#1565c0', '#2e7d32', '#e65100', '#6a1b9a',
+  '#00838f', '#ad1457', '#283593', '#558b2f', '#4e342e',
+]
+
+function sessionColor(port) {
+  return SESSION_COLORS[port % SESSION_COLORS.length]
+}
+
+function projectLabel(meta, port) {
+  if (!meta || !meta.projectDir) return `:${port}`
+  const path = meta.projectDir
+  const rel = path.replace(/^(?:\/(?:Users|home)\/[^/]+\/|[A-Z]:\\Users\\[^\\]+\\)/, '')
+  const segments = rel.replace(/[\\/]+$/, '').split(/[\\/]/)
+  const label = segments.length > 2 ? segments.slice(-2).join('/') : rel
+  return `${label} :${port}`
+}
 
 // --- Connect to background ---
 
@@ -21,111 +38,119 @@ const port = browser.runtime.connect({ name: 'sidebar' })
 
 port.onMessage.addListener((msg) => {
   switch (msg.type) {
-    case 'status':
-      setStatus(msg.connected, msg)
+    case 'session-update':
+      updateSessionBar(msg.sessions)
       break
-    case 'show-settings':
-      showSettings()
+    case 'session-removed':
+      removeSession(msg.port)
       break
     case 'pong':
-      setStatus(true)
-      updateActiveServerInfo(msg)
+      // pong updates are handled via session-update
       break
     case 'msg':
-      setStatus(true)
       addMessage(msg)
       break
     case 'edit':
       editMessage(msg.id, msg.text)
       break
     case 'tool_use':
-      setStatus(true)
       addToolUseMessage(msg)
       break
     case 'tool_result':
-      setStatus(true)
       addToolResultMessage(msg)
       break
   }
 })
 
-port.onDisconnect.addListener(() => setStatus(false))
+port.onDisconnect.addListener(() => {
+  updateSessionBar([])
+})
 port.postMessage({ type: 'connect' })
 
-// --- Status ---
+// --- Session bar ---
 
-const connectionErrorEl = document.getElementById('connection-error')
-const connectionDiagEl = document.getElementById('connection-diag')
+let lastSessionPort = null
 
-const SOURCE_LABELS = {
-  url: 'URL hash params',
-  saved: 'saved from previous session',
-  manual: 'manual settings',
-}
+function updateSessionBar(sessionsList) {
+  // Update meta cache
+  for (const s of sessionsList) {
+    if (s.meta) sessionMeta.set(s.port, s.meta)
+  }
 
-let isConnected = false
+  if (sessionsList.length === 0) {
+    noSessionsEl.classList.remove('hidden')
+    sessionListEl.innerHTML = ''
+    return
+  }
 
-function setStatus(connected, diag) {
-  isConnected = connected
-  if (connected) {
-    connectionErrorEl.classList.add('hidden')
-    serverIndicatorEl.classList.add('connected')
-    if (!serverIndicatorEl.dataset.hasServerInfo) {
-      serverIndicatorEl.textContent = 'Connected'
+  noSessionsEl.classList.add('hidden')
+
+  // Build set of current ports for removal detection
+  const currentPorts = new Set(sessionsList.map(s => s.port))
+
+  // Remove stale items
+  for (const el of [...sessionListEl.children]) {
+    const p = Number(el.dataset.port)
+    if (!currentPorts.has(p)) el.remove()
+  }
+
+  // Update or create items
+  for (const s of sessionsList) {
+    let el = sessionListEl.querySelector(`[data-port="${s.port}"]`)
+    if (!el) {
+      el = document.createElement('div')
+      el.dataset.port = s.port
+      el.style.setProperty('--session-color', sessionColor(s.port))
+
+      const dot = document.createElement('span')
+      dot.className = 'session-dot'
+      el.appendChild(dot)
+
+      const label = document.createElement('span')
+      label.className = 'session-label'
+      el.appendChild(label)
+
+      sessionListEl.appendChild(el)
     }
-    hideSettings()
-  } else {
-    connectionErrorEl.classList.remove('hidden')
-    serverIndicatorEl.classList.remove('connected')
-    serverIndicatorEl.textContent = 'No connection'
-    serverIndicatorEl.dataset.hasServerInfo = ''
-    updateDiag(diag)
+
+    el.className = `session-item ${s.connected ? 'connected' : 'disconnected'}`
+    el.querySelector('.session-label').textContent = projectLabel(s.meta, s.port)
+    el.title = (!s.connected && s.lastError) ? s.lastError : ''
   }
 }
 
-function updateDiag(diag) {
-  if (!diag || !connectionDiagEl) return
-  const lines = []
-  if (diag.port) lines.push(`Port: ${diag.port}`)
-  if (diag.source) lines.push(`Source: ${SOURCE_LABELS[diag.source] || diag.source}`)
-  if (diag.error) lines.push(`Error: ${diag.error}`)
-  if (diag.reconnectIn) lines.push(`Retry in: ~${diag.reconnectIn}s`)
-  connectionDiagEl.textContent = lines.join('\n')
+function removeSession(sessionPort) {
+  // Gray out messages from removed session
+  const msgEls = messagesEl.querySelectorAll(`[data-session-port="${sessionPort}"]`)
+  for (const el of msgEls) {
+    el.classList.add('session-dead')
+  }
 }
-
-// --- Settings form ---
-
-function showSettings() {
-  // Populate from storage if available
-  browser.storage.local.get([STORAGE_KEY_PORT, STORAGE_KEY_PASSWORD]).then((result) => {
-    if (result[STORAGE_KEY_PORT]) settingsPortEl.value = result[STORAGE_KEY_PORT]
-    if (result[STORAGE_KEY_PASSWORD]) settingsPasswordEl.value = result[STORAGE_KEY_PASSWORD]
-  }).catch(() => {})
-  settingsFormEl.classList.remove('hidden')
-}
-
-function hideSettings() {
-  settingsFormEl.classList.add('hidden')
-}
-
-settingsConnectBtn.addEventListener('click', () => {
-  const p = parseInt(settingsPortEl.value, 10)
-  const pw = settingsPasswordEl.value.trim()
-  if (!p || p < 1 || p > 65535) return
-  port.postMessage({ type: 'update-settings', port: p, password: pw || null })
-})
-
-// Toggle settings on indicator click
-serverIndicatorEl.addEventListener('click', () => {
-  settingsFormEl.classList.toggle('hidden')
-})
 
 // --- Messages ---
 
+function maybeAddSessionDivider(sessionPort) {
+  if (sessionPort && sessionPort !== lastSessionPort) {
+    lastSessionPort = sessionPort
+    const divider = document.createElement('div')
+    divider.className = 'session-divider'
+    divider.style.setProperty('--session-color', sessionColor(sessionPort))
+    divider.textContent = projectLabel(sessionMeta.get(sessionPort) || null, sessionPort)
+    divider.dataset.sessionPort = sessionPort
+    messagesEl.appendChild(divider)
+  }
+}
+
 function addMessage(msg) {
+  maybeAddSessionDivider(msg.sessionPort)
+
   const div = document.createElement('div')
   div.className = `message ${msg.from}`
   div.id = `msg-${msg.id}`
+  if (msg.sessionPort) {
+    div.dataset.sessionPort = msg.sessionPort
+    div.style.borderLeftColor = sessionColor(msg.sessionPort)
+  }
 
   const meta = document.createElement('div')
   meta.className = 'meta'
@@ -181,9 +206,15 @@ function scrollToBottom(force = false) {
 // --- Tool use/result messages ---
 
 function addToolUseMessage(msg) {
+  maybeAddSessionDivider(msg.sessionPort)
+
   const div = document.createElement('div')
   div.className = 'message tool-use'
   div.id = `msg-${msg.id}`
+  if (msg.sessionPort) {
+    div.dataset.sessionPort = msg.sessionPort
+    div.style.borderLeftColor = sessionColor(msg.sessionPort)
+  }
 
   const body = document.createElement('div')
   body.className = 'body'
@@ -196,9 +227,15 @@ function addToolUseMessage(msg) {
 }
 
 function addToolResultMessage(msg) {
+  maybeAddSessionDivider(msg.sessionPort)
+
   const div = document.createElement('div')
   div.className = 'message tool-result'
   div.id = `msg-${msg.id}`
+  if (msg.sessionPort) {
+    div.dataset.sessionPort = msg.sessionPort
+    div.style.borderLeftColor = sessionColor(msg.sessionPort)
+  }
 
   const body = document.createElement('div')
   body.className = 'body'
@@ -212,20 +249,3 @@ function addToolResultMessage(msg) {
 }
 
 // formatParamValue and formatToolParams are loaded from format.js
-
-// --- Server info ---
-
-function updateActiveServerInfo(pong) {
-  const label = projectLabel(pong)
-  const uptimeMin = Math.floor((pong.uptime || 0) / 60)
-  serverIndicatorEl.textContent = `${label} :${pong.port} | v${pong.version} | up ${uptimeMin}m`
-  serverIndicatorEl.dataset.hasServerInfo = '1'
-}
-
-function projectLabel(server) {
-  const path = server.projectDir || server.pluginRoot
-  if (!path) return `port ${server.port}`
-  const rel = path.replace(/^(?:\/(?:Users|home)\/[^/]+\/|[A-Z]:\\Users\\[^\\]+\\)/, '')
-  const segments = rel.replace(/[\\/]+$/, '').split(/[\\/]/)
-  return segments.length > 2 ? segments.slice(-2).join('/') : rel
-}

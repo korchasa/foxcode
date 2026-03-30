@@ -6,19 +6,12 @@
   <link rel="stylesheet" href="sidebar.css">
 </head>
 <body>
-  <div id="server-bar" class="server-bar">
-    <button id="server-indicator" class="server-indicator" title="Connection settings">No connection</button>
+  <div id="session-bar" class="session-bar">
+    <div id="session-list" class="session-list"></div>
   </div>
-  <div id="settings-form" class="settings-form hidden">
-    <div class="settings-title">Connection Settings</div>
-    <label class="settings-label">Port <input id="settings-port" type="number" min="1" max="65535" class="settings-input"></label>
-    <label class="settings-label">Password <input id="settings-password" type="text" class="settings-input"></label>
-    <button id="settings-connect" class="settings-connect-btn">Connect</button>
-  </div>
-  <div id="connection-error" class="connection-error">
-    <div class="connection-error-title">No connection to Claude Code</div>
-    <div id="connection-diag" class="connection-diag"></div>
-    <div class="connection-error-status">Reconnecting...</div>
+  <div id="no-sessions" class="no-sessions">
+    <div class="no-sessions-title">No active sessions</div>
+    <div class="no-sessions-hint">Start a Claude Code session with FoxCode plugin to connect.</div>
   </div>
   <div id="messages"></div>
   <script src="markdown.js"></script>

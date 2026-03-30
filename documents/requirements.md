@@ -62,6 +62,23 @@
   - [ ] Integration test: background executes code -> delegates to tab -> returns result (requires Firefox)
   - [x] MCP instructions describe API reference. Evidence: `foxcode/channel/lib.mjs:237-277` (evalInBrowser description)
 
+### 3.6 FR-6: Multi-Session Support
+- **Desc:** Multiple concurrent CC sessions communicate with a single Firefox extension instance. Each session has its own MCP server on a unique port; extension maintains N simultaneous WebSocket connections.
+- **Scenario:** User runs 2+ CC sessions with different projects -> each has its own MCP server -> extension connects to all -> sidebar shows messages from all sessions grouped by project label
+- **Acceptance:**
+  - [x] Extension maintains N WebSocket connections (one per MCP server). Evidence: `extension/background/background.js:18` (sessions Map), `extension/background/background.js:82-116` (connectToServer adds to Map)
+  - [x] `reply` messages from multiple sessions displayed simultaneously. Evidence: `extension/background/background.js:205-210` (injects sessionPort), `extension/sidebar/sidebar.js:135-170` (renders with session color)
+  - [x] `evalInBrowser` from any session, serialized via queue. Evidence: `extension/background/background.js:237-295` (evalQueue + processEvalQueue)
+  - [x] Dead session eval requests skipped (WS closed check before execution). Evidence: `extension/background/background.js:254-259`
+  - [x] Sidebar visually groups messages by session (colored border + divider). Evidence: `extension/sidebar/sidebar.js:121-131` (maybeAddSessionDivider), `extension/sidebar/sidebar.css:97-104` (session-divider)
+  - [x] Session bar shows all sessions with connection status. Evidence: `extension/sidebar/sidebar.js:79-117` (updateSessionBar)
+  - [x] New session auto-connects via URL hash (`tabs.onUpdated` listener). Evidence: `extension/background/background.js:298-304`
+  - [x] Per-session reconnect with exponential backoff (3s→30s, max 10 attempts). Evidence: `extension/background/background.js:155-178` (scheduleReconnect)
+  - [x] Dead sessions removed from Map after max reconnect attempts. Evidence: `extension/background/background.js:163-170`
+  - [x] `url-params.js` returns array of all matching tabs (deduplicated by port). Evidence: `extension/background/url-params.js:38-50`
+  - [x] Tests updated for array return type. Evidence: `extension/background/url-params.test.js:67-116`
+  - [ ] Integration test: 2 MCP servers + 1 extension (requires Firefox)
+
 ## 4. Non-Functional
 
 ### 4.1 NF-1: Easy Install via Claude Code Plugin [critical]
@@ -85,14 +102,14 @@
 - [x] `ping` tool checks browser extension connectivity. Returns `{connected: bool}`. Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler)
 - [x] `/foxcode:foxcode-run-project-profile` flow: status -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
 - [x] `/foxcode:foxcode-run-user-profile` flow: status -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
-- [x] Extension connects via URL hash params (`foxcode-port` + `foxcode-password`) or saved params or manual sidebar settings form. No port scanning. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
+- [x] Extension connects via URL hash params (`foxcode-port` + `foxcode-password`) or saved sessions. No port scanning, no manual settings form. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
 
 ### 4.3 NF-3: Reliability [very important]
-- [x] Auto-reconnect on connection loss with exponential backoff (3s → 30s max). Evidence: `extension/background/background.js:140-152` (scheduleReconnect)
-- [x] Graceful degradation when CC not running: diagnostic panel shows port, params source, error, retry timer. Evidence: `extension/sidebar/sidebar.js` (setStatus, updateDiag)
+- [x] Per-session auto-reconnect with exponential backoff (3s → 30s max, 10 attempts). Evidence: `extension/background/background.js:155-178` (scheduleReconnect)
+- [x] Graceful degradation when no sessions: "No active sessions" banner. Evidence: `extension/sidebar/sidebar.js:80-83`, `extension/sidebar/sidebar.html:13-16`
 - Channels warning and input state management removed (sidebar is read-only, no user input)
-- [x] Background sends enriched status (port, source, error, reconnectIn) to sidebar. Evidence: `extension/background/background.js:179-188` (broadcastStatus)
-- [x] Background pings server on sidebar connect to get fresh pong with server details. Evidence: `extension/background/background.js:255-260`
+- [x] Background sends session-update (all sessions status) to sidebar. Evidence: `extension/background/background.js:180-195` (broadcastSessionUpdate)
+- [x] Background pings all connected servers on sidebar connect. Evidence: `extension/background/background.js:311-316`
 - [ ] No message loss during normal operation - not verified
 - [x] No interference with CC terminal workflow. Evidence: tested manually
 
@@ -102,7 +119,7 @@
 ### 4.5 NF-5: Security
 - [x] All traffic local. Evidence: `foxcode/channel/lib.mjs` (createHttpServer binds 127.0.0.1)
 - [x] WebSocket upgrade-level password auth: server generates random password (persisted `~/.foxcode/password`, mode 0600), rejects connections without valid `?token=` param (HTTP 401). Evidence: `foxcode/channel/server.mjs` (upgrade handler), `foxcode/channel/lib.mjs` (passwordStorage)
-- [x] Connection params (port+password) saved in `browser.storage.local` for reconnection. Evidence: `extension/background/background.js` (saveConnectionParams)
+- [x] Session params (port+password array) saved in `browser.storage.local` for reconnection. Evidence: `extension/background/background.js:37-43` (saveSessions)
 
 ### 4.6 NF-6: Performance
 - [x] Message delivery latency <1s. Evidence: tested manually

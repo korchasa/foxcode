@@ -76,144 +76,84 @@ body {
   color: var(--text-primary);
 }
 
-/* --- Server bar & settings --- */
+/* --- Session bar --- */
 
-.server-bar {
+.session-bar {
   flex-shrink: 0;
   padding: 4px 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
 }
 
-.server-indicator {
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 6px;
-  width: 100%;
-  text-align: left;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
-.server-indicator:hover {
+.session-item:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
 }
-.server-indicator::before {
-  content: '';
+
+.session-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--status-disconnected);
   flex-shrink: 0;
+  background: var(--status-disconnected);
 }
-.server-indicator.connected::before {
+.session-item.connected .session-dot {
   background: var(--status-connected);
 }
 
-.settings-form {
-  padding: 10px 12px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.settings-form.hidden { display: none; }
-
-.settings-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
+.session-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.settings-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+/* --- No sessions banner --- */
 
-.settings-input {
-  flex: 1;
-  background: var(--bg-input);
-  border: 1px solid var(--border-input);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-primary);
-}
-.settings-input:focus {
-  outline: none;
-  border-color: var(--border-input-focus);
-}
-
-.settings-connect-btn {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  align-self: flex-end;
-}
-.settings-connect-btn:hover {
-  opacity: 0.9;
-}
-
-/* --- Connection error banner --- */
-
-.connection-error {
+.no-sessions {
   margin: 12px;
   padding: 14px 16px;
   background: var(--bg-secondary);
-  border: 1px solid var(--status-disconnected);
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 13px;
   line-height: 1.5;
 }
+.no-sessions.hidden { display: none; }
 
-.connection-error.hidden {
-  display: none;
-}
-
-.connection-error-title {
+.no-sessions-title {
   font-weight: 700;
-  color: var(--status-disconnected);
-  margin-bottom: 8px;
-  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
 }
 
-.connection-diag {
-  background: var(--bg-code-block);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 10px;
-  margin: 6px 0;
-  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
-  font-size: 12px;
-  color: var(--text-primary);
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.connection-diag:empty {
-  display: none;
-}
-
-.connection-error-status {
+.no-sessions-hint {
   color: var(--text-meta);
   font-size: 12px;
-  margin-top: 4px;
+}
+
+/* --- Session divider --- */
+
+.session-divider {
+  padding: 2px 16px;
+  font-size: 11px;
+  color: var(--session-color, var(--text-meta));
+  border-left: 3px solid var(--session-color, var(--border));
+  margin: 8px 0 2px;
+  font-weight: 600;
 }
 
 /* --- Messages --- */
@@ -231,6 +171,10 @@ body {
   display: flex;
   flex-direction: column;
   max-width: 100%;
+  border-left: 3px solid transparent;
+}
+.message.session-dead {
+  opacity: 0.4;
 }
 .message:hover {
   background: var(--message-hover);
