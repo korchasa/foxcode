@@ -1,13 +1,13 @@
 # SRS
 
 ## 1. Intro
-- **Desc:** FoxCode - Firefox WebExtension providing browser UI for active Claude Code sessions. Real-time message display and browser automation tools for running CLI sessions.
+- **Desc:** FoxCode - Firefox WebExtension for browser automation via Claude Code. Eval debug popup (on-demand, zero screen footprint) + headless browser API via MCP server over WebSocket.
 - **Def/Abbr:**
   - CC: Claude Code (CLI tool)
   - Channel: MCP server pushing events into a CC session
 
 ## 2. General
-- **Context:** Developer runs Claude Code in terminal. Wants to see session messages in browser and let CC automate the browser - without leaving the browser or restarting CC.
+- **Context:** Developer runs Claude Code in IDE/terminal. Wants CC to automate the browser. Eval debug popup shows evalInBrowser requests/responses on demand (zero screen footprint).
 - **Assumptions/Constraints:**
   - Firefox 78.0+ required
   - Claude Code CLI v2.1.80+ installed and running
@@ -16,13 +16,14 @@
 
 ## 3. Functional Reqs
 
-### 3.1 FR-1: Real-Time Session Sync
-- **Desc:** Display messages from active CC session in browser sidebar as they appear
-- **Scenario:** User has CC running in terminal -> opens sidebar -> sees live message stream (user prompts, assistant responses, tool calls/results)
+### 3.1 FR-1: Eval Debug Popup
+- **Desc:** On-demand popup (browser_action) displays evalInBrowser requests and responses. Zero screen footprint — opens only on icon click
+- **Scenario:** CC calls evalInBrowser -> request/response appear in popup log. Badge shows unread eval count. User clicks icon -> sees eval history
 - **Acceptance:**
-  - [x] New messages from CC session appear in sidebar within 1s. Evidence: `foxcode/channel/server.mjs:245-248` (reply tool broadcasts via WebSocket), `extension/sidebar/sidebar.js:166` (addMessage renders)
-  - [x] All message types rendered: user, assistant (text), tool use, tool result. Evidence: `extension/sidebar/sidebar.js:166` (addMessage: user/assistant), `extension/sidebar/sidebar.js:224-253` (addToolUseMessage, addToolResultMessage), `foxcode/channel/server.mjs:256,259` (broadcasts tool_use/tool_result)
-  - [x] Connection status indicator (connected/disconnected). Evidence: `extension/sidebar/sidebar.js:82-98` (setStatus), `extension/sidebar/sidebar.css:35-36,123` (CSS vars + .connected)
+  - [x] Popup shows tool_use and tool_result messages. Evidence: `extension/popup/popup.js:51-69` (appendEvalMessage)
+  - [x] Background buffers eval messages (200 cap FIFO) for popup replay. Evidence: `extension/background/background.js:293-303` (bufferEvalMessage)
+  - [x] Badge shows unread eval count, resets on popup open. Evidence: `extension/background/background.js:305-309` (updateBadge), `extension/background/background.js:326-328` (reset on connect)
+  - [x] No persistent screen footprint (no sidebar). Evidence: `extension/manifest.json` (browser_action, no sidebar_action)
 
 ### 3.2 FR-2: Send Messages [REMOVED]
 - **Status:** Removed. Browser sidebar is now read-only display. No user input, no message sending from browser to CC.
@@ -55,8 +56,8 @@
   - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:290-313`
   - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:230-240`
   - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:210-214`
-  - [x] `reply` tool preserved. Evidence: `foxcode/channel/lib.mjs:41-44`
-  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message). Evidence: `foxcode/channel/lib.mjs` (4 tools: status, ping, reply, evalInBrowser)
+  - [x] `reply` tool removed (IDE shows all CC output). Evidence: `foxcode/channel/lib.mjs` (3 tools: status, ping, evalInBrowser)
+  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message, reply). Evidence: `foxcode/channel/lib.mjs` (3 tools: status, ping, evalInBrowser)
   - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `extension/manifest.json:6-11,13`
   - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `extension/background/dom-helpers.test.js`, `extension/background/browser-api.test.js`
   - [ ] Integration test: background executes code -> delegates to tab -> returns result (requires Firefox)
@@ -64,14 +65,12 @@
 
 ### 3.6 FR-6: Multi-Session Support
 - **Desc:** Multiple concurrent CC sessions communicate with a single Firefox extension instance. Each session has its own MCP server on a unique port; extension maintains N simultaneous WebSocket connections.
-- **Scenario:** User runs 2+ CC sessions with different projects -> each has its own MCP server -> extension connects to all -> sidebar shows messages from all sessions grouped by project label
+- **Scenario:** User runs 2+ CC sessions with different projects -> each has its own MCP server -> extension connects to all -> popup shows eval messages from all sessions
 - **Acceptance:**
   - [x] Extension maintains N WebSocket connections (one per MCP server). Evidence: `extension/background/background.js:18` (sessions Map), `extension/background/background.js:82-116` (connectToServer adds to Map)
-  - [x] `reply` messages from multiple sessions displayed simultaneously. Evidence: `extension/background/background.js:205-210` (injects sessionPort), `extension/sidebar/sidebar.js:135-170` (renders with session color)
+  - [x] Eval messages from multiple sessions buffered and displayed. Evidence: `extension/background/background.js:293-303` (bufferEvalMessage with sessionPort)
   - [x] `evalInBrowser` from any session, serialized via queue. Evidence: `extension/background/background.js:237-295` (evalQueue + processEvalQueue)
   - [x] Dead session eval requests skipped (WS closed check before execution). Evidence: `extension/background/background.js:254-259`
-  - [x] Sidebar visually groups messages by session (colored border + divider). Evidence: `extension/sidebar/sidebar.js:121-131` (maybeAddSessionDivider), `extension/sidebar/sidebar.css:97-104` (session-divider)
-  - [x] Session bar shows all sessions with connection status. Evidence: `extension/sidebar/sidebar.js:79-117` (updateSessionBar)
   - [x] New session auto-connects via URL hash (`tabs.onUpdated` listener). Evidence: `extension/background/background.js:298-304`
   - [x] Per-session reconnect with exponential backoff (3s→30s, max 10 attempts). Evidence: `extension/background/background.js:155-178` (scheduleReconnect)
   - [x] Dead sessions removed from Map after max reconnect attempts. Evidence: `extension/background/background.js:163-170`
@@ -106,10 +105,9 @@
 
 ### 4.3 NF-3: Reliability [very important]
 - [x] Per-session auto-reconnect with exponential backoff (3s → 30s max, 10 attempts). Evidence: `extension/background/background.js:155-178` (scheduleReconnect)
-- [x] Graceful degradation when no sessions: "No active sessions" banner. Evidence: `extension/sidebar/sidebar.js:80-83`, `extension/sidebar/sidebar.html:13-16`
-- Channels warning and input state management removed (sidebar is read-only, no user input)
-- [x] Background sends session-update (all sessions status) to sidebar. Evidence: `extension/background/background.js:180-195` (broadcastSessionUpdate)
-- [x] Background pings all connected servers on sidebar connect. Evidence: `extension/background/background.js:311-316`
+- [x] Graceful degradation when no sessions: "No active sessions" banner in popup. Evidence: `extension/popup/popup.js:41-47`, `extension/popup/popup.html:9-12`
+- [x] Background sends session-update to popup. Evidence: `extension/background/background.js:188-203` (notifyPopupSessions)
+- [x] Background pings all connected servers on popup connect. Evidence: `extension/background/background.js:332-336`
 - [ ] No message loss during normal operation - not verified
 - [x] No interference with CC terminal workflow. Evidence: tested manually
 
@@ -126,13 +124,13 @@
 
 ## 5. Interfaces
 - **Transport:** Channel Plugin (MCP server inside CC) ↔ WebSocket localhost:8787 ↔ Firefox Extension
-- **Extension APIs:** browser.sidebarAction, browser.runtime, browser.tabs, browser.cookies, browser.webNavigation, browser.windows
-- **UI:** Sidebar panel with message stream and input
+- **Extension APIs:** browser.browserAction, browser.runtime, browser.tabs, browser.cookies, browser.webNavigation, browser.windows
+- **UI:** Popup eval debug console (browser_action, on-demand)
 
 ## 6. Acceptance
 - **Criteria:**
   - [x] Extension loads in Firefox without errors
-  - [x] Messages from CC terminal visible in sidebar in real-time
+  - [x] Eval requests/responses visible in popup on demand
   - Removed: Messages sent from sidebar (FR-2 removed)
   - [x] Page content/selection delivered to CC session
   - [x] CC can pull browser context from terminal

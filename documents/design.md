@@ -8,9 +8,9 @@
 - **Diagram:**
 ```mermaid
 graph LR
-  CC[Claude Code CLI] -->|reply/evalInBrowser| CH[Channel Plugin]
+  CC[Claude Code CLI] -->|evalInBrowser| CH[Channel Plugin]
   CH -->|WebSocket| BG[Background Script]
-  BG -->|messages| S[Sidebar UI]
+  BG -->|eval log| P[Popup UI]
   BG -->|executeScript| TAB[Active Tab DOM]
   CS[Content Script] -->|EVAL_IN_PAGE| BG
   BG -->|tool_response| CH
@@ -18,7 +18,7 @@ graph LR
 ```
 - **Subsystems:**
   - Channel Plugin (`foxcode/channel/`): Node.js MCP server, WebSocket bridge
-  - Extension (`extension/`): Sidebar UI, Background script, Content script
+  - Extension (`extension/`): Popup eval console, Background script, Content script
 
 ## 3. Components
 
@@ -26,32 +26,30 @@ graph LR
 - **`server.mjs`** - MCP server: WebSocket bridge, tool dispatch, graceful shutdown (stdin close / SIGTERM / SIGINT -> terminate WS clients, close server, exit). Reads name/version from `plugin.json` at runtime (single source of truth)
 - **`lib.mjs`** - Shared logic: ID generation, message builders, tool definitions, port management (`createHttpServer`, `portStorage`), password management (`passwordStorage`). File I/O limited to `portStorage` (`~/.foxcode/port`) and `passwordStorage` (`~/.foxcode/password`)
 - **`validator.mjs`** - Code syntax validation (async-aware via `new Function` wrapper)
-- **Capabilities:** `tools` (status, ping, reply, evalInBrowser)
+- **Capabilities:** `tools` (status, ping, evalInBrowser)
 - **Connectivity check:** `ping` tool checks if browser extension is connected. Returns `{connected: bool}`. Launch skills call `status` then `ping` as part of launch flow.
 - **Port binding:** Auto-binds to first available port in range 8787–8886. Priority: `FOXCODE_PORT` env -> saved port (`~/.foxcode/port`) -> random start with wrap-around. Saved on successful bind. Null-safe: runs without WebSocket if all ports taken (MCP stdio still works)
 - **Interfaces:** stdio (MCP with CC), WebSocket `ws://localhost:{port}` (extension, dynamic port)
 - **Tools exposed:**
   - `status()` - server telemetry (port, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion, pid, pluginRoot, launchMode, client). Always works, no browser required. `client` contains `{paramsSource, connectedAt}` from last extension ping
   - `ping()` - check if browser extension is connected. Returns `{connected: bool}`
-  - `reply(text, reply_to?)` - send CC response to browser
   - `evalInBrowser(code, timeout?)` - execute JS in browser with full API. Validates syntax, sends to extension via WebSocket, returns serialized result
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 
 ### 3.2 Background Script (`extension/background/`)
-- **`background.js`** - Multi-session WebSocket manager. Maintains `sessions` Map (port → Session) for N simultaneous MCP server connections. Connect priority: URL hash params (all tabs) > saved sessions. `tabs.onUpdated` listener auto-connects new sessions from URL hash. Per-session reconnect with exponential backoff (3s→30s, max 10 attempts). `evalInBrowser` requests serialized via global queue (dead-session requests skipped). Sends `session-update`/`session-removed` messages to sidebar. No settings form.
+- **`background.js`** - Multi-session WebSocket manager. Maintains `sessions` Map (port → Session) for N simultaneous MCP server connections. Connect priority: URL hash params (all tabs) > saved sessions. `tabs.onUpdated` listener auto-connects new sessions from URL hash. Per-session reconnect with exponential backoff (3s→30s, max 10 attempts). `evalInBrowser` requests serialized via global queue (dead-session requests skipped). Buffers eval messages (200 cap FIFO) for popup replay. Badge shows unread eval count. No settings form.
 - **`url-params.js`** - Parses `foxcode-port` and `foxcode-password` from tab URL hash. Returns array of `{port, password}` (all matches, deduplicated by port)
 - **`browser-api.js`** - Factory creating `api` object with ~30 async helpers (DI for testability)
 - **`dom-helpers.js`** - Pure functions generating injectable JS code (buildWaitAndAct, selectors, etc.)
 - **Execution model:** Agent code runs via `new Function('api', code)(browserApi)` in background (persistent, survives navigation). DOM ops delegated to tabs via `executeScript`. Navigation via `webNavigation.onCompleted`.
 - **Managed tab:** `navigate()` creates a new active tab on first call. Subsequent navigations reuse and activate it. All API operations target managed tab. `closeTab()` resets; next `navigate()` creates fresh tab. `tabs.onRemoved` auto-clears state. `screenshot()` temporarily activates managed tab for capture, then restores focus.
-- **Interfaces:** WebSocket (channel), port (sidebar), tabs.executeScript (DOM), tabs.sendMessage (content script for eval)
+- **Interfaces:** WebSocket (channel), port (popup), tabs.executeScript (DOM), tabs.sendMessage (content script for eval)
 - **Deps:** Channel plugin running, CSP `unsafe-eval`
 
-### 3.3 Sidebar (`extension/sidebar/`)
-- **`markdown.js`** - Pure markdown->HTML renderer (testable without DOM)
+### 3.3 Popup Eval Console (`extension/popup/`)
 - **`format.js`** - Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
-- **`sidebar.js`** - Multi-session UI: session bar (colored dots + project labels per session), message rendering with session grouping (colored left border + dividers). Caches session meta for labels. In-place DOM updates (no innerHTML wipe). Read-only display, no settings form
-- **Interfaces:** port connection to background script
+- **`popup.js`** - Eval debug UI: displays evalInBrowser requests (tool_use) and responses (tool_result). Receives buffered messages from background on open. No session bar, no chat messages, no markdown
+- **Interfaces:** port connection to background script (`name: 'popup'`)
 - **Deps:** Background script
 
 ### 3.4 Content Script (`extension/content/content-script.js`)
@@ -65,10 +63,9 @@ graph LR
 - **Session data:** Messages, tool results - in-memory, per-session. Session meta (projectDir, version, pid) cached from pong
 
 ## 5. Logic
-- **CC -> Browser:** CC calls `reply` tool -> channel -> WebSocket -> background -> sidebar
-- **CC automates browser:** CC calls `evalInBrowser` -> channel validates syntax -> sends `EVAL_CODE` via WebSocket -> background executes via `new Function('api',code)(browserApi)` -> API helpers delegate to `executeScript`/`webNavigation`/`cookies`/etc -> result serialized -> returned to CC
+- **CC automates browser:** CC calls `evalInBrowser` -> channel validates syntax -> sends `EVAL_CODE` via WebSocket -> background executes via `new Function('api',code)(browserApi)` -> API helpers delegate to `executeScript`/`webNavigation`/`cookies`/etc -> result serialized -> returned to CC. tool_use/tool_result broadcast to popup (if open) and buffered for replay
 - **Page main world eval:** `api.eval(expr)` -> background sends `EVAL_IN_PAGE` message to content script -> content script uses `wrappedJSObject.eval()` -> result returned
-- **WebSocket protocol:** JSON messages with `type` field discriminator (`msg`, `edit`, `tool_request`, `tool_response`, `tool_use`, `tool_result`). `pong` messages include `protocol_version` (integer) for compatibility checks. Background injects `sessionPort` into messages forwarded to sidebar. New sidebar messages: `session-update` (full session list), `session-removed` (cleanup)
+- **WebSocket protocol:** JSON messages with `type` field discriminator (`tool_request`, `tool_response`, `tool_use`, `tool_result`, `pong`). `pong` messages include `protocol_version` (integer) for compatibility checks. Background injects `sessionPort` into eval messages forwarded to popup. Popup messages: `session-update` (connection state), `buffered-messages` (replay on open)
 
 ## 6. Non-Functional
 - **Fault Tolerance:** Per-session auto-reconnect with exponential backoff (3s -> 30s max, 10 attempts). Dead sessions removed from Map. Channel server graceful shutdown on parent CC exit (stdin EOF) prevents orphan processes.
@@ -76,7 +73,7 @@ graph LR
 - **Logs:** Channel outputs to stderr (visible in CC debug logs)
 
 ## 7. Constraints
-- **One-way communication:** Sidebar is read-only display. CC sends messages to browser via `reply` tool; no browser-to-CC messaging
+- **One-way communication:** Popup is read-only eval debug display. No browser-to-CC messaging
 - **CSP unsafe-eval required:** `evalInBrowser` uses `new Function()` in background - needs `"script-src 'self' 'unsafe-eval'"` in manifest CSP. Acceptable: code source is trusted (Claude Code agent)
 - **api.eval() CSP-limited:** Page CSP may block `eval()` via wrappedJSObject on strict sites
 - **No iframe support:** executeScript targets top frame only

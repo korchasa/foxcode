@@ -18,7 +18,12 @@ const STORAGE_KEY_SESSIONS = 'foxcode_sessions'
 /** @type {Map<number, Session>} port → session */
 const sessions = new Map()
 
-let sidebarPort = null
+let popupPort = null
+
+/** Buffered eval messages for popup replay. */
+const evalBuffer = []
+const EVAL_BUFFER_MAX = 200
+let unreadEvalCount = 0
 
 /**
  * @typedef {Object} Session
@@ -113,7 +118,7 @@ function connectToServer(port, password, source) {
     session.reconnectAttempts = 0
     session.lastError = null
     saveSessions()
-    broadcastSessionUpdate()
+    notifyPopupSessions()
     ws.send(JSON.stringify({ type: 'ping', paramsSource: source }))
   }
 
@@ -121,7 +126,7 @@ function connectToServer(port, password, source) {
     if (!session.lastError) {
       session.lastError = event.code === 1006 ? 'Connection refused or dropped' : `WebSocket closed (${event.code})`
     }
-    broadcastSessionUpdate()
+    notifyPopupSessions()
     scheduleReconnect(port)
   }
 
@@ -155,9 +160,9 @@ async function connect() {
     }
   }
 
-  // If nothing found, sidebar shows "no sessions" state
+  // If nothing found, popup shows "no sessions" state
   if (sessions.size === 0) {
-    broadcastSessionUpdate()
+    notifyPopupSessions()
   }
 }
 
@@ -172,10 +177,7 @@ function scheduleReconnect(port) {
   if (session.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
     sessions.delete(port)
     saveSessions()
-    if (sidebarPort) {
-      sidebarPort.postMessage({ type: 'session-removed', port })
-    }
-    broadcastSessionUpdate()
+    notifyPopupSessions()
     return
   }
 
@@ -186,8 +188,8 @@ function scheduleReconnect(port) {
   }, session.reconnectInterval)
 }
 
-function broadcastSessionUpdate() {
-  if (!sidebarPort) return
+function notifyPopupSessions() {
+  if (!popupPort) return
   const list = []
   for (const [port, s] of sessions) {
     list.push({
@@ -195,10 +197,9 @@ function broadcastSessionUpdate() {
       connected: s.ws && s.ws.readyState === WebSocket.OPEN,
       meta: s.meta,
       lastError: s.lastError,
-      reconnectIn: s.reconnectTimer ? Math.round(s.reconnectInterval / 1000) : null,
     })
   }
-  sidebarPort.postMessage({ type: 'session-update', sessions: list })
+  popupPort.postMessage({ type: 'session-update', sessions: list })
 }
 
 // --- Handle messages from channel server ---
@@ -214,16 +215,14 @@ function handleChannelMessage(msg, sessionPort) {
           pid: msg.pid,
         }
       }
-      broadcastSessionUpdate()
-      if (sidebarPort) sidebarPort.postMessage({ ...msg, sessionPort })
+      notifyPopupSessions()
       break
     }
 
-    case 'msg':
-    case 'edit':
     case 'tool_use':
     case 'tool_result':
-      if (sidebarPort) sidebarPort.postMessage({ ...msg, sessionPort })
+      bufferEvalMessage({ ...msg, sessionPort })
+      if (popupPort) popupPort.postMessage({ ...msg, sessionPort })
       break
 
     case 'tool_request':
@@ -290,6 +289,25 @@ async function processEvalQueue() {
   processEvalQueue()
 }
 
+// --- Eval message buffer ---
+
+function bufferEvalMessage(msg) {
+  if (evalBuffer.length >= EVAL_BUFFER_MAX) {
+    evalBuffer.shift()
+  }
+  evalBuffer.push(msg)
+  if (!popupPort) {
+    unreadEvalCount++
+    updateBadge()
+  }
+}
+
+function updateBadge() {
+  const text = unreadEvalCount > 0 ? String(unreadEvalCount) : ''
+  browser.browserAction.setBadgeText({ text })
+  browser.browserAction.setBadgeBackgroundColor({ color: '#c2185b' })
+}
+
 // --- tabs.onUpdated listener for new session URLs ---
 
 browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
@@ -300,31 +318,28 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 })
 
-// --- Handle messages from sidebar ---
+// --- Handle messages from popup ---
 
 browser.runtime.onConnect.addListener((port) => {
-  if (port.name !== 'sidebar') return
-  sidebarPort = port
+  if (port.name !== 'popup') return
+  popupPort = port
 
-  broadcastSessionUpdate()
+  // Send buffered eval messages
+  popupPort.postMessage({ type: 'buffered-messages', messages: evalBuffer })
+  unreadEvalCount = 0
+  updateBadge()
 
-  // If any session is connected, request fresh server info
+  notifyPopupSessions()
+
+  // Request fresh server info from connected sessions
   for (const [, s] of sessions) {
     if (s.ws && s.ws.readyState === WebSocket.OPEN) {
       s.ws.send(JSON.stringify({ type: 'ping', paramsSource: s.paramsSource }))
     }
   }
 
-  port.onMessage.addListener((msg) => {
-    switch (msg.type) {
-      case 'connect':
-        connect()
-        break
-    }
-  })
-
   port.onDisconnect.addListener(() => {
-    sidebarPort = null
+    popupPort = null
   })
 })
 

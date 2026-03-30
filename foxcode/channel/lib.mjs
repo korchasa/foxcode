@@ -20,17 +20,6 @@ export function nextId() {
 }
 
 /**
- * Build a reply broadcast message for the extension.
- * @param {string} text - Reply text
- * @param {string} [replyTo] - Message ID to reply to
- * @returns {object}
- */
-export function buildReplyMessage(text, replyTo) {
-  const id = nextId()
-  return { type: 'msg', id, from: 'assistant', text, ts: Date.now(), replyTo }
-}
-
-/**
  * Build a tool_use broadcast message.
  * @param {string} tool
  * @param {object} params
@@ -203,18 +192,6 @@ export const TOOL_DEFINITIONS = [
     inputSchema: {
       type: 'object',
       properties: {},
-    },
-  },
-  {
-    name: 'reply',
-    description: 'Send a message to the Firefox browser sidebar.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        text: { type: 'string', description: 'Message text' },
-        reply_to: { type: 'string', description: 'Message ID to reply to (optional)' },
-      },
-      required: ['text'],
     },
   },
   {

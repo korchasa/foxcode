@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  state, nextId, buildReplyMessage,
+  state, nextId,
   buildToolUseMessage, buildToolResultMessage,
   TOOL_DEFINITIONS,
   buildPongMessage, PROTOCOL_VERSION, createHttpServer, BASE_PORT, PORT_RANGE, portStorage,
@@ -23,25 +23,6 @@ describe('nextId', () => {
     assert.notEqual(a, b)
     assert.match(a, /-1$/)
     assert.match(b, /-2$/)
-  })
-})
-
-describe('buildReplyMessage', () => {
-  beforeEach(() => { state.seq = 0 })
-
-  it('builds reply with correct structure', () => {
-    const msg = buildReplyMessage('Hello!', 'ref-1')
-    assert.equal(msg.type, 'msg')
-    assert.equal(msg.from, 'assistant')
-    assert.equal(msg.text, 'Hello!')
-    assert.equal(msg.replyTo, 'ref-1')
-    assert.ok(msg.id)
-    assert.ok(msg.ts)
-  })
-
-  it('allows undefined replyTo', () => {
-    const msg = buildReplyMessage('No ref')
-    assert.equal(msg.replyTo, undefined)
   })
 })
 
@@ -189,10 +170,10 @@ describe('createHttpServer', () => {
 })
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has 4 tools (status, ping, reply, evalInBrowser)', () => {
-    assert.equal(TOOL_DEFINITIONS.length, 4)
+  it('has 3 tools (status, ping, evalInBrowser)', () => {
+    assert.equal(TOOL_DEFINITIONS.length, 3)
     const names = TOOL_DEFINITIONS.map(t => t.name)
-    assert.deepEqual(names, ['status', 'ping', 'reply', 'evalInBrowser'])
+    assert.deepEqual(names, ['status', 'ping', 'evalInBrowser'])
   })
 
   it('status has no required params', () => {
@@ -208,11 +189,6 @@ describe('TOOL_DEFINITIONS', () => {
       assert.ok(tool.inputSchema, `${tool.name} missing inputSchema`)
       assert.equal(tool.inputSchema.type, 'object')
     }
-  })
-
-  it('reply tool requires text', () => {
-    const reply = TOOL_DEFINITIONS.find(t => t.name === 'reply')
-    assert.deepEqual(reply.inputSchema.required, ['text'])
   })
 
   it('evalInBrowser requires code', () => {

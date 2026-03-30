@@ -3,7 +3,6 @@
  * FoxCode - Channel plugin for Firefox extension.
  *
  * MCP server that bridges Claude Code ↔ Firefox extension via WebSocket.
- * - Exposes reply tool for CC -> browser responses
  * - Exposes evalInBrowser tool for CC -> browser automation (JS execution with ~30 API helpers)
  * - WebSocket server on localhost for extension connection
  */
@@ -16,8 +15,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { WebSocketServer } from 'ws'
 import {
-  nextId, buildReplyMessage,
-  buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
+  nextId, buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
   buildPongMessage, createHttpServer,
   passwordStorage,
 } from './lib.mjs'
@@ -172,7 +170,6 @@ const mcp = new Server(
       tools: {},
     },
     instructions: [
-      'The browser user reads the Firefox sidebar, not this terminal. Anything you want them to see MUST go through the reply tool - your transcript output never reaches the browser UI.',
       'Use evalInBrowser tool to execute JS in browser with full browser automation API (click, fill, navigate, snapshot, etc.).',
       PORT ? `Browser extension connects to ws://localhost:${PORT}.` : 'No WebSocket port available - browser extension cannot connect.',
     ].join('\n'),
@@ -210,11 +207,6 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         const connected = hasClients()
         const result = { connected }
         return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-      }
-      case 'reply': {
-        const replyMsg = buildReplyMessage(args.text, args.reply_to)
-        broadcast(replyMsg)
-        return { content: [{ type: 'text', text: `sent (${replyMsg.id})` }] }
       }
       case 'evalInBrowser': {
         const { valid, error } = validateCode(args.code)

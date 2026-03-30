@@ -26,7 +26,7 @@
 - Project Name: FoxCode
 
 ## Project Vision
-Firefox WebExtension providing browser UI for active Claude Code sessions. Message display, browser automation tools - via MCP server communicating over WebSocket. One-way: CC -> Browser only.
+Firefox WebExtension for browser automation via Claude Code. Eval debug popup (on-demand, zero screen footprint) + headless browser API — via MCP server communicating over WebSocket. One-way: CC -> Browser only.
 
 ## Project tooling Stack
 - **Extension**: JavaScript (ES6+), HTML, CSS - Firefox WebExtension API (Manifest V2)
@@ -37,10 +37,10 @@ Firefox WebExtension providing browser UI for active Claude Code sessions. Messa
 
 ## Architecture
 - **Channel Plugin** (`foxcode/channel/server.mjs`) - MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
-- **WebExtension Sidebar** (`extension/sidebar/`) - Chat UI: message rendering (read-only)
-- **Background Script** (`extension/background/background.js`) - WebSocket connection management, message routing, tool request handling
+- **Popup Eval Console** (`extension/popup/`) - On-demand eval debug UI: shows evalInBrowser requests/responses (browser_action popup, zero screen footprint)
+- **Background Script** (`extension/background/background.js`) - WebSocket connection management, eval message buffering, badge updates, tool request handling
 - **Content Script** (`extension/content/content-script.js`) - DOM access, `api.eval()` in page main world
-- **Flow**: Claude Code -> MCP stdio -> Channel Plugin -> WebSocket -> Background -> Sidebar
+- **Flow**: Claude Code -> MCP stdio -> Channel Plugin -> WebSocket -> Background -> Popup (eval log)
 
 ## Repository Structure
 
@@ -64,7 +64,7 @@ foxcode/
 │   └── .mcp.json         #   MCP server config (node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs)
 ├── extension/            # Firefox WebExtension (Manifest V2)
 │   ├── background/       #   Background script, browser-api, dom-helpers
-│   ├── sidebar/          #   Chat UI (HTML/CSS/JS)
+│   ├── popup/            #   Eval debug popup (HTML/CSS/JS)
 │   ├── content/          #   Content script (DOM access, api.eval)
 │   ├── icons/            #   Extension icon
 │   └── manifest.json     #   Extension manifest
@@ -93,7 +93,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 ### Key Differences
 - **Project Profile**: isolated Firefox, port known upfront (URL hash) -> instant connect. Persistent project-local profile
 - **User Profile**: user's own Firefox, no port hint -> probe saved sessions. Temporary add-on
-- **Multi-session**: extension maintains N simultaneous WebSocket connections (one per MCP server). Sessions identified by port. Sidebar groups messages by session with color coding
+- **Multi-session**: extension maintains N simultaneous WebSocket connections (one per MCP server). Sessions identified by port
 - **Reconnect**: per-session exponential backoff (3s -> 30s max, 10 attempts). Dead sessions removed automatically
 - **WebSocket port**: both use range 8787–8886 (BASE_PORT=8787, PORT_RANGE=100), random start + saved in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var
 
@@ -108,7 +108,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - WebSocket on localhost: simple, reliable bridge between Node.js and browser extension
 - Node.js for channel: MCP SDK compatibility, single process
 - Manifest V2: broader Firefox compatibility
-- Sidebar UI: non-intrusive, persistent panel alongside browsing
+- Popup eval console: on-demand via browser_action icon click, zero persistent screen footprint. Shows only evalInBrowser requests/responses
 - CC Plugin Marketplace for distribution: native install/update/versioning, auto-loads MCP server
 - Channel inside plugin dir (`foxcode/channel/`): bundled with plugin, no npm package. MCP server auto-installs deps on first run via `sh -c "npm install && node server.mjs"`
 - CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported

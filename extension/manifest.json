@@ -12,9 +12,9 @@
     "<all_urls>"
   ],
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
-  "sidebar_action": {
+  "browser_action": {
     "default_title": "FoxCode",
-    "default_panel": "sidebar/sidebar.html",
+    "default_popup": "popup/popup.html",
     "default_icon": "icons/icon.svg"
   },
   "background": {

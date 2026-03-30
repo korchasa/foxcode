@@ -1,5 +1,5 @@
 /**
- * FoxCode - Formatting helpers for sidebar display.
+ * FoxCode - Formatting helpers for popup display.
  * Pure functions, no DOM dependencies.
  */
 
