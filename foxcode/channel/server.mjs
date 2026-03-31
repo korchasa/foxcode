@@ -46,15 +46,20 @@ const clients = new Set()
 
 if (httpServer) {
   httpServer.on('request', (req, res) => {
-    if (req.method !== 'GET' || req.url !== '/') {
-      res.writeHead(404)
-      res.end()
+    if (req.method === 'GET' && req.url === '/') {
+      const projectDir = process.env.FOXCODE_PROJECT_DIR || process.cwd()
+      const html = buildConnectionPage(PORT, { projectDir, version: pluginMeta.version })
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      res.end(html)
       return
     }
-    const projectDir = process.env.FOXCODE_PROJECT_DIR || process.cwd()
-    const html = buildConnectionPage(PORT, clients.size, { projectDir, version: pluginMeta.version })
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    res.end(html)
+    if (req.method === 'GET' && req.url === '/status') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ connectedClients: clients.size }))
+      return
+    }
+    res.writeHead(404)
+    res.end()
   })
 
   httpServer.on('upgrade', (req, socket, head) => {

@@ -181,20 +181,13 @@ function escapeHtml(str) {
 
 /**
  * Generate informational HTML page served at http://localhost:PORT.
- * No secrets — purely for humans to verify server is running.
+ * No secrets. Polls /status every 2s for live connection state.
  * @param {number} port
- * @param {number} connectedClients
  * @param {{projectDir?: string, version?: string}} meta
  * @returns {string}
  */
-export function buildConnectionPage(port, connectedClients, meta = {}) {
+export function buildConnectionPage(port, meta = {}) {
   const project = escapeHtml(meta.projectDir ? meta.projectDir.split('/').pop() : 'unknown')
-  const connected = connectedClients > 0
-  const statusDot = connected ? '#34a853' : '#888'
-  const statusText = connected
-    ? `Connected (${connectedClients} client${connectedClients > 1 ? 's' : ''})`
-    : 'Waiting for extension'
-  const hint = connected ? '<div class="hint">Extension connected. You can close this tab.</div>' : ''
   return `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
@@ -209,17 +202,40 @@ background:#f5f5f5;color:#1a1a1a}
 h1{font-size:20px;margin-bottom:8px}
 .meta{font-size:13px;color:#888;margin-bottom:16px;font-family:"SF Mono",Monaco,Menlo,monospace}
 .status{font-size:14px;color:#888}
-.hint{font-size:13px;color:#34a853;margin-top:12px}
+.hint{font-size:13px;color:#34a853;margin-top:12px;display:none}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;
-background:${statusDot};margin-right:6px;vertical-align:middle}
+background:#888;margin-right:6px;vertical-align:middle}
 </style>
 </head><body>
 <div class="card">
 <h1>FoxCode</h1>
 <div class="meta">${project} · :${port} · v${escapeHtml(meta.version || '?')}</div>
-<div class="status"><span class="dot"></span>${statusText}</div>
-${hint}
+<div class="status"><span class="dot" id="dot"></span><span id="status-text">Waiting for extension</span></div>
+<div class="hint" id="hint">Extension connected. You can close this tab.</div>
 </div>
+<script>
+(function(){
+  var dot=document.getElementById('dot'),
+      txt=document.getElementById('status-text'),
+      hint=document.getElementById('hint');
+  function poll(){
+    fetch('/status').then(function(r){return r.json()}).then(function(d){
+      var n=d.connectedClients;
+      if(n>0){
+        dot.style.background='#34a853';
+        txt.textContent='Connected ('+n+' client'+(n>1?'s':'')+')';
+        hint.style.display='block';
+      }else{
+        dot.style.background='#888';
+        txt.textContent='Waiting for extension';
+        hint.style.display='none';
+      }
+    }).catch(function(){});
+  }
+  poll();
+  setInterval(poll,2000);
+})();
+</script>
 </body></html>`
 }
 
