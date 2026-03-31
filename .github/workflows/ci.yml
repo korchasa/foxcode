@@ -27,7 +27,7 @@ jobs:
         working-directory: foxcode/channel
 
       - name: Run extension tests
-        run: node --test background/browser-api.test.js background/dom-helpers.test.js sidebar/markdown.test.js
+        run: node --test background/browser-api.test.js background/dom-helpers.test.js background/serialize.test.js background/url-params.test.js popup/format.test.js
         working-directory: extension
 
   auto-release:
