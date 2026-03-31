@@ -4,7 +4,6 @@ description: >
   Launch FoxCode in Project Profile mode. Self-contained: checks prerequisites, locates extension,
   launches isolated Firefox via web-ext with project-local profile, verifies connectivity.
   Caches resolved paths in .foxcode/config.json for fast re-runs.
-disable-model-invocation: true
 ---
 
 # FoxCode Run — Project Profile

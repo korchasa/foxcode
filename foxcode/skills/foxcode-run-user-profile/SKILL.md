@@ -4,7 +4,6 @@ description: >
   Launch FoxCode in User Profile mode. Self-contained: checks prerequisites, locates extension,
   guides user to load it manually via about:debugging into their own Firefox, verifies connectivity.
   Caches resolved paths in .foxcode/config.json for fast re-runs.
-disable-model-invocation: true
 ---
 
 # FoxCode Run — User Profile
