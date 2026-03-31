@@ -30,6 +30,6 @@ echo "--- Tests ---"
 node --test \
   foxcode/channel/*.test.mjs \
   extension/background/*.test.js \
-  extension/sidebar/*.test.js
+  extension/popup/*.test.js
 
 echo "=== check complete ==="

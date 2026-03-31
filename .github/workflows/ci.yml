@@ -22,13 +22,8 @@ jobs:
         run: npm ci
         working-directory: foxcode/channel
 
-      - name: Run channel tests
-        run: node --test lib.test.mjs validator.test.mjs
-        working-directory: foxcode/channel
-
-      - name: Run extension tests
-        run: node --test background/browser-api.test.js background/dom-helpers.test.js background/serialize.test.js background/url-params.test.js popup/format.test.js
-        working-directory: extension
+      - name: Run checks
+        run: bash scripts/check.sh
 
   auto-release:
     needs: test
