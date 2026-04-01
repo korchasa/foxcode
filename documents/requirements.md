@@ -100,7 +100,7 @@
 - [x] `status` tool returns server telemetry (port, clients, uptime, launchMode, client) without browser. Evidence: `foxcode/channel/server.mjs` (status handler)
 - [x] `ping` tool checks browser extension connectivity. Returns `{connected: bool}`. Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler)
 - [x] `/foxcode:foxcode-run-project-profile` flow: status -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
-- [x] `/foxcode:foxcode-run-user-profile` flow: status -> ping -> guide manual loading -> verify. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
+- [x] `/foxcode:foxcode-run-user-profile` flow: status -> ping -> guide manual loading -> auto-open connection page -> poll & verify. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
 - [x] Extension connects via URL hash (`#PORT:PASSWORD`) or saved sessions. No port scanning, no manual settings form. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
 
 ### 4.3 NF-3: Reliability [very important]
