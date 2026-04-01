@@ -89,9 +89,10 @@ jobs:
 
           jq --arg v "$NEW_VERSION" '.version = $v' extension/manifest.json > tmp.json && mv tmp.json extension/manifest.json
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/channel/package.json > tmp.json && mv tmp.json foxcode/channel/package.json
+          jq --arg v "$NEW_VERSION" '.version = $v | .packages[""].version = $v' foxcode/channel/package-lock.json > tmp.json && mv tmp.json foxcode/channel/package-lock.json
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/.claude-plugin/plugin.json > tmp.json && mv tmp.json foxcode/.claude-plugin/plugin.json
 
-          git add extension/manifest.json foxcode/channel/package.json foxcode/.claude-plugin/plugin.json
+          git add extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json
           if git diff --cached --quiet; then
             echo "Files already at v${NEW_VERSION}, skipping commit"
           else
