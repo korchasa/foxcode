@@ -1,109 +1,41 @@
 ---
 name: foxcode-run-project-profile
 description: >
-  Launch FoxCode in Project Profile mode. Self-contained: checks prerequisites, locates extension,
-  launches isolated Firefox via web-ext with project-local profile, verifies connectivity.
-  Caches resolved paths in .foxcode/config.json for fast re-runs.
+  Launch FoxCode in Project Profile mode. Checks prerequisites, launches Firefox via web-ext, verifies connectivity.
 ---
 
 # FoxCode Run — Project Profile
 
-Self-contained launch: prerequisites → locate extension → web-ext → verify. Caches resolved paths in `.foxcode/config.json`.
+Launch isolated Firefox with FoxCode extension. Communicate in user's language. Be concise — minimal output, no explanations unless something fails.
 
-**IMPORTANT:** Detect the user's language from conversation context and communicate in that language throughout.
+## 1. Check if already connected
 
-## Step 1: Check server status
+Call `status`. If fails → tell user MCP server not running, stop.
+If `connectedClients > 0` → call `ping`. If `connected: true` → say "Ready." and stop.
 
-Call the `status` MCP tool.
+## 2. Resolve environment (parallel where possible)
 
-If the tool call fails:
-> FoxCode MCP server is not running. Make sure `.mcp.json` is configured and Claude Code loaded the foxcode MCP server. Restart Claude Code if needed.
+Read `.foxcode/config.json`. If cached paths exist and files are valid → skip resolution.
 
-Note the `port`, `password`, and `connectedClients` from the response.
+Otherwise resolve ALL of these (run checks in parallel):
+- `node --version` (must be v18+)
+- Firefox binary: macOS `/Applications/Firefox.app/Contents/MacOS/firefox`, Linux `which firefox`
+- Extension dir: `./extension/` or marketplace clone (`~/.claude/plugins/known_marketplaces.json` → `source.repo` = `korchasa/foxcode` → `installLocation` + `/extension/`)
 
-## Step 2: Check browser connection
+If anything missing → report what's missing, stop. Save resolved paths to `.foxcode/config.json`.
 
-If `connectedClients > 0`, call the `ping` tool. If `connected` is `true`:
-> Everything is working. Ready to go.
+## 3. Launch Firefox and verify
 
-Stop here. Otherwise continue to Step 3.
-
-## Step 3: Resolve environment
-
-Read `.foxcode/config.json` if it exists. It caches:
-```json
-{
-  "extensionDir": "/path/to/extension/",
-  "firefoxBinary": "/path/to/firefox"
-}
-```
-
-### If cache exists and paths are valid (files exist) — skip to Step 4.
-
-### If cache is missing or stale — resolve from scratch:
-
-**Node.js**: run `node --version`. Must be v18+.
-> If missing: Node.js 18+ is required. Install from https://nodejs.org
-
-**Firefox binary**: find Firefox:
-- **macOS**: `/Applications/Firefox.app/Contents/MacOS/firefox`
-- **Linux**: `which firefox`
-
-> If not found: Firefox is required. Install from https://www.mozilla.org/firefox/
-
-**Extension source**: find `extension/` directory, first match:
-1. `./extension/` in current working directory
-2. Marketplace clone: read `~/.claude/plugins/known_marketplaces.json`, find `source.repo` = `korchasa/foxcode`, use `installLocation` + `/extension/`
-
-> If not found: Extension source not found. Install the plugin: `/plugin install korchasa/foxcode`
-
-**Save cache**:
+Run in background:
 ```bash
-mkdir -p .foxcode
-cat > .foxcode/config.json << 'EOF'
-{"extensionDir": "$EXT_DIR", "firefoxBinary": "$FIREFOX"}
-EOF
-```
-
-Suggest adding `.foxcode/` to `.gitignore` if not already there.
-
-## Step 4: Launch Firefox
-
-```bash
-mkdir -p .foxcode/firefox-profile
-npx web-ext run \
-  --source-dir "$EXT_DIR" \
-  --firefox-profile .foxcode/firefox-profile \
-  --keep-profile-changes \
-  --start-url "http://localhost:${PORT}#${PORT}:${PASSWORD}" \
+mkdir -p .foxcode/firefox-profile && npx web-ext run \
+  --source-dir "$EXT_DIR" --firefox-profile .foxcode/firefox-profile \
+  --keep-profile-changes --start-url "http://localhost:${PORT}#${PORT}:${PASSWORD}" \
   --firefox="$FIREFOX"
 ```
 
-Tell the user:
-> Firefox launched with FoxCode on port {port}. Open sidebar: **View > Sidebar > FoxCode**.
+Tell user: "Firefox launching on port {port}."
 
-On first run, also explain:
-> A separate Firefox window opened. Your existing Firefox stays untouched. The profile in `.foxcode/firefox-profile/` persists logins, cookies, and settings between sessions.
-
-## Step 5: Wait for browser connection
-
-Poll the `status` MCP tool every ~5 seconds, up to 12 attempts (60 seconds total).
-
-On each poll, check `connectedClients`:
-- If `connectedClients > 0` — proceed to verification below.
-- If `connectedClients == 0` — wait ~5 seconds and retry.
-
-If all 12 attempts exhausted with no connection:
-> Browser did not connect within 60 seconds. Make sure the sidebar is open: **View > Sidebar > FoxCode** (or Cmd+B / Ctrl+B). Then run this skill again.
-
-Stop here.
-
-### Verify connectivity
-
-Once `connectedClients > 0`, call the `ping` tool.
-
-If `connected` is `true`:
-> Connectivity confirmed. Ready to go.
-
-If `connected` is `false`:
-> Browser connected but ping failed. Try reloading the extension.
+Poll `status` every 3s, max 10 attempts (30s). When `connectedClients > 0` → call `ping`.
+- `connected: true` → "Ready."
+- Timeout or ping fails → "No connection. Open sidebar: View > Sidebar > FoxCode. Re-run skill."
