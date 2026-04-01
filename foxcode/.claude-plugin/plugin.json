@@ -1,7 +1,7 @@
 {
   "name": "foxcode",
   "description": "Firefox browser UI for Claude Code sessions with real-time sync and browser automation",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "author": {
     "name": "korchasa"
   },
