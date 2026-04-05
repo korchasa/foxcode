@@ -18,28 +18,28 @@ Point Claude Code at the page and let it inspect the DOM or take a snapshot alon
 
 ## Getting Started
 
-Install plugin:
-```bash
+### Install
+
+Run `/plugin` in Claude Code — it opens an interactive plugin manager. Add the marketplace `korchasa/foxcode` in the Marketplaces tab, then install `foxcode` from the Discover tab.
+
+Or use commands directly:
+```
 /plugin marketplace add korchasa/foxcode
 /plugin install foxcode@korchasa
 ```
 
-Launch FoxCode with one of two modes:
-```bash
-/foxcode:foxcode-run-project-profile   # isolated Firefox with project-local profile
-/foxcode:foxcode-run-user-profile      # load extension into your own Firefox
-```
+### Launch
 
-### Commands
-
-- `/foxcode:foxcode-run-project-profile` — launch in isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
-- `/foxcode:foxcode-run-user-profile` — load extension into your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
+- `/foxcode:foxcode-run-project-profile` — isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
+- `/foxcode:foxcode-run-user-profile` — your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
 
 ## Features
 
-- **Eval debug popup** - see evalInBrowser requests and responses on demand (zero screen footprint)
-- **Browser automation** - click, fill forms, navigate, take screenshots, read DOM (~36 API helpers + storage sub-methods)
-- **Connection diagnostics** - popup shows connected sessions, error details when disconnected
+- **Real browser, real context** — works in your Firefox with existing sessions, cookies, auth, extensions. No separate browser instance
+- **Single-call scripting** — agent writes a full JS scenario (navigate → fill → click → assert) and sends it in one tool call. No round-trip per action — fewer tool calls means fewer tokens and lower API cost
+- **Rich async API** — ~36 helpers for DOM, navigation, tabs, cookies, screenshots, storage, console capture, dialog handling
+- **Multi-session** — multiple Claude Code sessions connect to one browser simultaneously. Each gets its own MCP server on a unique port
+- **Zero setup for the agent** — Claude Code plugin installs via marketplace, MCP server auto-starts, extension auto-connects via URL hash
 
 ## Architecture
 
