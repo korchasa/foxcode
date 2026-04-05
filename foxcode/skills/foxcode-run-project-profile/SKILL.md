@@ -8,25 +8,48 @@ description: >
 
 Launch isolated Firefox with FoxCode extension. Communicate in user's language. Be concise — minimal output, no explanations unless something fails.
 
+**IMPORTANT**: Minimize tool calls. Each call costs ~3s of overhead. Combine bash commands. Use parallel calls where noted.
+
 ## 1. Check if already connected
 
-Call `status`. If fails → tell user MCP server not running, stop.
-If `connectedClients > 0` → call `ping`. If `connected: true` → say "Ready." and stop.
+Call `status`. If fails -> tell user MCP server not running, stop.
+If `connectedClients > 0` -> call `ping`. If `connected: true` -> say "Ready." and stop.
 
-## 2. Resolve environment (parallel where possible)
+## 2. Resolve environment and launch
 
-Read `.foxcode/config.json`. If cached paths exist and files are valid → skip resolution.
+### 2a. Read config + password (ONE bash call)
 
-Otherwise resolve ALL of these (run checks in parallel):
-- `node --version` (must be v18+)
-- Firefox binary: macOS `/Applications/Firefox.app/Contents/MacOS/firefox`, Linux `which firefox`
-- Extension dir: `./extension/` or marketplace clone (`~/.claude/plugins/known_marketplaces.json` → `source.repo` = `korchasa/foxcode` → `installLocation` + `/extension/`)
+```bash
+cat .foxcode/config.json 2>/dev/null; echo "---SEPARATOR---"; cat "$HOME/.foxcode/password" 2>/dev/null
+```
 
-If anything missing → report what's missing, stop. Save resolved paths to `.foxcode/config.json`.
+If config.json exists with valid paths AND password is present -> go to 2c.
 
-## 3. Launch Firefox and verify
+### 2b. Full resolution (only if no cached config)
 
-Run in background:
+Run ONE bash command to resolve everything:
+
+```bash
+node --version && \
+{ test -x /Applications/Firefox.app/Contents/MacOS/firefox && echo "FIREFOX=/Applications/Firefox.app/Contents/MacOS/firefox" || \
+  { FF=$(which firefox 2>/dev/null) && echo "FIREFOX=$FF"; } || \
+  echo "FIREFOX_NOT_FOUND"; } && \
+{ EXT="$HOME/.claude/plugins/marketplaces/korchasa/extension"; \
+  test -f "$EXT/manifest.json" && echo "EXT_DIR=$EXT" || \
+  { EXT="./extension"; test -f "$EXT/manifest.json" && echo "EXT_DIR=$EXT" || \
+    echo "EXT_DIR_NOT_FOUND"; }; }
+```
+
+If anything missing -> report, stop.
+MUST save resolved paths to `.foxcode/config.json`:
+```json
+{"firefox": "<FIREFOX>", "extensionDir": "<EXT_DIR>"}
+```
+
+### 2c. Launch Firefox (background bash)
+
+Use PORT from step 1 `status` response and PASSWORD from step 2a.
+
 ```bash
 mkdir -p .foxcode/firefox-profile && npx web-ext run \
   --source-dir "$EXT_DIR" --firefox-profile .foxcode/firefox-profile \
@@ -36,6 +59,13 @@ mkdir -p .foxcode/firefox-profile && npx web-ext run \
 
 Tell user: "Firefox launching on port {port}."
 
-Poll `status` every 3s, max 10 attempts (30s). When `connectedClients > 0` → call `ping`.
-- `connected: true` → "Ready."
-- Timeout or ping fails → "No connection. Open sidebar: View > Sidebar > FoxCode. Re-run skill."
+## 3. Verify connection
+
+```bash
+sleep 5
+```
+
+Then call `status`. If `connectedClients > 0` -> call `ping`.
+- `connected: true` -> "Ready."
+- Not connected -> wait 3s, retry `status` (max 3 retries).
+- All retries exhausted -> "No connection. Open sidebar: View > Sidebar > FoxCode. Re-run skill."
