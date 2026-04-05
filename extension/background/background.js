@@ -1,7 +1,7 @@
 /**
  * FoxCode - Background script.
  * Manages multiple WebSocket connections (one per MCP server session)
- * and routes messages between sidebar, content script, and channel servers.
+ * and routes messages between popup, content script, and channel servers.
  *
  * EVAL_CODE handler: executes agent JS code with injected browser API object.
  * Concurrent eval requests from different sessions are serialized via queue.

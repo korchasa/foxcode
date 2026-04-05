@@ -2,19 +2,19 @@
 
 > **⚠️ Active Development** - This project is under heavy development. APIs, configuration, and behavior may change without notice. Expect breaking changes between versions.
 
-Claude Code to Firefox bridge. See Claude Code messages in the browser sidebar, give it page context, and let it automate the browser - all without leaving Firefox.
+Firefox WebExtension giving Claude Code browser automation in your real browser — with your sessions, cookies, and extensions. The agent scripts multi-step scenarios in a single call instead of round-tripping per action.
 
-FoxCode is a two-part system: a **Claude Code plugin** (MCP server on Node.js) and a **Firefox WebExtension** (sidebar UI + browser automation), connected via WebSocket on localhost.
+FoxCode is a two-part system: a **Claude Code plugin** (MCP server on Node.js) and a **Firefox WebExtension** (popup eval console + browser automation), connected via WebSocket on localhost.
 
 ## Usage Patterns
 
 ### Let Claude Code test your project in the browser
 
-Claude Code can click, fill forms, navigate, take screenshots, read DOM via `evalInBrowser` (~30 API helpers). Ask it to verify a fix, check a form flow, or inspect the rendered output — all while it has access to your project's code.
+Claude Code can click, fill forms, navigate, take screenshots, read DOM via `evalInBrowser` (~36 API helpers + storage sub-methods). Ask it to verify a fix, check a form flow, or inspect the rendered output — all while it has access to your project's code.
 
 ### Give Claude Code browser context for debugging
 
-Claude Code sees the current page automatically. Useful when describing frontend issues: instead of explaining what's on screen, just point Claude Code at the page and let it inspect the DOM or take a snapshot alongside the project source.
+Point Claude Code at the page and let it inspect the DOM or take a snapshot alongside the project source — no need to explain what's on screen.
 
 ## Getting Started
 
@@ -37,19 +37,18 @@ Launch FoxCode with one of two modes:
 
 ## Features
 
-- **Message display** - see Claude Code replies, tool executions, and results in the browser sidebar
-- **Browser automation** - click, fill forms, navigate, take screenshots, read DOM (~30 API helpers)
-- **Connection diagnostics** - sidebar shows port, params source, error details, and retry timer when disconnected
+- **Eval debug popup** - see evalInBrowser requests and responses on demand (zero screen footprint)
+- **Browser automation** - click, fill forms, navigate, take screenshots, read DOM (~36 API helpers + storage sub-methods)
+- **Connection diagnostics** - popup shows connected sessions, error details when disconnected
 
 ## Architecture
 
-```
-┌─────────────┐    WebSocket     ┌───────────────────┐    stdio    ┌─────────────┐
-│   Firefox    │ ←────────────->  │  MCP Channel      │ ←────────-> │ Claude Code  │
-│  Extension   │   localhost:    │  Plugin (Node.js)  │            │   (terminal) │
-│  (sidebar +  │   8787–8886    │  foxcode/channel/  │            │              │
-│  background) │                │                    │            │              │
-└─────────────┘                 └───────────────────┘            └─────────────┘
+```mermaid
+graph LR
+  CC["Claude Code<br/>(terminal)"] -->|stdio| MCP["MCP Channel Plugin<br/>(Node.js)"]
+  MCP -->|"WebSocket<br/>localhost:8787–8886"| EXT["Firefox Extension<br/>(popup + background)"]
+  EXT -->|executeScript| TAB["Active Tab DOM"]
+  EXT -->|eval via content script| PAGE["Page JS Context"]
 ```
 
 The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension supports multiple simultaneous connections (one per CC session) — auto-connects via URL hash params, or reconnects to saved sessions. No port scanning, no manual settings.
@@ -57,15 +56,14 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 ## Components
 
 - **Channel Plugin** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging Claude Code -> extension via WebSocket. Installed as a Claude Code plugin, provides MCP tools
-- **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: sidebar chat UI, background script for WebSocket + code execution, content script for DOM access in page context
+- **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: popup eval console (browser_action), background script for WebSocket + code execution, content script for DOM access in page context
 - **Run Project Profile Skill** (`foxcode/skills/foxcode-run-project-profile/SKILL.md`) - self-contained: prerequisites, locate extension, launch isolated Firefox via web-ext, verify connectivity
 - **Run User Profile Skill** (`foxcode/skills/foxcode-run-user-profile/SKILL.md`) - self-contained: prerequisites, locate extension, guide manual loading, verify connectivity
 
 ### MCP tools provided to Claude Code
 
-- `reply(text)` - send a message to the browser sidebar
-- `evalInBrowser(code)` - execute JS with browser automation API (click, fill, navigate, snapshot, screenshot, cookies, tabs, etc.)
-- `status()` - server telemetry: port, uptime, clients, launchMode, client info
+- `evalInBrowser(code, timeout?)` - execute JS with browser automation API (click, fill, navigate, snapshot, screenshot, cookies, tabs, etc.)
+- `status()` - server telemetry: port, password, projectDir, uptime, connectedClients, launchMode, client info
 - `ping()` - verify connectivity to browser extension
 
 ## Launch Flows
@@ -146,27 +144,42 @@ sequenceDiagram
 
 - **Project Profile**: isolated Firefox, port known upfront (URL hash) → instant connect. Persistent project-local profile
 - **User Profile**: user's own Firefox, no port hint → probe saved sessions. Temporary add-on, re-load after Firefox restart
-- **Multi-session**: extension supports N simultaneous WebSocket connections. Sidebar groups messages by session with color coding
+- **Multi-session**: extension supports N simultaneous WebSocket connections. Popup shows eval messages from all sessions
 - **Reconnect**: per-session exponential backoff (3s → 30s max, 10 attempts). Dead sessions auto-removed
 - **Connection**: both skills verify connectivity via `status` + `ping` tools
 
 ## Troubleshooting
 
-### Sidebar shows "No connection" with diagnostics
+### Popup shows "No active sessions"
 
-The sidebar displays diagnostic info: port, params source, error, and retry timer. Use this to identify the issue:
+The popup displays session list with connection status. Use this to identify the issue:
 
-- **Error: "Cannot connect to ws://127.0.0.1:PORT"** — MCP server not running or wrong port. Check `/mcp` in Claude Code.
-- **Error: "Connection refused or dropped"** — Server was running but stopped. CC may have exited.
-- **Source: "URL hash params"** — Port came from launch URL (project profile mode). If wrong, re-run `/foxcode:foxcode-run-project-profile`.
-- **Source: "saved from previous session"** — Using stale port. Click the connection indicator → enter correct port/password manually.
+- **No sessions** — MCP server not running or extension hasn't connected. Check `/mcp` in Claude Code.
+- **Session shows "(reconnecting…)"** — Server was running but stopped. CC may have exited. After 10 failed reconnect attempts (exponential backoff 3s → 30s) the session is silently removed from the list.
+- **To connect** — open the connection URL (`http://localhost:PORT#PORT:PASSWORD`) from the skill output, or re-run the launch skill.
+
+### evalInBrowser returns "No browser extension connected"
+
+CC calls `evalInBrowser` but no extension has an open WebSocket to the server.
+
+- Extension not loaded — load via `about:debugging` or re-run the launch skill.
+- Connection dropped — check popup for session status. Re-open the connection URL.
+- Password mismatch — if `~/.foxcode/password` was regenerated (e.g. deleted and server restarted), the extension's saved session has a stale token. Fix: re-open the connection URL (`http://localhost:PORT#PORT:PASSWORD`) from `status` tool output, or delete `~/.foxcode/password` and restart both server and extension.
+
+### evalInBrowser timeout
+
+Default timeout is 30s (server-side and extension-side). If code execution exceeds it, you get `Browser tool request timed out after 30000ms`.
+
+- Pass a higher timeout: `evalInBrowser({ code: "...", timeout: 60000 })`
+- Break long operations into smaller `evalInBrowser` calls.
 
 ### MCP server fails to start
 
 1. **Port conflict.** Server binds to a port in 8787–8886. Check: `lsof -i :8787-8886 | grep node`
-2. **Reset saved port:** `rm ~/.foxcode/port`
-3. **Force a specific port.** Set `FOXCODE_PORT` env var in `.mcp.json`:
+2. **All ports occupied.** If all 100 ports are busy, server starts without WebSocket (stderr: `no free port in range`). Free ports or use `FOXCODE_PORT`.
+3. **Reset saved port:** `rm ~/.foxcode/port`
+4. **Force a specific port.** Set `FOXCODE_PORT` env var in `.mcp.json`:
    ```json
    {"mcpServers": {"foxcode": {"command": "...", "env": {"FOXCODE_PORT": "8800"}}}}
    ```
-4. **Check dependencies:** `cd foxcode/channel && npm install`
+5. **Check dependencies:** `cd foxcode/channel && npm install`
