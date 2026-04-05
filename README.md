@@ -1,4 +1,4 @@
-# FoxCode - Claude Code -> Firefox Bridge
+# FoxCode: Claude Code -> Firefox Bridge
 
 > **⚠️ Active Development** - This project is under heavy development. APIs, configuration, and behavior may change without notice. Expect breaking changes between versions.
 
