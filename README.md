@@ -141,6 +141,36 @@ sequenceDiagram
 - **Reconnect**: per-session exponential backoff (3s → 30s max, 10 attempts). Dead sessions auto-removed
 - **Connection**: both skills verify connectivity via `status` + `ping` tools
 
+## Permissions
+
+By default, Claude Code asks for approval on every `evalInBrowser` call. To reduce friction, add permission rules to `.claude/settings.json` in your project:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__foxcode__status",
+      "mcp__foxcode__ping"
+    ]
+  }
+}
+```
+
+This auto-approves `status` and `ping` (read-only, safe). `evalInBrowser` stays in ask mode — it executes arbitrary JS in your browser, so manual approval per call is recommended.
+
+To also auto-approve `evalInBrowser` (use with caution):
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__foxcode__status",
+      "mcp__foxcode__ping",
+      "mcp__foxcode__evalInBrowser"
+    ]
+  }
+}
+```
+
 ## Troubleshooting
 
 ### Popup shows "No active sessions"
