@@ -98,7 +98,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - **WebSocket port**: both use range 8787–8886 (BASE_PORT=8787, PORT_RANGE=100), random start + saved in `~/.foxcode/port`. Override via `FOXCODE_PORT` env var
 
 ### Local Development (contributing to FoxCode)
-- Root `.mcp.json` runs `cd foxcode/channel && npm install && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"` (relative to repo root)
+- Root `.mcp.json` runs `cd foxcode/channel && npm ci && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"` (relative to repo root)
 - Extension loaded via `scripts/dev.sh` (`web-ext run --source-dir extension/`) or manually via `about:debugging`
 - CC: `claude --mcp-config .mcp.json`
 - Workflow: edit code -> reload extension -> test
@@ -110,7 +110,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - Manifest V2: broader Firefox compatibility
 - Popup eval console: on-demand via browser_action icon click, zero persistent screen footprint. Shows only evalInBrowser requests/responses
 - CC Plugin Marketplace for distribution: native install/update/versioning, auto-loads MCP server
-- Channel inside plugin dir (`foxcode/channel/`): bundled with plugin, no npm package. MCP server auto-installs deps on first run via `sh -c "npm install && node server.mjs"`
+- Channel inside plugin dir (`foxcode/channel/`): bundled with plugin, no npm package. MCP server auto-installs deps on first run via `sh -c "npm ci && node server.mjs"`
 - CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported
 - Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
 - Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
