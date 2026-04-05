@@ -13,7 +13,7 @@ Launch isolated Firefox with FoxCode extension. Communicate in user's language. 
 ## 1. Check if already connected
 
 Call `status`. If fails -> tell user MCP server not running, stop.
-If `connectedClients > 0` -> call `ping`. If `connected: true` -> say "Ready." and stop.
+If `connectedClients > 0` -> say "Ready." and stop.
 
 ## 2. Resolve environment and launch
 
@@ -65,7 +65,6 @@ Tell user: "Firefox launching on port {port}."
 sleep 5
 ```
 
-Then call `status`. If `connectedClients > 0` -> call `ping`.
-- `connected: true` -> "Ready."
+Then call `status`. If `connectedClients > 0` -> "Ready."
 - Not connected -> wait 3s, retry `status` (max 3 retries).
 - All retries exhausted -> "No connection. Open sidebar: View > Sidebar > FoxCode. Re-run skill."

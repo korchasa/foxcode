@@ -59,7 +59,6 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 - `evalInBrowser(code, timeout?)` - execute JS with browser automation API (click, fill, navigate, snapshot, screenshot, cookies, tabs, etc.)
 - `status()` - server telemetry: port, password, projectDir, uptime, connectedClients, launchMode, client info
-- `ping()` - verify connectivity to browser extension
 
 ## Launch Flows
 
@@ -139,7 +138,7 @@ sequenceDiagram
 - **User Profile**: user's own Firefox, no port hint → probe saved sessions. Temporary add-on, re-load after Firefox restart
 - **Multi-session**: extension supports N simultaneous WebSocket connections. Popup shows eval messages from all sessions
 - **Reconnect**: per-session exponential backoff (3s → 30s max, 10 attempts). Dead sessions auto-removed
-- **Connection**: both skills verify connectivity via `status` + `ping` tools
+- **Connection**: both skills verify connectivity via `status` tool (connectedClients > 0)
 
 ## Permissions
 
@@ -149,14 +148,13 @@ By default, Claude Code asks for approval on every `evalInBrowser` call. To redu
 {
   "permissions": {
     "allow": [
-      "mcp__foxcode__status",
-      "mcp__foxcode__ping"
+      "mcp__foxcode__status"
     ]
   }
 }
 ```
 
-This auto-approves `status` and `ping` (read-only, safe). `evalInBrowser` stays in ask mode — it executes arbitrary JS in your browser, so manual approval per call is recommended.
+This auto-approves `status` (read-only, safe). `evalInBrowser` stays in ask mode — it executes arbitrary JS in your browser, so manual approval per call is recommended.
 
 To also auto-approve `evalInBrowser` (use with caution):
 ```json
@@ -164,7 +162,6 @@ To also auto-approve `evalInBrowser` (use with caution):
   "permissions": {
     "allow": [
       "mcp__foxcode__status",
-      "mcp__foxcode__ping",
       "mcp__foxcode__evalInBrowser"
     ]
   }

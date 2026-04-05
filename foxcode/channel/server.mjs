@@ -220,11 +220,6 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         }
         return { content: [{ type: 'text', text: JSON.stringify(status) }] }
       }
-      case 'ping': {
-        const connected = hasClients()
-        const result = { connected }
-        return { content: [{ type: 'text', text: JSON.stringify(result) }] }
-      }
       case 'evalInBrowser': {
         const { valid, error } = validateCode(args.code)
         if (!valid) {

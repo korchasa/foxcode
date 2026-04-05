@@ -170,10 +170,10 @@ describe('createHttpServer', () => {
 })
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has 3 tools (status, ping, evalInBrowser)', () => {
-    assert.equal(TOOL_DEFINITIONS.length, 3)
+  it('has 2 tools (status, evalInBrowser)', () => {
+    assert.equal(TOOL_DEFINITIONS.length, 2)
     const names = TOOL_DEFINITIONS.map(t => t.name)
-    assert.deepEqual(names, ['status', 'ping', 'evalInBrowser'])
+    assert.deepEqual(names, ['status', 'evalInBrowser'])
   })
 
   it('status has no required params', () => {

@@ -11,7 +11,7 @@ Load extension into user's Firefox, connect, verify. Communicate in user's langu
 ## 1. Check if already connected
 
 Call `status`. If fails → tell user MCP server not running, stop.
-If `connectedClients > 0` → call `ping`. If `connected: true` → say "Ready." and stop.
+If `connectedClients > 0` → say "Ready." and stop.
 
 ## 2. Resolve environment
 
@@ -35,6 +35,5 @@ Tell user (single message):
 Open connection URL: `"$FIREFOX" "http://localhost:${PORT}#${PORT}:${PASSWORD}" &>/dev/null &`
 If fails → give user the URL to open manually.
 
-Poll `status` every 3s, max 10 attempts (30s). When `connectedClients > 0` → call `ping`.
-- `connected: true` → "Ready."
-- Timeout or ping fails → "No connection. Check extension loaded + sidebar open. Re-run skill."
+Poll `status` every 3s, max 10 attempts (30s). When `connectedClients > 0` → "Ready."
+- All retries exhausted → "No connection. Check extension loaded + sidebar open. Re-run skill."

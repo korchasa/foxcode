@@ -56,8 +56,8 @@
   - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:326-358`
   - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:245-253`
   - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:265-271`
-  - [x] `reply` tool removed (IDE shows all CC output). Evidence: `foxcode/channel/lib.mjs` (3 tools: status, ping, evalInBrowser)
-  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message, reply). Evidence: `foxcode/channel/lib.mjs` (3 tools: status, ping, evalInBrowser)
+  - [x] `reply` tool removed (IDE shows all CC output). Evidence: `foxcode/channel/lib.mjs` (2 tools: status, evalInBrowser)
+  - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message, reply). Evidence: `foxcode/channel/lib.mjs` (2 tools: status, evalInBrowser)
   - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `extension/manifest.json:6-11,13`
   - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `extension/background/dom-helpers.test.js`, `extension/background/browser-api.test.js`
   - [ ] Integration test: background executes code -> delegates to tab -> returns result (requires Firefox)
@@ -168,9 +168,8 @@
 ### 4.2 NF-2: Easy Launch [very important]
 - [x] Zero extra processes: CC loads channel from .mcp.json automatically. Evidence: `.mcp.json`, tested
 - [x] `status` tool returns server telemetry (port, clients, uptime, launchMode, client) without browser. Evidence: `foxcode/channel/server.mjs` (status handler)
-- [x] `ping` tool checks browser extension connectivity. Returns `{connected: bool}`. Evidence: `foxcode/channel/lib.mjs` (TOOL_DEFINITIONS ping), `foxcode/channel/server.mjs` (ping handler)
-- [x] `/foxcode:foxcode-run-project-profile` flow: status -> ping -> web-ext launch -> verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
-- [x] `/foxcode:foxcode-run-user-profile` flow: status -> ping -> guide manual loading -> auto-open connection page -> poll & verify. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
+- [x] `/foxcode:foxcode-run-project-profile` flow: status -> web-ext launch -> verify via status. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
+- [x] `/foxcode:foxcode-run-user-profile` flow: status -> guide manual loading -> auto-open connection page -> poll & verify via status. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
 - [x] Extension connects via URL hash (`#PORT:PASSWORD`) or saved sessions. No port scanning, no manual settings form. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
 
 ### 4.3 NF-3: Reliability [very important]

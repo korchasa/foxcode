@@ -252,14 +252,6 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
-    name: 'ping',
-    description: 'Test connectivity to browser extension. Returns { connected: bool }.',
-    inputSchema: {
-      type: 'object',
-      properties: {},
-    },
-  },
-  {
     name: 'evalInBrowser',
     description: [
       'Execute JavaScript in Firefox browser. Code runs in extension background with async browser API.',
