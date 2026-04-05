@@ -8,13 +8,9 @@ FoxCode is a two-part system: a **Claude Code plugin** (MCP server on Node.js) a
 
 ## Usage Patterns
 
-### Let Claude Code test your project in the browser
-
-Claude Code can click, fill forms, navigate, take screenshots, read DOM via `evalInBrowser` (~36 API helpers + storage sub-methods). Ask it to verify a fix, check a form flow, or inspect the rendered output — all while it has access to your project's code.
-
-### Give Claude Code browser context for debugging
-
-Point Claude Code at the page and let it inspect the DOM or take a snapshot alongside the project source — no need to explain what's on screen.
+- **Test in the browser** — verify fixes, check form flows, inspect rendered output — with access to your project's code
+- **Automate browser operations** — fill forms, click through flows, extract data, manage cookies/storage in one `evalInBrowser` call
+- **Debug with browser context** — inspect DOM or take a snapshot alongside the source, no need to explain what's on screen
 
 ## Getting Started
 
