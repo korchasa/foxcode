@@ -31,11 +31,11 @@ Or use commands directly:
 
 ## Features
 
-- **Real browser, real context** — works in your Firefox with existing sessions, cookies, auth, extensions. No separate browser instance
-- **Single-call scripting** — agent writes a full JS scenario (navigate → fill → click → assert) and sends it in one tool call. No round-trip per action — fewer tool calls means fewer tokens and lower API cost
+- **Real browser, real context** — your Firefox with existing sessions, cookies, auth, extensions
+- **Single-call scripting** — full JS scenario in one tool call, no round-trip per action
 - **Rich async API** — ~36 helpers for DOM, navigation, tabs, cookies, screenshots, storage, console capture, dialog handling
-- **Multi-session** — multiple Claude Code sessions connect to one browser simultaneously. Each gets its own MCP server on a unique port
-- **Zero setup for the agent** — Claude Code plugin installs via marketplace, MCP server auto-starts, extension auto-connects via URL hash
+- **Multi-session** — multiple Claude Code sessions connect to one browser simultaneously, each on a unique port
+- **Zero setup** — plugin installs via marketplace, MCP server auto-starts, extension auto-connects via URL hash
 
 ## Architecture
 
@@ -53,8 +53,7 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 - **Channel Plugin** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging Claude Code -> extension via WebSocket. Installed as a Claude Code plugin, provides MCP tools
 - **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: popup eval console (browser_action), background script for WebSocket + code execution, content script for DOM access in page context
-- **Run Project Profile Skill** (`foxcode/skills/foxcode-run-project-profile/SKILL.md`) - self-contained: prerequisites, locate extension, launch isolated Firefox via web-ext, verify connectivity
-- **Run User Profile Skill** (`foxcode/skills/foxcode-run-user-profile/SKILL.md`) - self-contained: prerequisites, locate extension, guide manual loading, verify connectivity
+- **Run Skills** (`foxcode/skills/`) - launch skills for Project Profile and User Profile modes (see Launch)
 
 ### MCP tools provided to Claude Code
 
@@ -64,11 +63,9 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 ## Launch Flows
 
-Two ways to load the extension into Firefox. Both are valid and must stay working.
-
 ### Project Profile (`/foxcode:foxcode-run-project-profile`)
 
-Isolated Firefox instance launched via `web-ext run` with a project-local profile (`.foxcode/firefox-profile/`). Port is passed via URL hash — instant connection. First setup via `install`, subsequent launches via `run`.
+Isolated Firefox via `web-ext run`, project-local profile (`.foxcode/firefox-profile/`). Port passed via URL hash — instant connection.
 
 ```mermaid
 sequenceDiagram
@@ -100,7 +97,7 @@ sequenceDiagram
 
 ### User Profile (`/foxcode:foxcode-run-user-profile`)
 
-Extension loaded into user's own Firefox via about:debugging. No port in URL — extension uses saved sessions from previous run. Re-launch via `/foxcode:foxcode-run-user-profile`.
+User's own Firefox via about:debugging. No port in URL — extension uses saved sessions.
 
 ```mermaid
 sequenceDiagram
@@ -148,15 +145,11 @@ sequenceDiagram
 
 ### Popup shows "No active sessions"
 
-The popup displays session list with connection status. Use this to identify the issue:
-
 - **No sessions** — MCP server not running or extension hasn't connected. Check `/mcp` in Claude Code.
 - **Session shows "(reconnecting…)"** — Server was running but stopped. CC may have exited. After 10 failed reconnect attempts (exponential backoff 3s → 30s) the session is silently removed from the list.
 - **To connect** — open the connection URL (`http://localhost:PORT#PORT:PASSWORD`) from the skill output, or re-run the launch skill.
 
 ### evalInBrowser returns "No browser extension connected"
-
-CC calls `evalInBrowser` but no extension has an open WebSocket to the server.
 
 - Extension not loaded — load via `about:debugging` or re-run the launch skill.
 - Connection dropped — check popup for session status. Re-open the connection URL.
@@ -164,7 +157,7 @@ CC calls `evalInBrowser` but no extension has an open WebSocket to the server.
 
 ### evalInBrowser timeout
 
-Default timeout is 30s (server-side and extension-side). If code execution exceeds it, you get `Browser tool request timed out after 30000ms`.
+Default timeout is 30s. If exceeded: `Browser tool request timed out after 30000ms`.
 
 - Pass a higher timeout: `evalInBrowser({ code: "...", timeout: 60000 })`
 - Break long operations into smaller `evalInBrowser` calls.
