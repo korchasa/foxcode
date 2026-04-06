@@ -84,8 +84,9 @@ When proposing a fix, classify *where* it belongs:
    - Otherwise, review the current conversation history.
 
 3. **Load Session History**
-   - Look for session history files (e.g., `session-history/` directory, previous transcripts, or logs).
-   - If session history exists, read all available session transcripts.
+   - Claude Code session logs: `~/.claude/projects/<encoded-path>/<sessionId>.jsonl`. Each line is JSON with `type` (user/assistant/tool_result/queue-operation), `timestamp`. Assistant messages have `message.content[]` with `tool_use` blocks (`name`, `input`). Text mention of a tool ≠ invocation — filter by `tool_use` type.
+   - Look for session history files: CC session logs (above), `session-history/` directory, previous transcripts, or logs.
+   - If session history exists, read available session transcripts.
    - Build a summary of recurring issues: for each error type, note how many sessions it appeared in, the pattern signature, and whether the root cause was the same.
    - This data will be used in later steps to distinguish recurring patterns from isolated incidents.
 
