@@ -8,3 +8,5 @@ demo-project/
 .foxcode/
 .idea/
 .vscode/
+__pycache__/
+*.pyc

@@ -15,25 +15,24 @@ If `connectedClients > 0` → say "Ready." and stop.
 
 ## 2. Resolve environment
 
-Read `.foxcode/config.json`. If cached paths exist and files are valid → skip resolution.
+```bash
+python3 "${CLAUDE_SKILL_DIR}/../foxcode-run-project-profile/scripts/resolve_env.py" --format=json
+```
 
-Otherwise resolve (in parallel):
-- Firefox binary: macOS `/Applications/Firefox.app/Contents/MacOS/firefox`, Linux `which firefox`
-- Extension dir: `./extension/` or marketplace clone (`~/.claude/plugins/known_marketplaces.json` → `source.repo` = `korchasa/foxcode` → `installLocation` + `/extension/`)
-
-If anything missing → report, stop. Save resolved paths to `.foxcode/config.json`.
+Returns JSON: `{"skillDir", "firefox", "extensionDir", "port", "password"}`. If fails → report error, stop.
+Use JSON values in steps below.
 
 ## 3. Guide loading
 
 Tell user (single message):
-> Load extension: Firefox → `about:debugging` → This Firefox → Load Temporary Add-on → select `$EXT_DIR/manifest.json`. Then open sidebar: View > Sidebar > FoxCode. Tell me when done.
+> 1. Load extension: `about:debugging` → This Firefox → Load Temporary Add-on → `{extensionDir}/manifest.json`
+> 2. Open in the same Firefox: http://localhost:{port}#{port}:{password}
+>
+> Tell me when done.
 
 **Wait for user response.**
 
-## 4. Connect and verify
-
-Open connection URL: `"$FIREFOX" "http://localhost:${PORT}#${PORT}:${PASSWORD}" &>/dev/null &`
-If fails → give user the URL to open manually.
+## 4. Verify connection
 
 Poll `status` every 3s, max 10 attempts (30s). When `connectedClients > 0` → "Ready."
-- All retries exhausted → "No connection. Check extension loaded + sidebar open. Re-run skill."
+- All retries exhausted → "No connection. Check extension loaded and the URL opened in the same Firefox. Re-run skill."

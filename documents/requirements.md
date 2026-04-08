@@ -162,6 +162,8 @@
   - [x] Launch skills are self-contained: check prerequisites, locate extension, cache in `.foxcode/config.json`, launch/guide, verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`, `foxcode/skills/foxcode-run-user-profile/SKILL.md`
   - [x] Skills check prerequisites: Node.js ≥18 (project profile), Firefox installed. Clear error with fix instructions per platform. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md` Step 3
   - [x] Two launch modes: **Project Profile** (isolated Firefox via web-ext) and **User Profile** (manual about:debugging). Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`, `foxcode/skills/foxcode-run-user-profile/SKILL.md`
+  - [x] Launch scripts bundle Python utilities: `resolve_env.py` (environment discovery + config cache), `launch_firefox.py` (web-ext launch + PID lifecycle). Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/`
+  - [x] PID tracking prevents duplicate browser instances. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py` (check_stale_pid), `foxcode/skills/foxcode-run-project-profile/scripts/test_launch_firefox.py`
   - [x] Skills communicate in user's language (auto-detect from conversation context). Evidence: SKILL.md frontmatter
   - [x] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps. Evidence: SKILL.md Step 3
 

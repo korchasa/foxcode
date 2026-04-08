@@ -53,7 +53,8 @@ foxcode/
 │   │   └── plugin.json   #   Plugin manifest (name, version, author)
 │   ├── skills/
 │   │   ├── foxcode-run-project-profile/
-│   │   │   └── SKILL.md  # Run skill — Project Profile (/foxcode:foxcode-run-project-profile)
+│   │   │   ├── SKILL.md  # Run skill — Project Profile (/foxcode:foxcode-run-project-profile)
+│   │   │   └── scripts/  # Python utilities (resolve_env.py, launch_firefox.py)
 │   │   └── foxcode-run-user-profile/
 │   │       └── SKILL.md  # Run skill — User Profile (/foxcode:foxcode-run-user-profile)
 │   ├── channel/           #   MCP channel plugin (Node.js)
@@ -119,6 +120,13 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
 - When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
 
+## Documentation Hierarchy
+1. **`AGENTS.md`**: Project vision, constraints, mandatory rules. READ-ONLY reference.
+2. **SRS** (`documents/requirements.md`): "What" & "Why". Source of truth for requirements.
+3. **SDS** (`documents/design.md`): "How". Architecture and implementation. Depends on SRS.
+4. **Whiteboards** (`documents/whiteboards/<YYYY-MM-DD>-<slug>.md`): Temporary plans/notes per task.
+5. **`README.md`**: Public-facing overview. Installation, usage, quick start. Derived from AGENTS.md + SRS + SDS.
+
 ## Planning Rules
 
 - **Environment Side-Effects**: Changes to infra/DB/external services -> plan MUST include migration/sync/deploy steps.
@@ -134,11 +142,6 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - **Verify Config Syntax**: Before using placeholders/variables in config files - check tool documentation for supported syntax. Do NOT write unverified syntax to files.
 - **Distribution Audit**: When changing packaging/distribution - inspect target environment contents (plugin cache, Docker image, npm package) BEFORE implementing.
 
-## CODE DOCS
-
-- **Module**: `AGENTS.md` (responsibility/decisions).
-- **Comments**: Class/Method/Func (JSDoc/GoDoc). Why/How > What. No trivial comments.
-
 ## TDD FLOW
 
 1. **RED**: Write test (`test <id>`) for new/changed logic or behavior.
@@ -153,3 +156,23 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - Code ONLY to fix tests/issues.
 - NO STUBS. Real code.
 - Run ALL tests before finish.
+- When a test fails, fix the source code — not the test. Do not modify a failing test to make it pass, do not add error swallowing or skip logic.
+- Do not create source files with guessed or fabricated data to satisfy imports — if the data source is missing, that is a blocker (see Diagnosing Failures).
+
+## Diagnosing Failures
+
+The goal is to identify the root cause, not to suppress the symptom. A quick workaround that hides the root cause is worse than an unresolved issue with a correct diagnosis.
+
+1. Read the relevant code and error output before making any changes.
+2. Apply "5 WHY" analysis to find the root cause.
+3. Root cause is fixable → apply the fix, retry.
+4. Second fix attempt failed → STOP. Output "STOP-ANALYSIS REPORT" (state, expected, 5-why chain, root cause, hypotheses). Wait for user help.
+
+When the root cause is outside your control (missing API keys/URLs, missing generator scripts, unavailable external services, wrong environment configuration) → STOP immediately and ask the user for the correct values. Do not guess, do not invent replacements, do not create workarounds.
+
+## Code Documentation
+
+- **Module level**: each module gets an `AGENTS.md` describing its responsibility and key decisions.
+- **Code level**: JSDoc for classes, methods, and functions. Focus on *why* and *how*, not *what*. Skip trivial comments — they add noise without value.
+
+> **Before you start:** read `documents/requirements.md` (SRS) and `documents/design.md` (SDS) if you haven't in this session. They contain project requirements and architecture that inform every task.

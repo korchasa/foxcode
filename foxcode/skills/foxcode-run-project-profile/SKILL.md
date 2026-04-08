@@ -15,49 +15,15 @@ Launch isolated Firefox with FoxCode extension. Communicate in user's language. 
 Call `status`. If fails -> tell user MCP server not running, stop.
 If `connectedClients > 0` -> say "Ready." and stop.
 
-## 2. Resolve environment and launch
-
-### 2a. Read config + password (ONE bash call)
+## 2. Launch Firefox (background bash)
 
 ```bash
-cat .foxcode/config.json 2>/dev/null; echo "---SEPARATOR---"; cat "$HOME/.foxcode/password" 2>/dev/null
+python3 "${CLAUDE_SKILL_DIR}/scripts/launch_firefox.py"
 ```
 
-If config.json exists with valid paths AND password is present -> go to 2c.
-
-### 2b. Full resolution (only if no cached config)
-
-Run ONE bash command to resolve everything:
-
-```bash
-node --version && \
-{ test -x /Applications/Firefox.app/Contents/MacOS/firefox && echo "FIREFOX=/Applications/Firefox.app/Contents/MacOS/firefox" || \
-  { FF=$(which firefox 2>/dev/null) && echo "FIREFOX=$FF"; } || \
-  echo "FIREFOX_NOT_FOUND"; } && \
-{ EXT="$HOME/.claude/plugins/marketplaces/korchasa/extension"; \
-  test -f "$EXT/manifest.json" && echo "EXT_DIR=$EXT" || \
-  { EXT="./extension"; test -f "$EXT/manifest.json" && echo "EXT_DIR=$EXT" || \
-    echo "EXT_DIR_NOT_FOUND"; }; }
-```
-
-If anything missing -> report, stop.
-MUST save resolved paths to `.foxcode/config.json`:
-```json
-{"firefox": "<FIREFOX>", "extensionDir": "<EXT_DIR>"}
-```
-
-### 2c. Launch Firefox (background bash)
-
-Use PORT from step 1 `status` response and PASSWORD from step 2a.
-
-```bash
-mkdir -p .foxcode/firefox-profile && npx web-ext run \
-  --source-dir "$EXT_DIR" --firefox-profile .foxcode/firefox-profile \
-  --keep-profile-changes --start-url "http://localhost:${PORT}#${PORT}:${PASSWORD}" \
-  --firefox="$FIREFOX"
-```
-
-Tell user: "Firefox launching on port {port}."
+Idempotent: resolves environment (Firefox, extension, port, password) and launches web-ext.
+If already running -> prints "Already running (PID X)", exit 0 -> tell user, go to step 3.
+If launched -> PID saved to `.foxcode/web-ext.pid`. If fails -> report error from stderr, stop.
 
 ## 3. Verify connection
 
