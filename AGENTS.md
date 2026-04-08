@@ -1,24 +1,21 @@
-# YOU MUST
-
-- STRICTLY FOLLOW YOUR ROLE.
-- FIRST ACTION IN SESSION: READ ALL PROJECT DOCS. ONE-TIME PER SESSION.
-- AFTER END OF SESSION, REVIEW ALL DOCUMENTS AND MAKE SURE THEY ARE ACCURATE AND UP TO DATE.
-- ALWAYS CHECK THE CHANGES MADE BY RUNNING THE APPROPRIATE TESTS OR SCRIPTS.
-- ALWAYS KEEP THE PROJECT IN WORKING CONDITION: WITHOUT ERRORS, WARNINGS, AND PROBLEMS IN THE FORMATER AND LINTER OUTPUT
-- STRICTLY FOLLOW TDD RULES.
-- WRITE ALL DOCUMENTATION IN ENGLISH IN COMPRESSED STYLE.
-- IF YOU SEE CONTRADICTIONS IN THE REQUEST OR CONTEXT, SAY ABOUT THEM, ASK THE NECESSARY QUESTIONS AND STOP.
-- DO NOT USE STUBS, "CRUTCHES", DECEPTIONS, OR OTHER PREMODS TO BYPASS CHECKS.
-- THE CODE MUST FOLLOW THE "FAIL FAST, FAIL CLEARLY" STRATEGY UNLESS THE USER HAS REQUESTED OTHERWISE.
-- IF A FIX ATTEMPT FAILS, APPLY "5 WHY" ANALYSIS TO FIND THE ROOT CAUSE BEFORE RETRYING.
-- IF ROOT CAUSE IS UNFIXABLE OR OUTSIDE CONTROL: STOP. DO NOT USE WORKAROUNDS. ASK USER FOR HELP.
-- IF ISSUE PERSISTS AFTER 2 ATTEMPTS: STOP. OUTPUT "STOP-ANALYSIS REPORT" (STATE, EXPECTED, 5-WHY CHAIN, ROOT CAUSE, HYPOTHESES). WAIT FOR USER HELP.
-- WHEN EDITING CI/CD, ALWAYS CHECK LOCALLY FIRST.
-- BE PRECISE IN YOUR WORDING. USE A SCIENTIFIC APPROACH. ACCOMPANY HIGHLY SPECIALIZED TERMS AND ABBREVIATIONS WITH SHORT HINTS IN PARENTHESES
-- PROVIDE EVIDENCE FOR YOUR CLAIMS
-- USE STANDARD TOOLS (jq, yq, jc) TO PROCESS AND MANAGE OUTPUT.
-- DO NOT USE TABLES IN CHAT OUTPUT. USE TWO-LEVEL LIST INSTEAD.
-- ALWAYS USE RELATIVE PATHS IN COMMANDS WHEN POSSIBLE. ABSOLUTE PATHS ONLY WHEN REQUIRED BY THE TOOL OR CONTEXT.
+# Core Project Rules
+- Follow your assigned role strictly — it defines scope and boundaries for your actions.
+- On first action in each session, read all project docs once — accurate context is a prerequisite for all work.
+- After finishing a session, review all project documents to ensure they reflect the current state. Stale docs mislead future sessions.
+- Verify every change by running appropriate tests or scripts — never assume correctness without evidence.
+- Keep the project in a clean state: no errors, warnings, or issues in formatter and linter output. A broken baseline blocks all future work.
+- Follow the TDD flow described below. Skipping it leads to untested code and regressions.
+- Write all documentation in English, compressed style. Brevity preserves context window.
+- If you see contradictions in the request or context, raise them explicitly, ask clarifying questions, and stop. Do not guess which interpretation is correct.
+- Do not use stubs, workarounds, or deceptions to bypass checks — they hide real problems and create false confidence.
+- Code should follow "fail fast, fail clearly" — surface errors immediately with clear messages rather than silently propagating bad state. Unless the user requests otherwise.
+- When editing CI/CD pipelines, always validate locally first — broken CI is visible to the whole team and slow to debug remotely.
+- Be precise in wording — use a scientific approach and accompany specialized terms and abbreviations with short hints in parentheses on first use.
+- Provide evidence for your claims — link to code, docs, or tool output. Unsupported assertions erode trust.
+- Use standard tools (jq, yq, jc) to process and manage structured output — they are portable and well-understood.
+- Do not add fallbacks, default behaviors, or error recovery silently — if the user didn't ask for it, it's an assumption. If you believe a fallback is genuinely needed, ask the user first.
+- Do not use tables in chat output — use two-level lists instead. Tables render poorly in terminal and are harder to scan.
+- Always use relative paths in commands when possible — absolute paths only when required by the tool or context.
 
 ---
 
