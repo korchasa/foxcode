@@ -1,4 +1,0 @@
-event: PreToolUse
-matcher: "Bash"
-description: "Run tests before git commit"
-timeout: 600

@@ -1,4 +1,0 @@
-event: PostToolUse
-matcher: "Write|Edit"
-description: "Auto-lint after file changes (ts/js/py)"
-timeout: 30

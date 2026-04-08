@@ -1,4 +1,0 @@
-event: PostToolUse
-matcher: "Write|Edit"
-description: "Auto-validate Mermaid diagrams after .md/.mmd edits"
-timeout: 30

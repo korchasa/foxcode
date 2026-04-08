@@ -1,7 +1,7 @@
 ref/
 node_modules/
 channel/node_modules/
-.claude/settings.local.json
+.claude/
 documents/whiteboards/
 .DS_Store
 demo-project/
