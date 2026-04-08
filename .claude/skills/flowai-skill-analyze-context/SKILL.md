@@ -1,6 +1,8 @@
 ---
 name: flowai-skill-analyze-context
 description: Analyze total token usage including conversation history, system prompts, and active rules to estimate cost.
+model: haiku
+effort: low
 ---
 
 # Analyze Context (Total Cost Estimation)
@@ -11,7 +13,7 @@ description: Analyze total token usage including conversation history, system pr
     - **Conversation History**: User messages, Assistant responses, Tool calls, and Tool outputs.
     - **System Context**:
         - **System Prompts**: The core instructions defining the agent's behavior.
-        - **Active Rules**: Content from `AGENTS.md` and any active `.cursor/rules`.
+        - **Active Rules**: Content from `AGENTS.md` (symlinked via `CLAUDE.md`).
         - **Skill/Tool Definitions**: The descriptions of available tools and skills (often a significant overhead).
         - **Attached Context**: Any `<open_and_recently_viewed_files>`, `<git_status>`, or other automatic context blocks.
 

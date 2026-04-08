@@ -1,6 +1,7 @@
 ---
 name: flowai-skill-fix-tests
 description: How to fix tests
+effort: high
 ---
 
 ## HOW TO FIX TESTS

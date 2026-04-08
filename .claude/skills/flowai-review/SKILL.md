@@ -41,7 +41,7 @@ Input sources:
 3. **Two roles, one pass**: Produce findings under two categories (QA, Code
    Review) but run them in parallel, not sequentially.
 4. **Verification**: Do not assume it works — read files, run project checks
-   (linter, tests, type-checker) if available.
+   (`scripts/check.sh`) if available.
 5. **Mandatory**: Use a task management tool (e.g., `todo_write`, `todowrite`)
    to track the execution steps of this review.
 6. **Severity levels**: Tag each finding as `[critical]`, `[warning]`, or
@@ -61,7 +61,19 @@ Input sources:
    - If there are NO changes (no diff, no staged files, no untracked files),
      report "No changes to review" and STOP.
 
-2. **Gather Context**
+2. **Pre-flight Project Check**
+   - If source code files were changed since the last successful project check
+     in this session (or if no check has been run yet), run the project check
+     command (`scripts/check.sh`) NOW, before starting the review.
+   - Skip ONLY if no code files were modified since the last successful check
+     run in this session.
+   - If the check fails: report failures immediately, then continue with the
+     review — failures will be included in the final report as `[critical]`.
+   - If no check command is found: note "No automated checks configured" and
+     proceed.
+
+3. **Gather Context**
+   - If you don't know the content of `documents/requirements.md` (SRS) and `documents/design.md` (SDS) — read them now.
    - Create a review plan in the task management tool.
    - Collect the diff: `git diff` (unstaged), `git diff --cached` (staged),
      or `git log --oneline <base>..HEAD` + `git diff <base>..HEAD` for
@@ -70,18 +82,39 @@ Input sources:
      `git status` output from step 1 — for each untracked file, read its
      content directly and include it in the review scope.
    - Read the original user request and the plan (whiteboard in `documents/whiteboards/` / task list).
-   - Look for project conventions in `AGENTS.md` and config files.
-     If these files do not exist, rely on conventions visible in the diff
-     and surrounding code.
+   - Look for project conventions in config files (linter, formatter configs).
+     Rely on conventions visible in the diff and surrounding code.
 
-3. **QA: Task Completion**
+   **Parallel Delegation** (after gathering context):
+   - **Small diff shortcut**: If `git diff --stat` shows < 50 changed lines,
+     skip delegation — run all steps inline (overhead not justified).
+   - Otherwise, delegate **2 independent tasks in parallel** (via subagents,
+     background tasks, or IDE-specific parallel execution — e.g., `Task`,
+     `Agent`, `parallel`):
+     - **SA1**: If pre-flight check (step 2) already ran, skip SA1. Otherwise,
+       run the project check command (`scripts/check.sh`). Delegate to a
+       console/shell-capable agent (e.g., `flowai-console-expert`). Return
+       pass/fail + full output.
+     - **SA2**: Run hygiene grep scan on diff output — search for `TODO`,
+       `FIXME`, `HACK`, `XXX`, `console.log`, `temp_*`, `*.tmp`, `*.bak`,
+       hardcoded secrets patterns. Delegate to a console/shell-capable agent.
+       Return findings list.
+   - **Fallback rule**: If any delegated task fails or times out, the main
+     agent performs that step inline. No hard dependency on delegation success.
+   - Continue with steps 4, 6, 7, 8 (main agent review) while delegated
+     tasks run.
+
+4. **QA: Task Completion**
    - Map each requirement/plan item to concrete changes in the diff.
    - Flag requirements with no corresponding changes as `[critical] Missing`.
    - Flag plan items marked "done" but not present in diff as
      `[critical] Phantom completion`.
    - Check for regressions: do changed files break existing functionality?
 
-4. **QA: Hygiene**
+5. **QA: Hygiene** _(use SA2 result if available; otherwise run inline)_
+   - If SA2 completed: review its findings, deduplicate with own Code Review
+     findings, and merge into the report.
+   - If SA2 failed/timed out or skipped (small diff): perform inline:
    - **Temp artifacts**: New `temp_*`, `*.tmp`, `*.bak`, debug `console.log`/
      `print` statements, hardcoded secrets or localhost URLs.
    - **Unfinished markers**: New `TODO`, `FIXME`, `HACK`, `XXX` introduced in
@@ -93,7 +126,7 @@ Input sources:
      `[warning] Entire directory deleted — confirm intentional` and ask the
      user to verify before proceeding.
 
-5. **Code Review: Design & Architecture**
+6. **Code Review: Design & Architecture**
    - **Responsibility**: Does each changed file/module stay within its stated
      responsibility? Flag scope creep.
    - **Coupling**: Are new dependencies (imports, API calls) justified?
@@ -102,7 +135,7 @@ Input sources:
      over-engineering (unnecessary interfaces, premature generalization) and
      under-engineering (god-functions, duplicated logic).
 
-6. **Code Review: Implementation Quality**
+7. **Code Review: Implementation Quality**
    - **Naming**: Are new identifiers (vars, funcs, types) clear and consistent
      with project conventions?
    - **Error handling**: Are errors handled explicitly? Flag swallowed
@@ -114,7 +147,7 @@ Input sources:
    - **Tests**: Do new/changed behaviors have corresponding tests? Are existing
      tests updated for changed behavior?
 
-7. **Code Review: Readability & Style**
+8. **Code Review: Readability & Style**
    - **Consistency**: Do changes follow the project's established patterns
      (file structure, naming, formatting)?
    - **Comments**: Are non-obvious decisions explained? Flag misleading or
@@ -125,14 +158,13 @@ Input sources:
      one-liners, overly compact expressions. Explicit code is preferred over
      clever short forms.
 
-8. **Run Automated Checks**
-   - If the project has a check command (`deno task check`, `npm run lint`,
-     `make check`, etc.), run it and include results.
-   - If no check command is found, explicitly note "No automated checks
-     configured" in the report — do not silently skip.
-   - If tests exist, run them and report failures.
+9. **Run Automated Checks** _(collect results from step 2 and/or SA1)_
+   - If pre-flight check (step 2) already ran: use its result. Do NOT re-run.
+   - If SA1 completed with a different/broader check: merge its results.
+   - If neither ran (no check command found): explicitly note "No automated
+     checks configured" in the report — do not silently skip.
 
-9. **Final Report**
+10. **Final Report**
    Output a structured report with the verdict on the FIRST line:
 
    ```
@@ -163,6 +195,7 @@ Input sources:
 
 <verification>
 [ ] Empty diff guard checked before starting.
+[ ] Pre-flight project check executed (or skipped — no code changes since last check).
 [ ] Diff collected and reviewed (not the whole project).
 [ ] Each requirement/plan item mapped to changes.
 [ ] Hygiene check: no temp files, debug output, unfinished markers in diff.

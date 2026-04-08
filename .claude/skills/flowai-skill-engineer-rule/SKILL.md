@@ -20,6 +20,8 @@ Rules serve two purposes:
 
 Rules work across multiple IDEs but use different file formats and locations. Before creating a rule, determine the current environment.
 
+**FoxCode project context**: This project uses **Claude Code** as its IDE. Rules go in `.claude/rules/*.md` or `CLAUDE.md` (symlinked from `AGENTS.md`). The project stack is JavaScript (ES6+), HTML, CSS (Firefox WebExtension) + Node.js (MCP server).
+
 ### Control Primitives Map by IDE
 
 | Primitive | Scope | Claude Code | Cursor | OpenCode |
@@ -42,7 +44,7 @@ Rules work across multiple IDEs but use different file formats and locations. Be
 | IDE | Always-Apply Rules | Conditional Rules | Format |
 |-----|-------------------|-------------------|--------|
 | **Cursor** | `.cursor/rules/*/RULE.md` with `alwaysApply: true` | `.cursor/rules/*/RULE.md` with `globs:` | YAML frontmatter + Markdown |
-| **Claude Code** | `CLAUDE.md`, `.claude/rules/*.md` | `.claude/rules/*.md` with `paths:` | YAML frontmatter + Markdown |
+| **Claude Code** | `CLAUDE.md`, `.claude/rules/*.md` (no `paths:` frontmatter) | `.claude/rules/*.md` with `paths:` (array of globs). `description` accepted but does not scope. `globs:`/`alwaysApply` ignored. Triggers on Read only, not Write/Edit. Subdirs discovered recursively. | YAML frontmatter (`paths`, optional `description`) + Markdown |
 | **OpenCode** | `AGENTS.md`, `opencode.json` `instructions` | `opencode.json` `instructions` (globs) | `AGENTS.md`: Plain Markdown; `opencode.json`: JSON array of paths/globs/URLs |
 
 ### Detection Strategy
@@ -60,7 +62,7 @@ Before creating a rule, determine:
 
 1. **Purpose**: What should this rule enforce or teach?
 2. **Scope**: Always apply, or only for specific files?
-3. **File patterns**: If conditional, which glob patterns? (e.g., `**/*.ts`, `backend/**/*.py`)
+3. **File patterns**: If conditional, which glob patterns? (e.g., `**/*.js`, `extension/**/*.js`, `foxcode/channel/**/*.mjs`)
 
 ### Inferring from Context
 
@@ -102,12 +104,14 @@ Rule content here...
 
 ### Claude Code
 
-Rules in `.claude/rules/*.md` with frontmatter:
+Rules in `.claude/rules/*.md` (subdirectories discovered recursively). Frontmatter fields: `paths` (array of glob strings), `description` (optional, informational only — does NOT scope the rule). Cursor-specific fields (`globs`, `alwaysApply`) are silently ignored (rule becomes always-apply).
+
+**Conditional rule** (loads when Claude reads a matching file):
 
 ```markdown
 ---
-description: TypeScript conventions
-paths: src/**/*.ts
+paths:
+  - "src/**/*.ts"
 ---
 
 # Rule Title
@@ -115,7 +119,20 @@ paths: src/**/*.ts
 Rule content here...
 ```
 
-Or project-wide in `CLAUDE.md` (no frontmatter, always applies).
+**Multiple glob patterns:**
+
+```markdown
+---
+paths:
+  - "src/**/*.ts"
+  - "lib/**/*.{ts,tsx}"
+  - "tests/**/*.test.ts"
+---
+```
+
+**Always-apply rule:** omit `paths` frontmatter entirely, or use `CLAUDE.md` (project root / subdirectory).
+
+**Limitations:** `paths:` triggers on `Read` only — `Write`/`Edit` to a matching path without prior Read does NOT load the rule.
 
 ### OpenCode
 
@@ -182,15 +199,9 @@ Every rule should contain:
 
 ### Phase 3: Verification
 
-Run validation:
-
-```bash
-deno run -A scripts/validate_rule.ts <path/to/rule-file-or-directory>
-```
-
 Checklist:
 - [ ] Correct file format for target IDE
-- [ ] Frontmatter configured correctly (description, globs/paths, alwaysApply)
+- [ ] Frontmatter configured correctly for target IDE (Cursor: `description`, `globs`, `alwaysApply`; Claude Code: `paths` required, `description` optional)
 - [ ] Content under 500 lines (prefer under 50)
 - [ ] Includes concrete examples
 - [ ] One concern per rule
@@ -209,7 +220,7 @@ Checklist:
 
 ## Example Rules
 
-### Error Handling (TypeScript)
+### Error Handling (TypeScript) — Cursor
 
 ```markdown
 ---
@@ -238,7 +249,35 @@ try {
 \`\`\`
 ```
 
-### React Patterns
+### Error Handling (TypeScript) — Claude Code
+
+```markdown
+---
+paths:
+  - "**/*.ts"
+---
+
+# Error Handling
+
+Always use typed errors with context:
+
+\`\`\`typescript
+// BAD
+try {
+  await fetchData();
+} catch (e) {}
+
+// GOOD
+try {
+  await fetchData();
+} catch (e) {
+  logger.error('Failed to fetch', { error: e });
+  throw new DataFetchError('Unable to retrieve data', { cause: e });
+}
+\`\`\`
+```
+
+### React Patterns — Cursor
 
 ```markdown
 ---
@@ -255,7 +294,24 @@ alwaysApply: false
 - Props interface named `{ComponentName}Props`
 ```
 
-### Project Architecture (Always Apply)
+### React Patterns — Claude Code
+
+```markdown
+---
+paths:
+  - "**/*.tsx"
+  - "**/*.jsx"
+---
+
+# React Patterns
+
+- Use functional components
+- Extract custom hooks for reusable logic
+- Colocate styles with components
+- Props interface named `{ComponentName}Props`
+```
+
+### Project Architecture (Always Apply) — Cursor
 
 ```markdown
 ---
@@ -263,6 +319,16 @@ description: Core architecture rules
 alwaysApply: true
 ---
 
+# Architecture
+
+- Domain logic in `src/domain/` — no framework imports
+- API handlers in `src/api/` — thin, delegate to domain
+- Shared types in `src/types/` — no runtime code
+```
+
+### Project Architecture (Always Apply) — Claude Code
+
+```markdown
 # Architecture
 
 - Domain logic in `src/domain/` — no framework imports

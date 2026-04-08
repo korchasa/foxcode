@@ -1,25 +1,15 @@
 {
   "version": 1,
   "hooks": {
-    "flowai-lint-on-write": {
-      "event": "PostToolUse",
-      "matcher": "Write|Edit",
-      "installedAt": "2026-03-30T12:36:44.897Z"
-    },
-    "flowai-test-before-commit": {
-      "event": "PreToolUse",
-      "matcher": "Bash",
-      "installedAt": "2026-03-30T12:36:44.897Z"
-    },
     "flowai-skill-structure-validate": {
       "event": "PostToolUse",
       "matcher": "Write|Edit",
-      "installedAt": "2026-03-30T12:36:44.897Z"
+      "installedAt": "2026-04-08T22:20:39.820Z"
     },
     "flowai-mermaid-validate": {
       "event": "PostToolUse",
       "matcher": "Write|Edit",
-      "installedAt": "2026-03-30T12:36:44.897Z"
+      "installedAt": "2026-04-08T22:20:39.820Z"
     }
   }
 }

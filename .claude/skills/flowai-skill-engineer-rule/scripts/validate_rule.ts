@@ -168,7 +168,7 @@ function validateCursorRule(content: string, _isLegacy = false): string[] {
     const sortedAllowed = [...allowed].sort();
     errors.push(
       `Unexpected frontmatter key(s): ${sortedUnexpected.join(", ")}. ` +
-        `Allowed: ${sortedAllowed.join(", ")}`,
+        `Allowed for Cursor: ${sortedAllowed.join(", ")}`,
     );
   }
 
@@ -235,7 +235,7 @@ function validateClaudeRule(content: string): string[] {
       const sortedAllowed = [...allowed].sort();
       errors.push(
         `Unexpected frontmatter key(s): ${sortedUnexpected.join(", ")}. ` +
-          `Allowed: ${sortedAllowed.join(", ")}`,
+          `Allowed for Claude Code: ${sortedAllowed.join(", ")}`,
       );
     }
   }

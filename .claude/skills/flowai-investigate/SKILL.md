@@ -2,6 +2,8 @@
 name: flowai-investigate
 description: Iterative issue investigation with user-controlled hypothesis selection
 disable-model-invocation: true
+argument-hint: issue description or error message
+effort: high
 ---
 
 # Investigate Issue

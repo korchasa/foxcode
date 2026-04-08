@@ -56,8 +56,9 @@ Skip this step only if user explicitly provided a complete feature list in their
 Check if `.devcontainer/` exists:
 - **If exists**:
   1. Read current `devcontainer.json` and display it to the user.
-  2. After generating the new version (Step 5), show a **diff** (old vs new) to the user.
-  3. **MANDATORY**: Ask for explicit per-file confirmation before overwriting. If user declines — **abort**, do not proceed to writing files.
+  2. **If the user reports a problem with the existing config**: Ask "What exactly is not working and what error do you see?" BEFORE proposing any fix. Do not assume the root cause — diagnose first.
+  3. After generating the new version (Step 5), show a **diff** (old vs new) to the user.
+  4. **MANDATORY**: Ask for explicit per-file confirmation before overwriting. If user declines — **abort**, do not proceed to writing files.
 - **If not exists**: proceed to generation.
 
 ### Step 4: Determine Capabilities
@@ -68,6 +69,7 @@ Ask the user (skip items already answered in prior context):
    - Claude Code — via `postCreateCommand` install script (see Claude Code § Install) + config volume + `ANTHROPIC_API_KEY`
    - OpenCode — via registry feature + config volume + `ANTHROPIC_API_KEY` (or other provider key)
    - Cursor CLI, Gemini CLI — via registry features
+   - flowai — via `deno install` in `postCreateCommand` (requires Deno runtime; auto-added as feature for non-Deno stacks)
    - Both/multiple — installs and configures all selected
    - None — skip AI CLI setup
 2. **Global skills**: "Mount host AI config directories into the container for access to global skills/settings? (read-only)"
@@ -100,21 +102,26 @@ Key structure:
     }
   },
   "remoteEnv": {
-    // Only for selected AI CLIs — see "AI CLI Setup Reference"
-    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    // WARNING: Do NOT include ANTHROPIC_API_KEY unless user explicitly provides an API key.
+    // An empty value (unset on host) breaks OAuth by triggering API-key auth mode.
+    // See references/auth-forwarding.md § Critical Warnings.
     "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
   },
   "secrets": {
-    // Codespaces prompts — add only for selected AI CLIs
-    "ANTHROPIC_API_KEY": {
-      "description": "API key for AI CLI tools (console.anthropic.com)"
-    },
+    // Add ANTHROPIC_API_KEY ONLY if user chose API-key auth (not OAuth)
     "GITHUB_TOKEN": {
       "description": "GitHub PAT for gh CLI"
     }
   },
   "mounts": [ /* global config mount if enabled */ ],
-  "postCreateCommand": "<dependency-install-command>",
+  // Object form for parallel execution. Volume chown MUST precede CLI install.
+  // setup-container.sh handles gh auth + Claude auth (see references/devcontainer-template.md)
+  "postCreateCommand": {
+    "deps": "<dependency-install-command>",
+    "setup": ".devcontainer/setup-container.sh",
+    "claude-chown": "sudo chown -R <user>:<user> ~/.claude",
+    "claude-cli": "curl -fsSL https://claude.ai/install.sh | bash"
+  },
   "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
   "remoteUser": "<non-root-user>"
 }
@@ -134,20 +141,38 @@ Generate only when user chose firewall in step 4.3. See [references/firewall-tem
 2. Write `.devcontainer/devcontainer.json`
 3. Write `.devcontainer/Dockerfile` (if custom)
 4. Write `.devcontainer/init-firewall.sh` (if firewall), make executable
+5. Write `.devcontainer/setup-container.sh` (if Claude Code selected or github-cli feature included), make executable. See [references/devcontainer-template.md](references/devcontainer-template.md) § Auth forwarding via setup-container.sh
 
 ### Step 7: Verify
 
 - [ ] `.devcontainer/devcontainer.json` is valid JSON (parse it)
 - [ ] If Dockerfile exists: no syntax errors (check `FROM` line present)
 - [ ] If `init-firewall.sh` exists: has shebang and `set -euo pipefail`
+- [ ] If `setup-container.sh` exists: has shebang, `set -euo pipefail`, and is executable
 - [ ] `remoteUser` matches the user in the base image (e.g., `node` for Node images, `vscode` for mcr base images)
 - [ ] No secrets/API keys hardcoded in any generated file
+- [ ] `remoteEnv` does NOT contain `ANTHROPIC_API_KEY` unless user explicitly chose API-key auth
+- [ ] If `setup-container.sh` includes gh auth: `GITHUB_TOKEN` is in `remoteEnv` (required for `gh auth login --with-token`)
+- [ ] If `setup-container.sh` includes gh auth: script calls both `gh auth login --with-token` AND `gh auth setup-git` (the latter registers credential helper for HTTPS git operations)
+- [ ] **End-to-end (if devcontainer CLI available)**: Run `devcontainer up --workspace-folder .` and verify container starts. If Claude Code was selected, run `devcontainer exec --workspace-folder . claude auth status` to verify auth works. This catches volume ownership, auth forwarding, and permission issues that static checks miss.
 
 ### Step 8: Post-Setup Notes
 
-If Claude Code was selected, display this note to the user after generation:
+Display relevant notes to the user after generation:
+
+If Claude Code was selected:
 
 > **Claude Code auth**: After the container starts, open a terminal inside it and run `claude` to log in via OAuth. Auth forwarding from macOS Keychain may handle this automatically, but if Claude Code reports auth errors, a manual `claude login` in the container terminal will fix it. Credentials are persisted in the config volume and survive container rebuilds.
+
+Always (github-cli feature is always included):
+
+> **GitHub CLI & git auth**: `setup-container.sh` automatically runs `gh auth login` + `gh auth setup-git` using `GITHUB_TOKEN` from `remoteEnv`. This enables both `gh` CLI commands (`gh pr`, `gh issue`, etc.) and git credential helper for HTTPS operations (`git push`, `git pull`). If `GITHUB_TOKEN` is not set on the host, run `gh auth login` manually in the container.
+>
+> **SSH vs HTTPS remotes**: The git credential helper configured by `gh auth setup-git` works only with HTTPS URLs. If the repository was cloned on the host via SSH (`git@github.com:user/repo.git`), git operations inside the container may still work via VS Code's SSH agent forwarding. However, if SSH agent forwarding is unavailable, switch the remote to HTTPS: `git remote set-url origin https://github.com/user/repo.git`
+
+If flowai was selected:
+
+> **flowai CLI**: flowai is installed globally via Deno. Run `flowai sync` in the container terminal to sync skills/agents. The `.flowai.yaml` config is read from the project workspace root.
 
 ---
 
@@ -228,7 +253,7 @@ For other AI CLIs, use devcontainer registry features where available (see [refe
 | **Auth forwarding** | Host Keychain → staging file → container volume. See [references/auth-forwarding.md](references/auth-forwarding.md) |
 | **Global skills mount** | `source=${localEnv:HOME}/.claude,target=/home/<user>/.claude-host,type=bind,readonly` |
 | **Skills sync** | `rm -rf ~/.claude/skills ~/.claude/commands && cp -rL ~/.claude-host/skills ~/.claude/skills 2>/dev/null \|\| true && cp -rL ~/.claude-host/commands ~/.claude/commands 2>/dev/null \|\| true` |
-| **Env vars** | `ANTHROPIC_API_KEY` (API key auth). Do NOT set `CLAUDE_CONFIG_DIR` (breaks volume auth strategy). `DISABLE_AUTOUPDATER=1` (optional, pin version) |
+| **Env vars** | `ANTHROPIC_API_KEY` — only if user explicitly provides API key; empty value breaks OAuth. Do NOT set `CLAUDE_CONFIG_DIR` (breaks volume auth strategy). `DISABLE_AUTOUPDATER=1` (optional, pin version) |
 | **Extension** | `anthropic.claude-code` |
 
 ### OpenCode
@@ -251,6 +276,18 @@ For other AI CLIs, use devcontainer registry features where available (see [refe
 | **Install (feature)** | `ghcr.io/stu-bell/devcontainer-features/cursor-cli:0` |
 | **Extension** | N/A (Cursor is the IDE host itself) |
 
+### flowai
+
+| Aspect | Details |
+|---|---|
+| **Install** | `postCreateCommand`: `deno install -g -A -f jsr:@korchasa/flowai` |
+| **Config dir** | None (reads `.flowai.yaml` from the project workspace) |
+| **Config volume** | None |
+| **Global skills mount** | None |
+| **Env vars** | None |
+| **Extension** | None (CLI-only) |
+| **Note** | Requires Deno. For non-Deno stacks, add `ghcr.io/devcontainers-extra/features/deno:latest` to features. |
+
 ### Global Skills Mount Rules
 
 - Mount to a **separate path** (`*-host`) to avoid overwriting container-local config
@@ -260,17 +297,14 @@ For other AI CLIs, use devcontainer registry features where available (see [refe
 
 ### Environment Variables (remoteEnv)
 
-Add only for selected AI CLIs:
 ```jsonc
 {
-  // Claude Code (when selected)
-  "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
-  // WARNING: Do NOT set CLAUDE_CONFIG_DIR — it breaks the volume auth strategy.
-  // See references/auth-forwarding.md for details.
-  // OpenCode (when selected, if using Anthropic)
-  // Uses same ANTHROPIC_API_KEY
-  // GitHub (always)
+  // GitHub (always) — required for gh CLI auth + git credential helper (setup-container.sh)
   "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+  // ANTHROPIC_API_KEY — add ONLY if user explicitly provides an API key.
+  // WARNING: An empty value (unset on host) breaks OAuth by triggering API-key auth mode.
+  // WARNING: Do NOT set CLAUDE_CONFIG_DIR — it breaks the volume auth strategy.
+  // See references/auth-forwarding.md § Critical Warnings.
 }
 ```
 
@@ -279,9 +313,7 @@ Add only for selected AI CLIs:
 Add only for selected AI CLIs:
 ```jsonc
 {
-  "ANTHROPIC_API_KEY": {
-    "description": "API key for AI CLI tools (console.anthropic.com)"
-  },
+  // Add ANTHROPIC_API_KEY ONLY if user chose API-key auth (not OAuth)
   "GITHUB_TOKEN": {
     "description": "GitHub PAT for gh CLI"
   }

@@ -1,3 +1,5 @@
+// FR-INIT — project analysis for flowai-init
+// FR-INIT.STACK — stack detection via marker files
 /**
  * generate_agents.ts — Project analysis tool for flowai-init.
  *

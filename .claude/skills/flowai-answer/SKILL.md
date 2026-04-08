@@ -4,6 +4,7 @@ description: >-
   Analyze and answer user questions in Autonomous Mode by reading documentation
   and inspecting codebase
 disable-model-invocation: true
+argument-hint: question about the project
 ---
 
 # Task Answer

@@ -66,6 +66,12 @@ RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 RUN curl -fsSL https://opencode.ai/install | bash
 ```
 
+### flowai
+```dockerfile
+# flowai CLI (requires Deno installed in earlier layer)
+RUN deno install -g -A -f jsr:@korchasa/flowai
+```
+
 ## Firewall Support (append when security hardening enabled)
 
 ```dockerfile

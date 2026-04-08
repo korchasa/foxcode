@@ -5,16 +5,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "deno run -A .claude/scripts/flowai-lint-on-write/run.ts",
-            "timeout": 30
-          }
-        ],
-        "matcher": "Write|Edit"
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
             "command": "deno run -A .claude/scripts/flowai-skill-structure-validate/run.ts",
             "timeout": 30
           }
@@ -30,18 +20,6 @@
           }
         ],
         "matcher": "Write|Edit"
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "deno run -A .claude/scripts/flowai-test-before-commit/run.ts",
-            "timeout": 600
-          }
-        ],
-        "matcher": "Bash"
       }
     ]
   }

@@ -69,8 +69,14 @@ When auth is lost (new volume, new workspace), it can be restored automatically 
 
 **postCreateCommand** (add to existing):
 ```jsonc
-"claude-auth": "[ ! -f ~/.claude/.credentials.json ] && [ -s ~/.claude-auth-staging.json ] && cp ~/.claude-auth-staging.json ~/.claude/.credentials.json && chmod 600 ~/.claude/.credentials.json || true"
+"claude-auth": ".devcontainer/setup-container.sh"
 ```
+
+The `setup-container.sh` script handles both Claude auth and gh CLI auth. See [devcontainer-template.md](devcontainer-template.md) § Auth forwarding via setup-container.sh for the full script.
+
+**Why a script instead of inline?** The previous inline pattern (`[ ! -f ... ] && ... || true`) had two problems:
+- `|| true` masked ALL errors — impossible to diagnose failures
+- `[ ! -f ... ]` guard skipped copy when a corrupt/empty `.credentials.json` existed from a failed OAuth attempt
 
 ### How It Works
 
@@ -80,20 +86,24 @@ Keychain ──initializeCommand──→  ~/.claude-auth-staging.json (temp fil
                                    │
                                    ├─ bind,readonly mount ──→ ~/.claude-auth-staging.json
                                    │
-                                   └─ postCreateCommand copies once:
+                                   └─ postCreateCommand runs setup-container.sh:
                                       ~/.claude-auth-staging.json → ~/.claude/.credentials.json
-                                      (only if .credentials.json doesn't exist in volume)
+                                      (always copies if staging file is non-empty)
 ```
 
 ### Behavior
 
 - **First create (empty volume)**: Tokens copied from host Keychain → auth works immediately
-- **Rebuild (volume has tokens)**: Skip copy (`[ ! -f ... ]` guard) → existing tokens preserved
-- **Host re-auth**: Delete `~/.claude/.credentials.json` in container + restart → re-copied from host
-- **Non-macOS host**: `security` command fails silently → empty staging file → no copy → user authenticates via extension UI
+- **Rebuild (volume has tokens)**: Tokens overwritten from staging → always fresh from host Keychain
+- **Host re-auth**: Tokens auto-updated on next rebuild (initializeCommand re-extracts from Keychain)
+- **Non-macOS host**: `security` command fails silently → empty staging file → script logs message and exits cleanly → user authenticates via `claude login`
 - **Multiple containers**: Each has own volume, own copy of tokens → no conflicts
 
 ## Critical Warnings
+
+### DO NOT set `ANTHROPIC_API_KEY` to empty string in `remoteEnv`
+
+`${localEnv:ANTHROPIC_API_KEY}` resolves to an empty string when the variable is not set on the host. Claude Code interprets an empty `ANTHROPIC_API_KEY` as an explicit API-key auth attempt — it skips OAuth entirely and fails with an auth error. Only include `ANTHROPIC_API_KEY` in `remoteEnv` if the user explicitly provides an API key value. When using OAuth (auth forwarding from macOS Keychain), do NOT include this variable at all.
 
 ### DO NOT set `CLAUDE_CONFIG_DIR`
 

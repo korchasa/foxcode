@@ -113,7 +113,7 @@ The user wants to bootstrap an AI agent's understanding of the project. The agen
    - For **Brownfield**: ask "Create missing components? Update existing via diff? [create missing / update all / select]"
 
 6. **Generate AGENTS.md Files**
-   - Read template files from `assets/` directory:
+   - Read template files from `../../assets/` directory (pack-level shared assets):
      - `AGENTS.template.md` — reference for `./AGENTS.md`
      - `AGENTS.documents.template.md` — fallback for `./documents/AGENTS.md`
      - `AGENTS.scripts.template.md` — fallback for `./scripts/AGENTS.md`

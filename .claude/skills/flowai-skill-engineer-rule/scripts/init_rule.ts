@@ -40,8 +40,8 @@ alwaysApply: true
 `;
 
 const CLAUDE_TEMPLATE_CONDITIONAL = `---
-description: {description}
-paths: {globs}
+paths:
+  - "{globs}"
 ---
 
 # {title}

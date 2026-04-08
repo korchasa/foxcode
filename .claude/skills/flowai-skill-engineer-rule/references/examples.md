@@ -114,8 +114,9 @@ alwaysApply: false
 
 ```markdown
 ---
-description: TypeScript coding standards
-paths: src/**/*.ts
+paths:
+  - "src/**/*.ts"
+  - "lib/**/*.ts"
 ---
 
 # TypeScript Standards
@@ -125,4 +126,35 @@ paths: src/**/*.ts
 - Prefer `interface` over `type` for object shapes
 - Use `readonly` for immutable properties
 ```
+
+### Test Conventions (.claude/rules/testing.md)
+
+```markdown
+---
+paths:
+  - "**/*.test.ts"
+  - "**/*.spec.ts"
+---
+
+# Test Conventions
+
+- Describe block = module/component name
+- It block = behavior description
+- Arrange-Act-Assert pattern
+- No test interdependencies
+- Mock external services, not internal modules
+```
+
+### Always-Apply Architecture (.claude/rules/architecture.md)
+
+```markdown
+# Architecture
+
+- `src/domain/` — pure business logic, no framework imports
+- `src/api/` — thin handlers, delegate to domain
+- `src/infra/` — database, external services
+- Never import from `api/` or `infra/` in `domain/`
+```
+
+**Note:** Claude Code `paths:` triggers on `Read` only. `Write`/`Edit` to a matching path without prior `Read` does NOT load the rule. `globs:` and `alwaysApply:` fields are Cursor-specific and silently ignored in Claude Code.
 
