@@ -44,6 +44,21 @@ function createBrowserApi(deps) {
     return results?.[0] ?? null
   }
 
+  /**
+   * Shared pattern for DOM actions: wait for selector, execute action, check result.
+   * @param {string} selector - CSS selector
+   * @param {number} timeout - wait timeout ms
+   * @param {string} actionCode - generated JS code from build*Action()
+   * @param {string} name - action name for error messages
+   */
+  async function domAction(selector, timeout, actionCode, name) {
+    const tabId = await getTargetTabId()
+    const code = buildWaitAndAct(selector, timeout, actionCode)
+    const result = await execInTab(tabId, code)
+    if (!result?.ok) throw new Error(result?.error || `${name} failed`)
+    return result
+  }
+
   const NAVIGATION_TIMEOUT_MS = 30000
 
   /** Wait for navigation to complete on given tab, with timeout */
@@ -114,67 +129,35 @@ function createBrowserApi(deps) {
     // --- DOM Interaction ---
 
     async click(selector, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildClickAction())
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'click failed')
-      return result
+      return domAction(selector, timeout, buildClickAction(), 'click')
     },
 
     async dblclick(selector, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildDblclickAction())
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'dblclick failed')
-      return result
+      return domAction(selector, timeout, buildDblclickAction(), 'dblclick')
     },
 
     async type(selector, text, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildTypeAction(text))
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'type failed')
-      return result
+      return domAction(selector, timeout, buildTypeAction(text), 'type')
     },
 
     async fill(selector, value, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildFillAction(value))
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'fill failed')
-      return result
+      return domAction(selector, timeout, buildFillAction(value), 'fill')
     },
 
     async select(selector, value, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildSelectAction(value))
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'select failed')
-      return result
+      return domAction(selector, timeout, buildSelectAction(value), 'select')
     },
 
     async check(selector, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildCheckAction(true))
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'check failed')
-      return result
+      return domAction(selector, timeout, buildCheckAction(true), 'check')
     },
 
     async uncheck(selector, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildCheckAction(false))
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'uncheck failed')
-      return result
+      return domAction(selector, timeout, buildCheckAction(false), 'uncheck')
     },
 
     async hover(selector, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildHoverAction())
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || 'hover failed')
-      return result
+      return domAction(selector, timeout, buildHoverAction(), 'hover')
     },
 
     async press(key) {
@@ -200,11 +183,7 @@ function createBrowserApi(deps) {
     // --- Page Query ---
 
     async $(selector, { timeout = 2000 } = {}) {
-      const tabId = await getTargetTabId()
-      const code = buildWaitAndAct(selector, timeout, buildQueryAction())
-      const result = await execInTab(tabId, code)
-      if (!result?.ok) throw new Error(result?.error || '$ failed')
-      return result
+      return domAction(selector, timeout, buildQueryAction(), '$')
     },
 
     async $$(selector) {

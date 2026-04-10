@@ -32,7 +32,7 @@
 - **Desc:** Send current page content or selected text as context into CC session
 - **Scenario:** CC requests page content via MCP tool -> content delivered as context to active CC session
 - **Acceptance:**
-  - [x] Page content accessible to CC via `api.snapshot()` and `api.eval()` in `evalInBrowser`. Evidence: `extension/background/browser-api.js:100-253` (DOM/query helpers), `extension/content/content-script.js:7-21` (eval in page world)
+  - [x] Page content accessible to CC via `api.snapshot()` and `api.eval()` in `evalInBrowser`. Evidence: `extension/background/browser-api.js:119-232` (DOM/query helpers), `extension/content/content-script.js:7-21` (eval in page world)
   - [x] Content arrives in CC session as tool result. Evidence: `foxcode/channel/server.mjs:228-239` (evalInBrowser handler)
 
 ### 3.4 FR-4: Project Context
@@ -49,12 +49,12 @@
   - [x] `evalInBrowser` MCP tool with `code` (string) + `timeout` (number, optional) params. Evidence: `foxcode/channel/lib.mjs:245-319` (TOOL_DEFINITIONS), `foxcode/channel/server.mjs:228-239` (handler)
   - [x] Code syntax validated before execution (async-aware). Evidence: `foxcode/channel/validator.mjs:5-12` (validateCode), `foxcode/channel/validator.test.mjs`
   - [x] Background script executes code via `new Function('api', ...)` with injected API object. Evidence: `extension/background/background.js:260-272`
-  - [x] API provides DOM helpers (click, fill, type, select, check, hover, waitFor, $, $$, snapshot). Evidence: `extension/background/browser-api.js:100-253`, `extension/background/dom-helpers.js`
+  - [x] API provides DOM helpers (click, fill, type, select, check, hover, waitFor, $, $$, snapshot). Evidence: `extension/background/browser-api.js:47-60` (domAction helper), `extension/background/browser-api.js:119-220` (api methods), `extension/background/dom-helpers.js`
   - [x] DOM helpers auto-wait for element (poll 100ms, configurable timeout). Evidence: `extension/background/dom-helpers.js:14-32` (buildWaitAndAct)
-  - [x] Navigation helpers await page load via webNavigation.onCompleted. Evidence: `extension/background/browser-api.js:257-267`
-  - [x] `navigate()` creates new active tab on first call. Subsequent navigations reuse and activate managed tab. `closeTab()` resets state. Evidence: `extension/background/browser-api.js:21-28,257-267,306-317`, `extension/background/browser-api.test.js:364-548`
-  - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:326-358`
-  - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:245-253`
+  - [x] Navigation helpers await page load via webNavigation.onCompleted. Evidence: `extension/background/browser-api.js:236-272`
+  - [x] `navigate()` creates new active tab on first call. Subsequent navigations reuse and activate managed tab. `closeTab()` resets state. Evidence: `extension/background/browser-api.js:21-28,236-246,285-296`, `extension/background/browser-api.test.js:364-548`
+  - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:305-337`
+  - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:224-232`
   - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:265-271`
   - [x] `reply` tool removed (IDE shows all CC output). Evidence: `foxcode/channel/lib.mjs` (2 tools: status, evalInBrowser)
   - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message, reply). Evidence: `foxcode/channel/lib.mjs` (2 tools: status, evalInBrowser)
