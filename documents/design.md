@@ -86,8 +86,8 @@ graph LR
 - **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`sh -c "cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install && node server.mjs"`). Auto-installs deps on first run, loads automatically on plugin enable. No npm package needed.
 - **Launch skills:** `/foxcode:foxcode-run-project-profile` (isolated Firefox via web-ext) and `/foxcode:foxcode-run-user-profile` (manual extension loading via about:debugging, auto-open connection page). Both self-contained: prereq check, locate extension, cache paths in `.foxcode/config.json`, launch/guide, verify connectivity
 - **Bundled scripts** (`foxcode/skills/foxcode-run-project-profile/scripts/`): Python 3.9+ utilities shared by both skills
-  - `resolve_env.py` — discovers Firefox binary (macOS/Linux/Windows), extension dir, reads port/password. Greenfield: saves to `.foxcode/config.json`. Brownfield: reads cache, re-discovers if stale. Output: `--format=json` or `--format=shell`
-  - `launch_firefox.py` — calls `resolve_env` internally, launches web-ext with PID lifecycle (`.foxcode/web-ext.pid`): stale/live detection, cleanup on exit (SIGTERM/SIGHUP/normal)
+  - `resolve_env.py` — discovers Firefox binary (macOS/Linux/Windows), extension dir. Greenfield: saves to `.foxcode/config.json`. Brownfield: reads cache, re-discovers if stale. Output: `--format=json` or `--format=shell`. Does NOT handle port/password — those come only from live MCP `status` (single source of truth; avoids stale `~/.foxcode/port` vs. running server mismatch)
+  - `launch_firefox.py` — accepts `--port`/`--password` (passed by skill from `status` response), resolves Firefox+extension via `resolve_env`, launches web-ext with PID lifecycle (`.foxcode/web-ext.pid`): stale/live detection, cleanup on exit (SIGTERM/SIGHUP/normal). Without `--port`/`--password` (dev mode): no `--start-url`, extension auto-discovers via port scan
 
 ### Idempotency
 - `.xpi` download: detect existing file, ask re-download or skip

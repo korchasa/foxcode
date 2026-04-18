@@ -40,21 +40,13 @@ class TestResolveEnv(unittest.TestCase):
         Path(self.fake_ff).write_text("#!/bin/sh\necho fake")
         os.chmod(self.fake_ff, 0o755)
 
-        # Fake foxcode home dir with port and password
-        self.foxcode_home = os.path.join(self.tmpdir, ".foxcode")
-        os.makedirs(self.foxcode_home)
-        Path(os.path.join(self.foxcode_home, "port")).write_text("8800")
-        Path(os.path.join(self.foxcode_home, "password")).write_text("abc123")
-
     def tearDown(self):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def _run(self, fmt="shell", extra_args=None, env_override=None):
         env = os.environ.copy()
-        # Override HOME so script finds our fake .foxcode/
         env["HOME"] = self.tmpdir
-        # Pass fake firefox path
         if env_override:
             env.update(env_override)
         cmd = [
@@ -64,10 +56,10 @@ class TestResolveEnv(unittest.TestCase):
             "--no-default-firefox-paths",
             "--extension-search-paths", self.ext_dir,
         ] + (extra_args or [])
-        return subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=10)
+        return subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=10, cwd=self.tmpdir)
 
-    def test_shell_format_exports_all_vars(self):
-        """--format=shell outputs all required variables."""
+    def test_shell_format_exports_paths_only(self):
+        """--format=shell outputs SKILL_DIR/FIREFOX/EXT_DIR — no port/password."""
         result = self._run(fmt="shell")
         self.assertEqual(result.returncode, 0, result.stderr)
         lines = result.stdout.strip().splitlines()
@@ -75,24 +67,22 @@ class TestResolveEnv(unittest.TestCase):
         self.assertIn("SKILL_DIR", exports)
         self.assertIn("FIREFOX", exports)
         self.assertIn("EXT_DIR", exports)
-        self.assertIn("PORT", exports)
-        self.assertIn("PASSWORD", exports)
+        self.assertNotIn("PORT", exports)
+        self.assertNotIn("PASSWORD", exports)
         self.assertEqual(exports["FIREFOX"], self.fake_ff)
-        self.assertEqual(exports["PORT"], "8800")
-        self.assertEqual(exports["PASSWORD"], "abc123")
         self.assertTrue(exports["SKILL_DIR"].endswith("foxcode-run-project-profile"))
         self.assertEqual(exports["EXT_DIR"], self.ext_dir)
 
-    def test_json_format(self):
-        """--format=json outputs valid JSON with all fields."""
+    def test_json_format_paths_only(self):
+        """--format=json outputs firefox/extensionDir/skillDir — no port/password."""
         result = self._run(fmt="json")
         self.assertEqual(result.returncode, 0, result.stderr)
         data = json.loads(result.stdout)
         self.assertEqual(data["firefox"], self.fake_ff)
-        self.assertEqual(data["port"], "8800")
-        self.assertEqual(data["password"], "abc123")
         self.assertIn("skillDir", data)
         self.assertIn("extensionDir", data)
+        self.assertNotIn("port", data)
+        self.assertNotIn("password", data)
 
     def test_missing_firefox_fails(self):
         """Exits non-zero when Firefox not found."""
@@ -112,48 +102,24 @@ class TestResolveEnv(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("extension", result.stderr.lower())
 
-    def test_missing_port_outputs_empty(self):
-        """Missing port file outputs empty PORT but still succeeds."""
-        os.remove(os.path.join(self.foxcode_home, "port"))
-        result = self._run(fmt="shell")
+    def test_does_not_read_foxcode_home(self):
+        """resolve_env must not access ~/.foxcode/ — port/password are not its concern."""
+        # Create ~/.foxcode/ with readable files; resolve_env must ignore them.
+        foxcode_home = os.path.join(self.tmpdir, ".foxcode")
+        os.makedirs(foxcode_home)
+        Path(os.path.join(foxcode_home, "port")).write_text("8800")
+        Path(os.path.join(foxcode_home, "password")).write_text("secret")
+        result = self._run(fmt="json")
         self.assertEqual(result.returncode, 0, result.stderr)
-        lines = result.stdout.strip().splitlines()
-        exports = {l.split("=", 1)[0]: l.split("=", 1)[1] for l in lines if "=" in l}
-        self.assertEqual(exports["PORT"], "")
-
-    def test_unreadable_port_file_fails(self):
-        """Port file with no read permission -> exit 1 with error."""
-        port_file = os.path.join(self.foxcode_home, "port")
-        os.chmod(port_file, 0o000)
-        result = self._run(fmt="shell")
-        os.chmod(port_file, 0o644)  # restore for cleanup
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("permission", result.stderr.lower())
-
-    def test_unreadable_password_file_fails(self):
-        """Password file with no read permission -> exit 1 with error."""
-        pw_file = os.path.join(self.foxcode_home, "password")
-        os.chmod(pw_file, 0o000)
-        result = self._run(fmt="shell")
-        os.chmod(pw_file, 0o644)  # restore for cleanup
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("permission", result.stderr.lower())
-
-    def test_missing_password_outputs_empty(self):
-        """Missing password file outputs empty PASSWORD but still succeeds."""
-        os.remove(os.path.join(self.foxcode_home, "password"))
-        result = self._run(fmt="shell")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        lines = result.stdout.strip().splitlines()
-        exports = {l.split("=", 1)[0]: l.split("=", 1)[1] for l in lines if "=" in l}
-        self.assertEqual(exports["PASSWORD"], "")
+        data = json.loads(result.stdout)
+        # No port/password appear in output regardless of file contents.
+        self.assertNotIn("port", data)
+        self.assertNotIn("password", data)
 
     def test_skill_dir_from_file_location(self):
         """SKILL_DIR derived from script's own __file__ path."""
         result = self._run(fmt="json")
         data = json.loads(result.stdout)
-        # Script is at .../skills/foxcode-run-project-profile/scripts/resolve_env.py
-        # SKILL_DIR should be .../skills/foxcode-run-project-profile
         self.assertEqual(data["skillDir"], self.skill_dir)
 
 
@@ -176,10 +142,6 @@ class TestConfigCache(unittest.TestCase):
         self.fake_ff = os.path.join(self.tmpdir, "firefox")
         Path(self.fake_ff).write_text("#!/bin/sh\necho fake")
         os.chmod(self.fake_ff, 0o755)
-        self.foxcode_home = os.path.join(self.tmpdir, ".foxcode")
-        os.makedirs(self.foxcode_home)
-        Path(os.path.join(self.foxcode_home, "port")).write_text("8800")
-        Path(os.path.join(self.foxcode_home, "password")).write_text("abc123")
         # config.json lives under CWD/.foxcode/ (cwd overridden to tmpdir)
         self.config_path = os.path.join(self.tmpdir, ".foxcode", "config.json")
 
@@ -208,13 +170,14 @@ class TestConfigCache(unittest.TestCase):
         config = json.loads(Path(self.config_path).read_text())
         self.assertEqual(config["firefox"], self.fake_ff)
         self.assertIn("extensionDir", config)
+        # Invariant: cache holds only path info, never port/password.
+        self.assertNotIn("port", config)
+        self.assertNotIn("password", config)
 
     def test_brownfield_uses_cached_config(self):
         """Second run reads from cache, ignoring search paths."""
-        # First run — creates config pointing to fake_ff
         self._run()
         self.assertTrue(os.path.exists(self.config_path))
-        # Second run — pass bogus search paths; should still work from cache
         result = self._run(extra_args=[
             "--firefox-search-paths", "/nonexistent/ff",
         ])
@@ -224,7 +187,7 @@ class TestConfigCache(unittest.TestCase):
 
     def test_brownfield_stale_config_rediscovers(self):
         """If cached firefox path is invalid, re-discovers."""
-        # Write stale config
+        Path(self.config_path).parent.mkdir(parents=True, exist_ok=True)
         Path(self.config_path).write_text(json.dumps({
             "firefox": "/nonexistent/old-firefox",
             "extensionDir": self.ext_dir,
@@ -232,7 +195,6 @@ class TestConfigCache(unittest.TestCase):
         result = self._run()
         self.assertEqual(result.returncode, 0, result.stderr)
         data = json.loads(result.stdout)
-        # Should have re-discovered the real fake_ff
         self.assertEqual(data["firefox"], self.fake_ff)
 
 

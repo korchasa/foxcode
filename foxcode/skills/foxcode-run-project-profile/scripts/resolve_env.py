@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-"""Resolve FoxCode environment: Firefox binary, extension dir, skill dir, port, password.
+"""Resolve FoxCode environment: Firefox binary, extension dir, skill dir.
 
 Derives SKILL_DIR from its own __file__ location (no external hints needed).
 Searches well-known paths for Firefox and extension directory.
+
+Port and password are NOT resolved here: they are authoritative only via the
+MCP `status` tool response. Skills pass them explicitly to launch_firefox.py.
 
 Output formats:
   --format=shell  (default): KEY=VALUE lines, one per var (eval-friendly)
@@ -102,16 +105,6 @@ def _resolve_skill_dir() -> str:
     return str(Path(os.path.abspath(__file__)).parent.parent)
 
 
-# --- Port and password ---
-
-def _read_file(path: str) -> str:
-    """Read file contents. Returns empty string if file doesn't exist. Raises on permission error."""
-    try:
-        return Path(path).read_text().strip()
-    except FileNotFoundError:
-        return ""
-
-
 # --- Config cache ---
 
 def _config_path() -> Path:
@@ -154,18 +147,12 @@ def resolve_all(
     Brownfield: reads .foxcode/config.json if cached paths are valid.
     Greenfield: discovers paths, saves to .foxcode/config.json.
     """
-    home = os.path.expanduser("~")
-    port = _read_file(os.path.join(home, ".foxcode", "port"))
-    password = _read_file(os.path.join(home, ".foxcode", "password"))
-
     cached = _load_cached_config()
     if cached:
         return {
             "skillDir": _resolve_skill_dir(),
             "firefox": cached["firefox"],
             "extensionDir": cached["extensionDir"],
-            "port": port,
-            "password": password,
         }
 
     # Greenfield discovery
@@ -173,8 +160,6 @@ def resolve_all(
         "skillDir": _resolve_skill_dir(),
         "firefox": find_firefox(firefox_search_paths, use_default_firefox_paths),
         "extensionDir": find_extension_dir(extension_search_paths, use_default_extension_paths),
-        "port": port,
-        "password": password,
     }
 
     # Cache discovered paths for next run
@@ -208,16 +193,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    try:
-        env = resolve_all(
-            firefox_search_paths=args.firefox_search_paths,
-            use_default_firefox_paths=not args.no_default_firefox_paths,
-            extension_search_paths=args.extension_search_paths,
-            use_default_extension_paths=not args.no_default_extension_paths,
-        )
-    except PermissionError as e:
-        print(f"Error: permission denied reading {e.filename}", file=sys.stderr)
-        return 1
+    env = resolve_all(
+        firefox_search_paths=args.firefox_search_paths,
+        use_default_firefox_paths=not args.no_default_firefox_paths,
+        extension_search_paths=args.extension_search_paths,
+        use_default_extension_paths=not args.no_default_extension_paths,
+    )
 
     # Validate required fields
     errors = []
@@ -237,8 +218,6 @@ def main() -> int:
         print(f"SKILL_DIR={env['skillDir']}")
         print(f"FIREFOX={env['firefox']}")
         print(f"EXT_DIR={env['extensionDir']}")
-        print(f"PORT={env['port']}")
-        print(f"PASSWORD={env['password']}")
 
     return 0
 

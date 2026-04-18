@@ -42,21 +42,19 @@ class LaunchTestBase(unittest.TestCase):
         Path(self.fake_ff).write_text("#!/bin/sh\necho fake")
         os.chmod(self.fake_ff, 0o755)
 
-        # Fake foxcode home
-        self.foxcode_home = os.path.join(self.tmpdir, ".foxcode")
-        os.makedirs(self.foxcode_home)
-        Path(os.path.join(self.foxcode_home, "port")).write_text("8800")
-        Path(os.path.join(self.foxcode_home, "password")).write_text("secret")
-
         # Dirs for PID and profile
         self.pid_file = os.path.join(self.tmpdir, "web-ext.pid")
         self.profile_dir = os.path.join(self.tmpdir, "ff-profile")
+
+        # Port/password supplied by caller (skill) — authoritative from status
+        self.port = 8800
+        self.password = "secret"
 
     def tearDown(self):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def _run_launch(self, extra_env=None, background=False):
+    def _run_launch(self, extra_env=None, background=False, extra_args=None, pass_credentials=True):
         env = os.environ.copy()
         env["HOME"] = self.tmpdir
         # Override PATH so npx resolves to a fake that exits fast
@@ -86,9 +84,15 @@ class LaunchTestBase(unittest.TestCase):
             "--extension-search-paths", self.ext_dir,
             "--no-default-extension-paths",
         ]
+        if pass_credentials:
+            cmd += ["--port", str(self.port), "--password", self.password]
+        if extra_args:
+            cmd += extra_args
+        # cwd=tmpdir so resolve_env's .foxcode/config.json lookup is isolated from
+        # whatever project the tests happen to run in.
         if background:
-            return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-        return subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=15)
+            return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, cwd=self.tmpdir)
+        return subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=15, cwd=self.tmpdir)
 
 
 class TestLaunchResolves(LaunchTestBase):
@@ -201,7 +205,7 @@ class TestWebExtArgs(LaunchTestBase):
         self.fail(f"No JSON args in stdout: {result.stdout}")
 
     def test_start_url_includes_port_and_password(self):
-        """--start-url contains port and password from resolved env."""
+        """--start-url contains port and password passed explicitly by caller."""
         result = self._run_launch()
         for line in result.stdout.splitlines():
             try:
@@ -209,12 +213,37 @@ class TestWebExtArgs(LaunchTestBase):
                 args = data["args"]
                 idx = args.index("--start-url")
                 url = args[idx + 1]
-                self.assertIn("8800", url)
-                self.assertIn("secret", url)
+                self.assertIn(str(self.port), url)
+                self.assertIn(self.password, url)
+                self.assertEqual(
+                    url,
+                    f"http://localhost:{self.port}#{self.port}:{self.password}",
+                )
                 return
             except (json.JSONDecodeError, ValueError, KeyError):
                 continue
         self.fail(f"No start-url in stdout: {result.stdout}")
+
+    def test_no_start_url_when_credentials_omitted(self):
+        """Without --port/--password, web-ext starts without --start-url (dev mode)."""
+        result = self._run_launch(pass_credentials=False)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for line in result.stdout.splitlines():
+            try:
+                data = json.loads(line)
+                args = data["args"]
+                self.assertNotIn("--start-url", args)
+                return
+            except (json.JSONDecodeError, ValueError, KeyError):
+                continue
+        self.fail(f"No JSON args in stdout: {result.stdout}")
+
+    def test_port_without_password_rejected(self):
+        """--port without --password is a caller error (invariant: both or neither)."""
+        result = self._run_launch(pass_credentials=False, extra_args=["--port", "8800"])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("--port", result.stderr)
+        self.assertIn("--password", result.stderr)
 
 
 if __name__ == "__main__":
