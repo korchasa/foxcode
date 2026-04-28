@@ -2,7 +2,7 @@ ref/
 node_modules/
 channel/node_modules/
 .claude/
-documents/whiteboards/
+documents/tasks/
 .DS_Store
 demo-project/
 .foxcode/
