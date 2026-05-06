@@ -21,6 +21,7 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from resolve_env import resolve_all
@@ -59,15 +60,20 @@ def _write_pid_file(pid_file: Path, pid: int, port: int | None) -> None:
 
 
 def _kill_process(pid: int) -> None:
-    """Terminate process: SIGTERM with 2 s grace period, then SIGKILL."""
-    import time as _time
+    """Terminate process: SIGTERM with 2 s grace period, then SIGKILL.
+
+    Uses os.kill(pid, 0) to check liveness — valid here because the target
+    (web-ext) is a child of another launch_firefox.py instance which reaps
+    it promptly via proc.wait(). Do NOT use os.kill(pid, 0) in tests where
+    the process may become a zombie — use Popen.poll() instead.
+    """
     try:
         if sys.platform == "win32":
             subprocess.run(["taskkill", "/F", "/PID", str(pid)], check=False)
             return
         os.kill(pid, signal.SIGTERM)
         for _ in range(40):
-            _time.sleep(0.05)
+            time.sleep(0.05)
             try:
                 os.kill(pid, 0)
             except OSError:

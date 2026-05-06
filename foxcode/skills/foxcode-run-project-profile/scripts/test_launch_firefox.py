@@ -158,7 +158,12 @@ class TestLaunchResolves(LaunchTestBase):
 
 
 class TestStaleDetection(LaunchTestBase):
-    """Stale/live PID detection."""
+    """Stale/live PID detection.
+
+    Use Popen.poll() (not os.kill(pid, 0)) to check subprocess liveness.
+    os.kill(pid, 0) returns success for zombie processes (dead but not reaped)
+    on macOS/Linux. poll() calls waitpid() which reaps the zombie correctly.
+    """
 
     def test_stale_pid_overwritten(self):
         """Stale PID file is overwritten on new launch."""
