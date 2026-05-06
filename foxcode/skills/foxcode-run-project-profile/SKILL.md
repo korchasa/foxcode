@@ -28,7 +28,8 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/launch_firefox.py" --port <PORT0> --passwor
 ```
 
 Idempotent:
-- Already running -> prints `Already running (PID X)`, exit 0 -> continue to step 3.
+- Already running on same port -> prints `Already running (PID X)`, exit 0 -> continue to step 3.
+- Running on different port (stale session) -> kills old Firefox, prints `Port changed (OLD -> NEW)...`, relaunches -> continue to step 3.
 - Launched -> PID saved to `.foxcode/web-ext.pid`.
 - Fails -> report stderr, stop.
 

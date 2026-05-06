@@ -127,7 +127,7 @@ class TestLaunchResolves(LaunchTestBase):
                     break
                 time.sleep(0.1)
             self.assertTrue(os.path.exists(self.pid_file))
-            pid = int(Path(self.pid_file).read_text().strip())
+            pid = int(Path(self.pid_file).read_text().strip().splitlines()[0])
             self.assertGreater(pid, 0)
         finally:
             proc.terminate()
@@ -167,18 +167,48 @@ class TestStaleDetection(LaunchTestBase):
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_live_pid_exits_ok(self):
-        """Live PID in file -> exit 0 with 'already running' message."""
+        """Live PID with matching port -> exit 0 with 'already running' message."""
         blocker = subprocess.Popen(
             [sys.executable, "-c", "import time; time.sleep(60)"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
-        Path(self.pid_file).write_text(str(blocker.pid) + "\n")
+        # Write PID file with matching port so check passes
+        Path(self.pid_file).write_text(f"{blocker.pid}\n{self.port}\n")
         try:
             result = self._run_launch()
             self.assertEqual(result.returncode, 0)
             self.assertIn("already running", result.stdout.lower())
         finally:
             blocker.terminate()
+            blocker.wait()
+
+    def test_live_pid_port_mismatch_relaunches(self):
+        """Live PID with different port -> kill old process and launch new Firefox."""
+        blocker = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+        old_pid = blocker.pid
+        stale_port = self.port + 99
+        Path(self.pid_file).write_text(f"{old_pid}\n{stale_port}\n")
+        try:
+            result = self._run_launch()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            # Use poll() to reap the zombie and detect actual termination
+            deadline = time.time() + 2.0
+            while time.time() < deadline and blocker.poll() is None:
+                time.sleep(0.05)
+            exited = blocker.poll() is not None
+            self.assertTrue(
+                exited,
+                f"Old Firefox process should have been killed. "
+                f"stdout={result.stdout!r} stderr={result.stderr!r}",
+            )
+            # Should NOT print "already running"
+            self.assertNotIn("already running", result.stdout.lower())
+        finally:
+            if blocker.poll() is None:
+                blocker.terminate()
             blocker.wait()
 
 
