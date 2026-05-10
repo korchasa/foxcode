@@ -54,21 +54,33 @@ class LaunchTestBase(unittest.TestCase):
         import shutil
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
-    def _run_launch(self, extra_env=None, background=False, extra_args=None, pass_credentials=True):
+    def _run_launch(self, extra_env=None, background=False, extra_args=None, pass_credentials=True, npx_keepalive=False):
         env = os.environ.copy()
         env["HOME"] = self.tmpdir
-        # Override PATH so npx resolves to a fake that exits fast
+        # Override PATH so npx resolves to a fake. Default = exit fast; tests
+        # that need to observe a live PID set npx_keepalive=True so the fake
+        # blocks until SIGTERM (matches real web-ext lifecycle).
         fake_npx = os.path.join(self.tmpdir, "bin", "npx")
         os.makedirs(os.path.dirname(fake_npx), exist_ok=True)
-        Path(fake_npx).write_text(textwrap.dedent("""\
-            #!/usr/bin/env python3
-            import json, sys, signal, time
-            signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
-            print(json.dumps({"args": sys.argv[1:]}), flush=True)
-            if "--wait" in sys.argv:
+        if npx_keepalive:
+            Path(fake_npx).write_text(textwrap.dedent("""\
+                #!/usr/bin/env python3
+                import json, sys, signal, time
+                signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+                print(json.dumps({"args": sys.argv[1:]}), flush=True)
                 while True:
                     time.sleep(0.1)
-        """))
+            """))
+        else:
+            Path(fake_npx).write_text(textwrap.dedent("""\
+                #!/usr/bin/env python3
+                import json, sys, signal, time
+                signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
+                print(json.dumps({"args": sys.argv[1:]}), flush=True)
+                if "--wait" in sys.argv:
+                    while True:
+                        time.sleep(0.1)
+            """))
         os.chmod(fake_npx, 0o755)
         env["PATH"] = os.path.dirname(fake_npx) + os.pathsep + env.get("PATH", "")
 
@@ -107,20 +119,7 @@ class TestLaunchResolves(LaunchTestBase):
 
     def test_pid_file_written(self):
         """PID file is created while process runs."""
-        # Override fake npx to stay alive
-        fake_npx = os.path.join(self.tmpdir, "bin", "npx")
-        os.makedirs(os.path.dirname(fake_npx), exist_ok=True)
-        Path(fake_npx).write_text(textwrap.dedent("""\
-            #!/usr/bin/env python3
-            import signal, sys, time
-            signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
-            print("RUNNING", flush=True)
-            while True:
-                time.sleep(0.1)
-        """))
-        os.chmod(fake_npx, 0o755)
-
-        proc = self._run_launch(background=True)
+        proc = self._run_launch(background=True, npx_keepalive=True)
         try:
             for _ in range(50):
                 if os.path.exists(self.pid_file):
@@ -135,18 +134,7 @@ class TestLaunchResolves(LaunchTestBase):
 
     def test_sigterm_cleans_pid(self):
         """SIGTERM cleans up PID file."""
-        fake_npx = os.path.join(self.tmpdir, "bin", "npx")
-        os.makedirs(os.path.dirname(fake_npx), exist_ok=True)
-        Path(fake_npx).write_text(textwrap.dedent("""\
-            #!/usr/bin/env python3
-            import signal, sys, time
-            signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
-            while True:
-                time.sleep(0.1)
-        """))
-        os.chmod(fake_npx, 0o755)
-
-        proc = self._run_launch(background=True)
+        proc = self._run_launch(background=True, npx_keepalive=True)
         for _ in range(50):
             if os.path.exists(self.pid_file):
                 break
