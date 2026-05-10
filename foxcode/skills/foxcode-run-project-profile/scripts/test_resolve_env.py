@@ -198,5 +198,51 @@ class TestConfigCache(unittest.TestCase):
         self.assertEqual(data["firefox"], self.fake_ff)
 
 
+class TestOpencodeHandoffFile(unittest.TestCase):
+    """resolve_env.py honours ~/.foxcode/opencode-plugin-dir for extension discovery."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.skill_dir = os.path.join(self.tmpdir, "skills", "foxcode-run-project-profile")
+        self.scripts_dir = os.path.join(self.skill_dir, "scripts")
+        os.makedirs(self.scripts_dir)
+        self.script_link = os.path.join(self.scripts_dir, "resolve_env.py")
+        os.symlink(os.path.abspath(SCRIPT), self.script_link)
+        # Plugin bundle layout
+        self.plugin_dir = os.path.join(self.tmpdir, "plugin")
+        self.bundle_ext = os.path.join(self.plugin_dir, "bundle", "extension")
+        os.makedirs(self.bundle_ext)
+        Path(os.path.join(self.bundle_ext, "manifest.json")).write_text("{}")
+        # Fake firefox
+        self.fake_ff = os.path.join(self.tmpdir, "firefox")
+        Path(self.fake_ff).write_text("#!/bin/sh\necho fake")
+        os.chmod(self.fake_ff, 0o755)
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def test_extension_via_opencode_handoff_file(self):
+        """When ~/.foxcode/opencode-plugin-dir points at a valid bundle, that wins."""
+        # Write handoff file under fake HOME
+        foxcode_home = os.path.join(self.tmpdir, ".foxcode")
+        os.makedirs(foxcode_home)
+        Path(os.path.join(foxcode_home, "opencode-plugin-dir")).write_text(self.plugin_dir + "\n")
+
+        env = os.environ.copy()
+        env["HOME"] = self.tmpdir
+        cmd = [
+            sys.executable, self.script_link,
+            "--format", "json",
+            "--firefox-search-paths", self.fake_ff,
+            "--no-default-firefox-paths",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=self.tmpdir, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        # Bundle extension wins over any CC marketplace fallback or ./extension cwd entry
+        self.assertEqual(data["extensionDir"], os.path.abspath(self.bundle_ext))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -195,6 +195,24 @@
 ### 4.6 NF-6: Performance
 - [x] Message delivery latency <1s. Evidence: tested manually
 
+### 4.7 NF-7: Easy Install in OpenCode [important]
+- **Description:** Secondary install path = OpenCode plugin npm package (`@korchasa/foxcode-opencode`). User adds one entry to the `plugin` array in `opencode.json`; the package auto-seeds launch skills into `~/.config/opencode/skills/`, writes `~/.foxcode/opencode-plugin-dir` so the existing Python helpers locate the bundled extension, and emits an MCP entry snippet for the user. CLI fallback (`npx -y @korchasa/foxcode-opencode setup [--write-config]`) for one-shot install or CI.
+- **Tasks:** [add-opencode-support](tasks/2026/05/add-opencode-support.md)
+- **Scenario:** User runs `npx -y @korchasa/foxcode-opencode setup --write-config` from a project dir → CLI seeds skills, writes handoff, lazily installs channel deps, patches `opencode.json` → user starts OpenCode → runs `/foxcode-run-project-profile` → `evalInBrowser` round-trips against Firefox. Plugin route (no CLI): user adds `"plugin": ["@korchasa/foxcode-opencode"]` to `opencode.json`, OpenCode auto-installs via Bun, plugin runs on `session.created`, prints MCP snippet to stderr → user pastes snippet → restart → done.
+- **Acceptance:**
+  - [x] `opencode/` package layout: `package.json`, `index.mjs` (plugin entry), `lib/` (paths, seed-skills, mcp-snippet, patcher, handoff, exec, lazy-install, prereq, skill-frontmatter), `bin/foxcode-opencode.mjs` (CLI), `prepack.mjs`, `test/`. Evidence: `ls opencode/`, `node --test opencode/lib/*.test.mjs opencode/test/*.test.mjs`
+  - [x] Plugin seeds skills idempotently (`created` → `kept` → `replaced-dangling` → `user-dir-kept`). Evidence: `opencode/lib/seed-skills.test.mjs` (5 tests pass)
+  - [x] Plugin emits MCP snippet to stderr exactly when `mcp.foxcode` is missing from project + global `opencode.json`. Evidence: `opencode/test/plugin.test.mjs` (`bootstrap seeds skills…`, `bootstrap stays quiet…`)
+  - [x] CLI `setup` is idempotent (second run reports `kept`); `setup --write-config` patches plain JSON; refuses files with `//` or `/*` comments. Evidence: `opencode/test/cli.test.mjs` (6 tests pass)
+  - [x] `opencode.json` patcher: surgical, idempotent (`created` / `added-mcp` / `added-foxcode` / `updated` / `noop`); refuses JSONC comments and non-object top-level shape. Evidence: `opencode/lib/patcher.test.mjs` (8 tests pass)
+  - [x] Channel deps installed lazily (`npm ci --omit=dev`) on first plugin/CLI invocation; tarball does not vendor `node_modules`. Evidence: `opencode/lib/lazy-install.mjs`, `opencode/test/pack.test.mjs::test prepack…`
+  - [x] `prepack.mjs` syncs version from `foxcode/.claude-plugin/plugin.json`, copies `extension/`, `foxcode/channel/`, `foxcode/skills/foxcode-run-{project,user}-profile/` into `bundle/`, excluding `node_modules/`. Evidence: `opencode/test/pack.test.mjs`
+  - [x] File-based handoff (`~/.foxcode/opencode-plugin-dir`) consumed by `resolve_env.py` — bundle extension takes priority over CC marketplace heuristic. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/test_resolve_env.py::TestOpencodeHandoffFile`
+  - [x] Bundled SKILL.md files have valid OpenCode frontmatter (required `name`, `description`). Evidence: `opencode/lib/skill-frontmatter.test.mjs::real bundled skills (project + user profile) parse cleanly`
+  - [x] CC plugin marketplace path unchanged (no edits to `foxcode/.claude-plugin/`, `foxcode/.mcp.json`, channel sources, skill bodies). Evidence: `git diff main -- foxcode/.claude-plugin foxcode/.mcp.json foxcode/channel foxcode/skills` shows no changes outside additive Python helper extension
+  - [x] Subprocess wrapper (`lib/exec.mjs`) uses `node:child_process.spawn` for cross-runtime support (Bun and Node). Evidence: `opencode/lib/exec.test.mjs`
+  - [ ] End-to-end smoke test on macOS captured in PR (manual): install OpenCode → install plugin → run `/foxcode-run-project-profile` → run `evalInBrowser({code:'return await navigate("https://example.com")'})`. Evidence: PR transcript
+
 ## 5. Interfaces
 - **Transport:** Channel Plugin (MCP server inside CC) ↔ WebSocket localhost:8787 ↔ Firefox Extension
 - **Extension APIs:** browser.browserAction, browser.runtime, browser.tabs, browser.cookies, browser.webNavigation, browser.windows

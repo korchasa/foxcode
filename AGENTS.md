@@ -66,6 +66,12 @@ foxcode/
 │   ├── content/          #   Content script (DOM access, api.eval)
 │   ├── icons/            #   Extension icon
 │   └── manifest.json     #   Extension manifest
+├── opencode/             # OpenCode npm package (@korchasa/foxcode-opencode)
+│   ├── index.mjs         #   Plugin entry: session.created hook (seed + handoff + snippet)
+│   ├── bin/              #   CLI: foxcode-opencode setup|uninstall|doctor
+│   ├── lib/              #   paths, seed-skills, mcp-snippet, patcher, handoff, exec, ...
+│   ├── prepack.mjs       #   Bundle assembly at npm-pack time (copies ../extension, ../foxcode/{channel,skills})
+│   └── test/             #   Plugin + CLI + pack integration tests
 ├── documents/            # Project docs (SRS, SDS, whiteboards)
 ├── scripts/              # Dev scripts (check.sh, test.sh, dev.sh)
 ├── .mcp.json             # Dev-mode MCP config (local server.mjs)

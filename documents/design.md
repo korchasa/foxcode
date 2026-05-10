@@ -89,6 +89,19 @@ graph LR
   - `resolve_env.py` — discovers Firefox binary (macOS/Linux/Windows), extension dir. Greenfield: saves to `.foxcode/config.json`. Brownfield: reads cache, re-discovers if stale. Output: `--format=json` or `--format=shell`. Does NOT handle port/password — those come only from live MCP `status` (single source of truth; avoids stale `~/.foxcode/port` vs. running server mismatch)
   - `launch_firefox.py` — accepts `--port`/`--password` (passed by skill from `status` response), resolves Firefox+extension via `resolve_env`, launches web-ext with PID lifecycle (`.foxcode/web-ext.pid`): stale/live detection, cleanup on exit (SIGTERM/SIGHUP/normal). Without `--port`/`--password` (dev mode): no `--start-url`, extension auto-discovers via port scan
 
+### Secondary: OpenCode npm package (NF-7)
+- **Structure:** sibling top-level dir `opencode/` (parallel to `foxcode/`, `extension/`). Published to npm as `@korchasa/foxcode-opencode`.
+- **Package layout:** `index.mjs` (plugin entry), `lib/` (paths, seed-skills, mcp-snippet, patcher, handoff, exec, lazy-install, prereq, skill-frontmatter), `bin/foxcode-opencode.mjs` (CLI), `prepack.mjs` (bundle assembly), `bundle/` (created at pack time, contains `extension/`, `channel/`, `skills/`).
+- **Plugin route:** user adds `"plugin": ["@korchasa/foxcode-opencode"]` to `opencode.json`; OpenCode auto-installs via Bun. On `session.created` (earliest plugin-callable hook) the plugin (a) symlinks bundled SKILL.md dirs into `~/.config/opencode/skills/foxcode-run-{project,user}-profile/`, (b) writes `~/.foxcode/opencode-plugin-dir` for Python helpers, (c) lazy-installs channel deps via `npm ci --omit=dev`, (d) emits an MCP snippet to stderr exactly when `mcp.foxcode` is missing from project + global `opencode.json`. Snippet emitted at most once per process.
+- **CLI route (one-shot):** `npx -y @korchasa/foxcode-opencode setup [--write-config]`. Same actions as the plugin, plus `--write-config` patches `opencode.json` directly (plain JSON only; refuses files with `//` or `/*` comments). `uninstall` removes seeded symlinks and the handoff file but never auto-removes `mcp.foxcode` (avoids destructive config mutation). `doctor` prints diagnostics.
+- **Seed semantics:** symlink target check. `created` (new), `kept` (correct symlink), `replaced-dangling` (target moved by nvm/reinstall), `user-dir-kept` (real dir preserved), `copied-fallback` (Windows non-admin perm-denied → recursive copy).
+- **Patcher actions:** `created` (file did not exist), `added-mcp` (mcp key absent), `added-foxcode` (mcp present, foxcode missing), `updated` (foxcode present with different value), `noop` (already correct).
+- **Handoff (`~/.foxcode/opencode-plugin-dir`):** absolute path to plugin root. `resolve_env.py::find_extension_dir` reads this file (mode 0644) before falling back to the CC marketplace clone heuristic. Mirrors the existing `~/.foxcode/port` / `~/.foxcode/password` pattern — env-var propagation through subprocess chains is unreliable.
+- **Version sync:** `prepack.mjs` reads `version` from `foxcode/.claude-plugin/plugin.json` (single source of truth) and writes it back into `opencode/package.json` before pack. Keeps CC + OpenCode releases aligned.
+- **Bundle exclusions:** `prepack.mjs` excludes `node_modules/`, `.foxcode/`, `build/`, `.DS_Store` from the copied trees. Channel deps install lazily on first invocation, not at pack time.
+- **Subprocess strategy:** `lib/exec.mjs` wraps `node:child_process.spawn` (no Bun-only `$` template tag) — single code path under both Bun (OpenCode plugin sandbox) and Node (CLI / dev).
+
 ### Idempotency
 - `.xpi` download: detect existing file, ask re-download or skip
 - Safe to re-run
+- OpenCode plugin/CLI: `seedSkills` and `patchOpencodeJson` are idempotent by construction — second run is a no-op when state already matches.
