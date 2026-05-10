@@ -1,6 +1,9 @@
 ref/
 node_modules/
 channel/node_modules/
+opencode/bundle/
+opencode/*.tgz
+opencode/deno.lock
 .claude/
 documents/tasks/
 .DS_Store

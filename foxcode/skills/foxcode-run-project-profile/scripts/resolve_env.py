@@ -74,6 +74,23 @@ def find_firefox(
 
 # --- Extension directory discovery ---
 
+def _read_opencode_handoff() -> str | None:
+    """Read absolute path to OpenCode plugin's bundle dir from handoff file.
+
+    Written by `@korchasa/foxcode-opencode` (plugin or CLI) on first run;
+    consumed here so skills can locate the bundled extension when launched
+    from an OpenCode session. File-based handoff (rather than env var) is
+    the proven pattern in this codebase — env vars do not propagate
+    reliably through OpenCode -> bash -> python subprocess chains.
+    """
+    handoff = Path.home() / ".foxcode" / "opencode-plugin-dir"
+    try:
+        text = handoff.read_text().strip()
+    except (FileNotFoundError, PermissionError, OSError):
+        return None
+    return text or None
+
+
 def find_extension_dir(
     search_paths: list[str] | None = None,
     use_default_paths: bool = True,
@@ -81,6 +98,12 @@ def find_extension_dir(
     """Find extension directory containing manifest.json."""
     candidates = list(search_paths or [])
     if use_default_paths:
+        # OpenCode plugin handoff wins over CC marketplace heuristic when present.
+        opencode_dir = _read_opencode_handoff()
+        if opencode_dir:
+            candidates.append(os.path.join(opencode_dir, "bundle", "extension"))
+            # Dev fallback when running from cloned repo (no bundle/ yet)
+            candidates.append(os.path.join(opencode_dir, "..", "extension"))
         skill_dir = _resolve_skill_dir()
         if skill_dir:
             # Marketplace: .../marketplaces/korchasa/foxcode/skills/... -> .../korchasa/extension/

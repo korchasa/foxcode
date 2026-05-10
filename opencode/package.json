@@ -1,0 +1,51 @@
+{
+  "name": "@korchasa/foxcode-opencode",
+  "version": "0.14.0",
+  "description": "OpenCode plugin: auto-seed FoxCode launch skills, emit MCP entry snippet, ship Firefox extension + channel server",
+  "type": "module",
+  "main": "index.mjs",
+  "bin": {
+    "foxcode-opencode": "bin/foxcode-opencode.mjs"
+  },
+  "scripts": {
+    "prepack": "node prepack.mjs",
+    "postpack": "node -e \"import('node:fs/promises').then(fs => fs.rm('./bundle', { recursive: true, force: true }))\"",
+    "test": "node --test lib/*.test.mjs test/*.test.mjs",
+    "test:acceptance": "node --test test/acceptance/mcp.test.mjs test/acceptance/bridge.test.mjs",
+    "test:e2e-ide": "bash ../scripts/test-ide.sh"
+  },
+  "keywords": [
+    "opencode",
+    "foxcode",
+    "firefox",
+    "browser-automation",
+    "mcp",
+    "plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/korchasa/foxcode.git",
+    "directory": "opencode"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "index.mjs",
+    "lib/",
+    "bin/",
+    "bundle/",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@opencode-ai/plugin": "*"
+  },
+  "peerDependenciesMeta": {
+    "@opencode-ai/plugin": { "optional": true }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "ws": "^8.20.0"
+  }
+}

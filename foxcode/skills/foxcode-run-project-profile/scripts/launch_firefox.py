@@ -134,6 +134,10 @@ def main() -> int:
     parser.add_argument("--no-default-firefox-paths", action="store_true")
     parser.add_argument("--extension-search-paths", nargs="+", default=None)
     parser.add_argument("--no-default-extension-paths", action="store_true")
+    parser.add_argument(
+        "--headless", action="store_true",
+        help="Run Firefox in headless mode (no UI). Used by acceptance tests.",
+    )
     args = parser.parse_args()
 
     if (args.port is None) != (args.password is None):
@@ -179,6 +183,8 @@ def main() -> int:
         "--keep-profile-changes",
         f"--firefox={env['firefox']}",
     ] + start_url_args
+    if args.headless:
+        cmd += ["--args=--headless"]
 
     # Launch
     proc = subprocess.Popen(cmd)

@@ -29,6 +29,46 @@ Or use commands directly:
 - `/foxcode:foxcode-run-project-profile` — isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
 - `/foxcode:foxcode-run-user-profile` — your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
 
+## Install in OpenCode
+
+FoxCode also ships as an OpenCode plugin via npm. Two routes:
+
+### One-shot CLI (recommended — single restart)
+
+```sh
+npx -y @korchasa/foxcode-opencode setup --write-config
+```
+
+The CLI seeds `foxcode-run-project-profile` and `foxcode-run-user-profile` skills into `~/.config/opencode/skills/` (as symlinks to the bundled SKILL.md), writes `~/.foxcode/opencode-plugin-dir` so the launch skills can locate the bundled extension, lazily installs channel deps, and patches `opencode.json` with the `mcp.foxcode` entry. Restart OpenCode once and run `/foxcode-run-project-profile`.
+
+`--write-config` requires plain JSON — the CLI refuses files containing `//` or `/*` comments and prints the snippet for manual paste instead.
+
+### Plugin route (auto-update via Bun)
+
+Add to `opencode.json`:
+
+```json
+{ "plugin": ["@korchasa/foxcode-opencode"] }
+```
+
+OpenCode auto-installs the package via Bun on next start. The plugin runs on `session.created`, performs the same seed + handoff steps, and prints the MCP-entry snippet to stderr if `mcp.foxcode` is missing. Paste the snippet into `opencode.json` and restart OpenCode (two restarts total — the trade-off for unattended updates afterwards).
+
+### Diagnostics
+
+```sh
+npx -y @korchasa/foxcode-opencode doctor
+```
+
+Prints prereq check, plugin/bundle paths, handoff state, and `mcp.foxcode` presence.
+
+### Uninstall
+
+```sh
+npx -y @korchasa/foxcode-opencode uninstall
+```
+
+Removes seeded symlinks (preserves any user-owned real directory it found in their place) and the handoff file. `mcp.foxcode` is **not** auto-removed from `opencode.json` — remove the entry by hand to avoid destructive config mutation.
+
 ## Features
 
 - **Real browser, real context** — your Firefox with existing sessions, cookies, auth, extensions

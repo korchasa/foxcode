@@ -10,7 +10,11 @@ echo "=== FoxCode: check ==="
 
 # Comment scan
 echo "--- Comment scan ---"
-grep -rn "TODO\|FIXME\|HACK\|XXX\|debugger\|console\.log" extension/ foxcode/channel/server.mjs foxcode/channel/lib.mjs 2>/dev/null || echo "No issues found."
+grep -rn "TODO\|FIXME\|HACK\|XXX\|debugger\|console\.log" \
+  extension/ \
+  foxcode/channel/server.mjs foxcode/channel/lib.mjs \
+  opencode/index.mjs opencode/lib opencode/bin opencode/prepack.mjs \
+  2>/dev/null || echo "No issues found."
 
 # Validate manifest.json
 echo "--- Manifest validation ---"
@@ -24,12 +28,37 @@ fi
 echo "--- JS syntax check ---"
 node --check foxcode/channel/server.mjs && echo "foxcode/channel/server.mjs: syntax OK"
 node --check foxcode/channel/lib.mjs && echo "foxcode/channel/lib.mjs: syntax OK"
+node --check opencode/index.mjs && echo "opencode/index.mjs: syntax OK"
+node --check opencode/prepack.mjs && echo "opencode/prepack.mjs: syntax OK"
+node --check opencode/bin/foxcode-opencode.mjs && echo "opencode/bin/foxcode-opencode.mjs: syntax OK"
+for f in opencode/lib/*.mjs; do
+  node --check "$f" && echo "$f: syntax OK"
+done
 
-# Tests (glob-based discovery)
+# Tests — unit + acceptance (glob-based discovery)
 echo "--- Tests ---"
 node --test \
   foxcode/channel/*.test.mjs \
   extension/background/*.test.js \
-  extension/popup/*.test.js
+  extension/popup/*.test.js \
+  opencode/lib/*.test.mjs \
+  opencode/test/*.test.mjs
+
+# Acceptance: MCP-stdio protocol + WebSocket bridge end-to-end.
+# Spawn the channel as a subprocess and exercise the full RPC path
+# without requiring Firefox or OpenCode itself.
+echo "--- Acceptance (Tier 1+2: MCP + bridge) ---"
+node --test \
+  opencode/test/acceptance/mcp.test.mjs \
+  opencode/test/acceptance/bridge.test.mjs
+
+# Tier 4 (real IDE × real Firefox) is not run by `check`. It lives in:
+#   scripts/test-ide.sh    — Tier 4 (LLM tokens, ~50 s)
+
+# Python tests (skill helpers)
+echo "--- Python tests ---"
+python3 -W ignore::ResourceWarning -m unittest discover \
+  -s foxcode/skills/foxcode-run-project-profile/scripts \
+  -p 'test_*.py'
 
 echo "=== check complete ==="
