@@ -91,12 +91,31 @@ def _read_opencode_handoff() -> str | None:
     return text or None
 
 
+def _find_extension_via_plugin_root() -> str | None:
+    """Derive extension path from CLAUDE_PLUGIN_ROOT env var.
+
+    CC sets CLAUDE_PLUGIN_ROOT to the plugin dir in the marketplace clone:
+      ~/.../plugins/marketplaces/<marketplace>/<plugin>/
+    Extension lives one level up, in the marketplace root:
+      ~/.../plugins/marketplaces/<marketplace>/extension/
+    """
+    plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+    if not plugin_root:
+        return None
+    return str(Path(plugin_root).parent / "extension")
+
+
 def find_extension_dir(
     search_paths: list[str] | None = None,
     use_default_paths: bool = True,
 ) -> str | None:
     """Find extension directory containing manifest.json."""
     candidates = list(search_paths or [])
+    # CLAUDE_PLUGIN_ROOT is an explicit CC runtime signal (not a user default),
+    # so probe it regardless of use_default_paths.
+    plugin_root_ext = _find_extension_via_plugin_root()
+    if plugin_root_ext:
+        candidates.append(plugin_root_ext)
     if use_default_paths:
         # OpenCode plugin handoff wins over CC marketplace heuristic when present.
         opencode_dir = _read_opencode_handoff()
