@@ -106,6 +106,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - Extension loaded via `scripts/dev.sh` (`web-ext run --source-dir extension/`) or manually via `about:debugging`
 - CC: `claude --mcp-config .mcp.json`
 - Workflow: edit code -> reload extension -> test
+- Two foxcode MCP servers run simultaneously in dev sessions: `mcp__foxcode__` (dev mode, root `.mcp.json`, `pluginRoot: null`) and `mcp__plugin_foxcode_foxcode__` (plugin mode, CC plugin install, `pluginRoot: "~/.../marketplaces/..."`, `launchMode: "plugin"`). Use the latter to verify CC plugin runtime behaviour.
 
 ## Key Decisions
 - MCP server over Native Messaging: no subprocess per request
@@ -118,6 +119,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported
 - Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
 - Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
+- `CLAUDE_PLUGIN_ROOT` at runtime points to the **marketplace clone** plugin dir (`~/.../plugins/marketplaces/<marketplace>/<plugin>/`), NOT the plugin cache. Extension path: `Path(CLAUDE_PLUGIN_ROOT).parent / "extension"`. Verified via `mcp__plugin_foxcode_foxcode__status` → `pluginRoot` field. Before implementing code that reads `CLAUDE_PLUGIN_ROOT`, call that tool to confirm the actual value.
 - Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools)
 - URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Server serves info page at `http://localhost:PORT` (no secrets in HTML, shows project name + status). Password passed only in URL hash (`#PORT:PASSWORD`) which is never sent to server. Extension auto-connects via `tabs.onUpdated` listener. Multiple CC sessions coexist (different ports, shared password, N simultaneous WebSocket connections). No manual settings form — connections only via URL hash
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
