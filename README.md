@@ -119,7 +119,7 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 ## Components
 
 - **Channel** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging agent -> extension via WebSocket. Installed or configured per supported agent, provides MCP tools
-- **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: popup eval console (browser_action), background script for WebSocket + code execution, content script for DOM access in page context
+- **Firefox Extension** (`foxcode/extension/`) - Manifest V2 WebExtension bundled inside the plugin: popup eval console (browser_action), background script for WebSocket + code execution, content script for DOM access in page context
 - **Run Skills** (`foxcode/skills/`) - launch skills for Project Profile and User Profile modes (see Launch)
 
 ### MCP tools provided to agents

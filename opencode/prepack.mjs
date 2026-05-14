@@ -4,7 +4,7 @@
  *
  *   1. Read version from foxcode/.claude-plugin/plugin.json (single source of truth)
  *      and write it back into opencode/package.json.
- *   2. Copy ../extension, ../foxcode/channel, ../foxcode/skills/foxcode-run-* into
+ *   2. Copy ../foxcode/extension, ../foxcode/channel, ../foxcode/skills/foxcode-run-* into
  *      ./bundle/ (excluding node_modules/, build/, .foxcode/).
  *
  * Channel deps are NOT installed here — the plugin/CLI runs `npm ci --omit=dev`
@@ -62,8 +62,8 @@ async function main() {
   if (existsSync(BUNDLE)) await rm(BUNDLE, { recursive: true, force: true });
   await mkdir(BUNDLE, { recursive: true });
 
-  console.log("prepack: copying extension/");
-  await copyTree(join(REPO_ROOT, "extension"), join(BUNDLE, "extension"));
+  console.log("prepack: copying foxcode/extension/");
+  await copyTree(join(REPO_ROOT, "foxcode", "extension"), join(BUNDLE, "extension"));
 
   console.log("prepack: copying foxcode/channel/");
   await copyTree(join(REPO_ROOT, "foxcode", "channel"), join(BUNDLE, "channel"));

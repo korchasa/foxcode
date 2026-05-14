@@ -24,7 +24,7 @@ export function resolveFromModule(callerUrl, relative) {
 /**
  * Compute the absolute paths to bundled artifacts (extension, channel, skills).
  * In a published package they live under `<pluginRoot>/bundle/`; in dev,
- * sources live at the repo root (`../extension`, `../foxcode/channel`, `../foxcode/skills`).
+ * sources live under `../foxcode/{extension,channel,skills}` relative to opencode/.
  */
 export function bundlePaths(pluginRoot) {
   const bundleDir = join(pluginRoot, "bundle");
@@ -38,7 +38,7 @@ export function bundlePaths(pluginRoot) {
   }
   const repoRoot = resolve(pluginRoot, "..");
   return {
-    extension: join(repoRoot, "extension"),
+    extension: join(repoRoot, "foxcode", "extension"),
     channel: join(repoRoot, "foxcode", "channel"),
     skills: join(repoRoot, "foxcode", "skills"),
     source: "dev",

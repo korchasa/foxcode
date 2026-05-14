@@ -58,7 +58,7 @@ test("bundlePaths falls back to repo-relative paths in dev mode", async () => {
     mkdirSync(pluginRoot, { recursive: true });
     const p = bundlePaths(pluginRoot);
     assert.equal(p.source, "dev");
-    assert.equal(p.extension, join(tmp, "extension"));
+    assert.equal(p.extension, join(tmp, "foxcode", "extension"));
     assert.equal(p.channel, join(tmp, "foxcode", "channel"));
     assert.equal(p.skills, join(tmp, "foxcode", "skills"));
   });

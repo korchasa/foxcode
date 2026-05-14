@@ -96,13 +96,13 @@ def _find_extension_via_plugin_root() -> str | None:
 
     CC sets CLAUDE_PLUGIN_ROOT to the plugin dir in the marketplace clone:
       ~/.../plugins/marketplaces/<marketplace>/<plugin>/
-    Extension lives one level up, in the marketplace root:
-      ~/.../plugins/marketplaces/<marketplace>/extension/
+    Extension lives inside the plugin dir:
+      ~/.../plugins/marketplaces/<marketplace>/<plugin>/extension/
     """
     plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
     if not plugin_root:
         return None
-    return str(Path(plugin_root).parent / "extension")
+    return str(Path(plugin_root) / "extension")
 
 
 def find_extension_dir(
@@ -122,13 +122,14 @@ def find_extension_dir(
         if opencode_dir:
             candidates.append(os.path.join(opencode_dir, "bundle", "extension"))
             # Dev fallback when running from cloned repo (no bundle/ yet)
-            candidates.append(os.path.join(opencode_dir, "..", "extension"))
+            candidates.append(os.path.join(opencode_dir, "..", "foxcode", "extension"))
         skill_dir = _resolve_skill_dir()
         if skill_dir:
-            # Marketplace: .../marketplaces/korchasa/foxcode/skills/... -> .../korchasa/extension/
-            marketplace_ext = str(Path(skill_dir).parent.parent.parent / "extension")
-            candidates.append(marketplace_ext)
-        candidates.append("./extension")
+            # Marketplace clone or plugin cache:
+            # .../<plugin>/skills/<skill>/scripts/.. -> .../<plugin>/extension/
+            plugin_dir_ext = str(Path(skill_dir).parent.parent / "extension")
+            candidates.append(plugin_dir_ext)
+        candidates.append("./foxcode/extension")
 
     for d in candidates:
         if os.path.isfile(os.path.join(d, "manifest.json")):

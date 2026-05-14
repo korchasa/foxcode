@@ -21,10 +21,10 @@
 - **Desc:** On-demand popup (browser_action) displays evalInBrowser requests and responses. Zero screen footprint — opens only on icon click
 - **Scenario:** CC calls evalInBrowser -> request/response appear in popup log. Badge shows unread eval count. User clicks icon -> sees eval history
 - **Acceptance:**
-  - [x] Popup shows tool_use and tool_result messages. Evidence: `extension/popup/popup.js:78-97` (appendEvalMessage)
-  - [x] Background buffers eval messages (200 cap FIFO) for popup replay. Evidence: `extension/background/background.js:294-303` (bufferEvalMessage)
-  - [x] Badge shows unread eval count, resets on popup open. Evidence: `extension/background/background.js:305-309` (updateBadge), `extension/background/background.js:327-330` (reset on connect)
-  - [x] No persistent screen footprint (no sidebar). Evidence: `extension/manifest.json` (browser_action, no sidebar_action)
+  - [x] Popup shows tool_use and tool_result messages. Evidence: `foxcode/extension/popup/popup.js:78-97` (appendEvalMessage)
+  - [x] Background buffers eval messages (200 cap FIFO) for popup replay. Evidence: `foxcode/extension/background/background.js:294-303` (bufferEvalMessage)
+  - [x] Badge shows unread eval count, resets on popup open. Evidence: `foxcode/extension/background/background.js:305-309` (updateBadge), `foxcode/extension/background/background.js:327-330` (reset on connect)
+  - [x] No persistent screen footprint (no sidebar). Evidence: `foxcode/extension/manifest.json` (browser_action, no sidebar_action)
 
 ### 3.2 FR-2: Send Messages [REMOVED]
 - **Status:** Removed. Browser sidebar is now read-only display. No user input, no message sending from browser to CC.
@@ -33,7 +33,7 @@
 - **Desc:** Send current page content or selected text as context into CC session
 - **Scenario:** CC requests page content via MCP tool -> content delivered as context to active CC session
 - **Acceptance:**
-  - [x] Page content accessible to CC via `api.snapshot()` and `api.eval()` in `evalInBrowser`. Evidence: `extension/background/browser-api.js:119-232` (DOM/query helpers), `extension/content/content-script.js:7-21` (eval in page world)
+  - [x] Page content accessible to CC via `api.snapshot()` and `api.eval()` in `evalInBrowser`. Evidence: `foxcode/extension/background/browser-api.js:119-232` (DOM/query helpers), `foxcode/extension/content/content-script.js:7-21` (eval in page world)
   - [x] Content arrives in CC session as tool result. Evidence: `foxcode/channel/server.mjs:228-239` (evalInBrowser handler)
 
 ### 3.4 FR-4: Project Context
@@ -49,18 +49,18 @@
 - **Acceptance:**
   - [x] `evalInBrowser` MCP tool with `code` (string) + `timeout` (number, optional) params. Evidence: `foxcode/channel/lib.mjs:245-319` (TOOL_DEFINITIONS), `foxcode/channel/server.mjs:228-239` (handler)
   - [x] Code syntax validated before execution (async-aware). Evidence: `foxcode/channel/validator.mjs:5-12` (validateCode), `foxcode/channel/validator.test.mjs`
-  - [x] Background script executes code via `new Function('api', ...)` with injected API object. Evidence: `extension/background/background.js:260-272`
-  - [x] API provides DOM helpers (click, fill, type, select, check, hover, waitFor, $, $$, snapshot). Evidence: `extension/background/browser-api.js:47-60` (domAction helper), `extension/background/browser-api.js:119-220` (api methods), `extension/background/dom-helpers.js`
-  - [x] DOM helpers auto-wait for element (poll 100ms, configurable timeout). Evidence: `extension/background/dom-helpers.js:14-32` (buildWaitAndAct)
-  - [x] Navigation helpers await page load via webNavigation.onCompleted. Evidence: `extension/background/browser-api.js:236-272`
-  - [x] `navigate()` creates new active tab on first call. Subsequent navigations reuse and activate managed tab. `closeTab()` resets state. Evidence: `extension/background/browser-api.js:21-28,236-246,285-296`, `extension/background/browser-api.test.js:364-548`
-  - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `extension/background/browser-api.js:305-337`
-  - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `extension/content/content-script.js:8-14`, `extension/background/browser-api.js:224-232`
-  - [x] Timeout (default 30s) via Promise.race. Evidence: `extension/background/background.js:265-271`
+  - [x] Background script executes code via `new Function('api', ...)` with injected API object. Evidence: `foxcode/extension/background/background.js:260-272`
+  - [x] API provides DOM helpers (click, fill, type, select, check, hover, waitFor, $, $$, snapshot). Evidence: `foxcode/extension/background/browser-api.js:47-60` (domAction helper), `foxcode/extension/background/browser-api.js:119-220` (api methods), `foxcode/extension/background/dom-helpers.js`
+  - [x] DOM helpers auto-wait for element (poll 100ms, configurable timeout). Evidence: `foxcode/extension/background/dom-helpers.js:14-32` (buildWaitAndAct)
+  - [x] Navigation helpers await page load via webNavigation.onCompleted. Evidence: `foxcode/extension/background/browser-api.js:236-272`
+  - [x] `navigate()` creates new active tab on first call. Subsequent navigations reuse and activate managed tab. `closeTab()` resets state. Evidence: `foxcode/extension/background/browser-api.js:21-28,236-246,285-296`, `foxcode/extension/background/browser-api.test.js:364-548`
+  - [x] Privileged helpers (screenshot, cookies, tabs, resize) call WebExtension APIs directly. Evidence: `foxcode/extension/background/browser-api.js:305-337`
+  - [x] `api.eval(expr)` executes in page main world via wrappedJSObject. Evidence: `foxcode/extension/content/content-script.js:8-14`, `foxcode/extension/background/browser-api.js:224-232`
+  - [x] Timeout (default 30s) via Promise.race. Evidence: `foxcode/extension/background/background.js:265-271`
   - [x] `reply` tool removed (IDE shows all CC output). Evidence: `foxcode/channel/lib.mjs` (2 tools: status, evalInBrowser)
   - [x] Old tools removed (get_page_content, get_selected_text, get_page_url, edit_message, reply). Evidence: `foxcode/channel/lib.mjs` (2 tools: status, evalInBrowser)
-  - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `extension/manifest.json:6-11,13`
-  - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `extension/background/dom-helpers.test.js`, `extension/background/browser-api.test.js`
+  - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `foxcode/extension/manifest.json:6-11,13`
+  - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `foxcode/extension/background/dom-helpers.test.js`, `foxcode/extension/background/browser-api.test.js`
   - [ ] Integration test: background executes code -> delegates to tab -> returns result (requires Firefox)
   - [x] MCP instructions describe API reference. Evidence: `foxcode/channel/lib.mjs:264-303` (evalInBrowser description)
 
@@ -68,15 +68,15 @@
 - **Desc:** Multiple concurrent CC sessions communicate with a single Firefox extension instance. Each session has its own MCP server on a unique port; extension maintains N simultaneous WebSocket connections.
 - **Scenario:** User runs 2+ CC sessions with different projects -> each has its own MCP server -> extension connects to all -> popup shows eval messages from all sessions
 - **Acceptance:**
-  - [x] Extension maintains N WebSocket connections (one per MCP server). Evidence: `extension/background/background.js:19` (sessions Map), `extension/background/background.js:82-114` (connectToServer adds to Map)
-  - [x] Eval messages from multiple sessions buffered and displayed. Evidence: `extension/background/background.js:294-303` (bufferEvalMessage with sessionPort)
-  - [x] `evalInBrowser` from any session, serialized via queue. Evidence: `extension/background/background.js:236-289` (evalQueue + processEvalQueue)
-  - [x] Dead session eval requests skipped (WS closed check before execution). Evidence: `extension/background/background.js:253-258`
-  - [x] New session auto-connects via URL hash (`tabs.onUpdated` listener). Evidence: `extension/background/background.js:313-319`
-  - [x] Per-session reconnect with exponential backoff (3s→30s, max 10 attempts). Evidence: `extension/background/background.js:172-189` (scheduleReconnect)
-  - [x] Dead sessions removed from Map after max reconnect attempts. Evidence: `extension/background/background.js:177-182`
-  - [x] `url-params.js` returns array of all matching tabs (deduplicated by port). Evidence: `extension/background/url-params.js:41-57`
-  - [x] Tests updated for array return type. Evidence: `extension/background/url-params.test.js:67-116`
+  - [x] Extension maintains N WebSocket connections (one per MCP server). Evidence: `foxcode/extension/background/background.js:19` (sessions Map), `foxcode/extension/background/background.js:82-114` (connectToServer adds to Map)
+  - [x] Eval messages from multiple sessions buffered and displayed. Evidence: `foxcode/extension/background/background.js:294-303` (bufferEvalMessage with sessionPort)
+  - [x] `evalInBrowser` from any session, serialized via queue. Evidence: `foxcode/extension/background/background.js:236-289` (evalQueue + processEvalQueue)
+  - [x] Dead session eval requests skipped (WS closed check before execution). Evidence: `foxcode/extension/background/background.js:253-258`
+  - [x] New session auto-connects via URL hash (`tabs.onUpdated` listener). Evidence: `foxcode/extension/background/background.js:313-319`
+  - [x] Per-session reconnect with exponential backoff (3s→30s, max 10 attempts). Evidence: `foxcode/extension/background/background.js:172-189` (scheduleReconnect)
+  - [x] Dead sessions removed from Map after max reconnect attempts. Evidence: `foxcode/extension/background/background.js:177-182`
+  - [x] `url-params.js` returns array of all matching tabs (deduplicated by port). Evidence: `foxcode/extension/background/url-params.js:41-57`
+  - [x] Tests updated for array return type. Evidence: `foxcode/extension/background/url-params.test.js:67-116`
   - [ ] Integration test: 2 MCP servers + 1 extension (requires Firefox)
 
 ### 3.7 FR-7: Disconnect Notifications
@@ -175,13 +175,13 @@
 - [x] `status` tool returns server telemetry (port, clients, uptime, launchMode, client) without browser. Evidence: `foxcode/channel/server.mjs` (status handler)
 - [x] `/foxcode:foxcode-run-project-profile` flow: status -> web-ext launch -> verify via status. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`
 - [x] `/foxcode:foxcode-run-user-profile` flow: status -> guide manual loading -> auto-open connection page -> poll & verify via status. Evidence: `foxcode/skills/foxcode-run-user-profile/SKILL.md`
-- [x] Extension connects via URL hash (`#PORT:PASSWORD`) or saved sessions. No port scanning, no manual settings form. Evidence: `extension/background/background.js` (connect flow), `extension/background/url-params.js`
+- [x] Extension connects via URL hash (`#PORT:PASSWORD`) or saved sessions. No port scanning, no manual settings form. Evidence: `foxcode/extension/background/background.js` (connect flow), `foxcode/extension/background/url-params.js`
 
 ### 4.3 NF-3: Reliability [very important]
-- [x] Per-session auto-reconnect with exponential backoff (3s → 30s max, 10 attempts). Evidence: `extension/background/background.js:172-189` (scheduleReconnect)
-- [x] Graceful degradation when no sessions: "No active sessions" banner in popup. Evidence: `extension/popup/popup.js:43-52`, `extension/popup/popup.html:9-12`
-- [x] Background sends session-update to popup. Evidence: `extension/background/background.js:191-203` (notifyPopupSessions)
-- [x] Background pings all connected servers on popup connect. Evidence: `extension/background/background.js:335-339`
+- [x] Per-session auto-reconnect with exponential backoff (3s → 30s max, 10 attempts). Evidence: `foxcode/extension/background/background.js:172-189` (scheduleReconnect)
+- [x] Graceful degradation when no sessions: "No active sessions" banner in popup. Evidence: `foxcode/extension/popup/popup.js:43-52`, `foxcode/extension/popup/popup.html:9-12`
+- [x] Background sends session-update to popup. Evidence: `foxcode/extension/background/background.js:191-203` (notifyPopupSessions)
+- [x] Background pings all connected servers on popup connect. Evidence: `foxcode/extension/background/background.js:335-339`
 - [ ] No message loss during normal operation - not verified
 - [x] No interference with CC terminal workflow. Evidence: tested manually
 
@@ -191,7 +191,7 @@
 ### 4.5 NF-5: Security
 - [x] All traffic local. Evidence: `foxcode/channel/lib.mjs` (createHttpServer binds 127.0.0.1)
 - [x] WebSocket upgrade-level password auth: server generates random password (persisted `~/.foxcode/password`, mode 0600), rejects connections without valid `?token=` param (HTTP 401). Evidence: `foxcode/channel/server.mjs` (upgrade handler), `foxcode/channel/lib.mjs` (passwordStorage)
-- [x] Session params (port+password array) saved in `browser.storage.local` for reconnection. Evidence: `extension/background/background.js:43-49` (saveSessions)
+- [x] Session params (port+password array) saved in `browser.storage.local` for reconnection. Evidence: `foxcode/extension/background/background.js:43-49` (saveSessions)
 
 ### 4.6 NF-6: Performance
 - [x] Message delivery latency <1s. Evidence: tested manually
@@ -207,7 +207,7 @@
   - [x] CLI `setup` is idempotent (second run reports `kept`); `setup --write-config` patches plain JSON; refuses files with `//` or `/*` comments. Evidence: `opencode/test/cli.test.mjs` (6 tests pass)
   - [x] `opencode.json` patcher: surgical, idempotent (`created` / `added-mcp` / `added-foxcode` / `updated` / `noop`); refuses JSONC comments and non-object top-level shape. Evidence: `opencode/lib/patcher.test.mjs` (8 tests pass)
   - [x] Channel deps installed lazily (`npm ci --omit=dev`) on first plugin/CLI invocation; tarball does not vendor `node_modules`. Evidence: `opencode/lib/lazy-install.mjs`, `opencode/test/pack.test.mjs::test prepack…`
-  - [x] `prepack.mjs` syncs version from `foxcode/.claude-plugin/plugin.json`, copies `extension/`, `foxcode/channel/`, `foxcode/skills/foxcode-run-{project,user}-profile/` into `bundle/`, excluding `node_modules/`. Evidence: `opencode/test/pack.test.mjs`
+  - [x] `prepack.mjs` syncs version from `foxcode/.claude-plugin/plugin.json`, copies `foxcode/extension/`, `foxcode/channel/`, `foxcode/skills/foxcode-run-{project,user}-profile/` into `bundle/`, excluding `node_modules/`. Evidence: `opencode/test/pack.test.mjs`
   - [x] File-based handoff (`~/.foxcode/opencode-plugin-dir`) consumed by `resolve_env.py` — bundle extension takes priority over CC marketplace heuristic. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/test_resolve_env.py::TestOpencodeHandoffFile`
   - [x] Bundled SKILL.md files have valid OpenCode frontmatter (required `name`, `description`). Evidence: `opencode/lib/skill-frontmatter.test.mjs::real bundled skills (project + user profile) parse cleanly`
   - [x] CC plugin marketplace path unchanged (no edits to `foxcode/.claude-plugin/`, `foxcode/.mcp.json`, channel sources, skill bodies). Evidence: `git diff main -- foxcode/.claude-plugin foxcode/.mcp.json foxcode/channel foxcode/skills` shows no changes outside additive Python helper extension
@@ -222,7 +222,18 @@
   - [x] Codex launch skills are discoverable from repo scope via `.agents/skills`. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:1`, `.agents/skills/foxcode-run-user-profile/SKILL.md:1`, `opencode/lib/skill-frontmatter.test.mjs:64`
   - [x] Codex launch skills reuse canonical FoxCode skill bodies instead of forking launch logic. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:8`, `.agents/skills/foxcode-run-user-profile/SKILL.md:8`, `foxcode/skills/foxcode-run-project-profile/SKILL.md:1`, `foxcode/skills/foxcode-run-user-profile/SKILL.md:1`
   - [x] Tier-4 acceptance includes Codex alongside Claude Code and OpenCode. Evidence: `opencode/test/acceptance/ide-task.test.ts:37`, `scripts/test-ide.sh:14`
-  - [ ] Published Codex plugin marketplace package with bundled extension/channel assets. Deferred: requires separate distribution audit for Codex plugin cache contents.
+  - [ ] Published Codex plugin marketplace package. Deferred: with extension now bundled inside `foxcode/` (NF-9), the plugin payload is self-contained, but Codex marketplace tooling still needs investigation.
+
+### 4.9 NF-9: Self-Contained Plugin Payload [important]
+- **Description:** The Firefox extension lives inside the plugin dir (`foxcode/extension/`) instead of at the repo root, so every distribution channel ships the same self-contained payload. Removes the dependency on the CC marketplace clone for extension discovery and unblocks future Codex marketplace packaging.
+- **Scenario:** CC plugin cache, CC marketplace clone, and OpenCode npm bundle all carry the extension under `<plugin>/extension/`. Skills resolve it via `${CLAUDE_PLUGIN_ROOT}/extension` without walking out of the plugin dir.
+- **Acceptance:**
+  - [x] Extension assets live at `foxcode/extension/`. Evidence: `foxcode/extension/manifest.json:1`
+  - [x] `resolve_env.py` derives extension path from `CLAUDE_PLUGIN_ROOT` without `.parent`. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/resolve_env.py:94`, `foxcode/skills/foxcode-run-project-profile/scripts/test_resolve_env.py:125`
+  - [x] OpenCode prepack copies from `foxcode/extension/` into `bundle/extension/`. Evidence: `opencode/prepack.mjs:65`, `opencode/test/pack.test.mjs:20`
+  - [x] Dev-mode `bundlePaths()` resolves extension under `foxcode/extension/`. Evidence: `opencode/lib/paths.mjs:41`, `opencode/lib/paths.test.mjs:61`
+  - [x] Tier-4 acceptance loads extension from new path. Evidence: `opencode/test/acceptance/ide-task.test.ts:32`
+  - [x] `scripts/check.sh` and `scripts/test.sh` reference the new path. Evidence: `scripts/check.sh:14`, `scripts/test.sh:9`
 
 ## 5. Interfaces
 - **Transport:** Channel Plugin (MCP server inside supported agent) ↔ WebSocket localhost:8787 ↔ Firefox Extension

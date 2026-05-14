@@ -11,7 +11,7 @@ echo "=== FoxCode: check ==="
 # Comment scan
 echo "--- Comment scan ---"
 grep -rn "TODO\|FIXME\|HACK\|XXX\|debugger\|console\.log" \
-  extension/ \
+  foxcode/extension/ \
   foxcode/channel/server.mjs foxcode/channel/lib.mjs \
   opencode/index.mjs opencode/lib opencode/bin opencode/prepack.mjs \
   2>/dev/null || echo "No issues found."
@@ -19,9 +19,9 @@ grep -rn "TODO\|FIXME\|HACK\|XXX\|debugger\|console\.log" \
 # Validate manifest.json
 echo "--- Manifest validation ---"
 if command -v jq &>/dev/null; then
-  jq . extension/manifest.json >/dev/null && echo "manifest.json: valid JSON"
+  jq . foxcode/extension/manifest.json >/dev/null && echo "manifest.json: valid JSON"
 else
-  node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json','utf8'))" && echo "manifest.json: valid JSON"
+  node -e "JSON.parse(require('fs').readFileSync('foxcode/extension/manifest.json','utf8'))" && echo "manifest.json: valid JSON"
 fi
 
 echo "--- Codex config validation ---"
@@ -46,8 +46,8 @@ done
 echo "--- Tests ---"
 node --test \
   foxcode/channel/*.test.mjs \
-  extension/background/*.test.js \
-  extension/popup/*.test.js \
+  foxcode/extension/background/*.test.js \
+  foxcode/extension/popup/*.test.js \
   opencode/lib/*.test.mjs \
   opencode/test/*.test.mjs
 

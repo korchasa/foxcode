@@ -18,7 +18,7 @@ graph LR
 ```
 - **Subsystems:**
   - Channel Plugin (`foxcode/channel/`): Node.js MCP server, WebSocket bridge
-  - Extension (`extension/`): Popup eval console, Background script, Content script
+  - Extension (`foxcode/extension/`): Popup eval console, Background script, Content script — bundled inside the plugin dir so CC plugin cache, marketplace clone, and OpenCode bundle all carry the same assets
 
 ## 3. Components
 
@@ -34,7 +34,7 @@ graph LR
   - `evalInBrowser(code, timeout?)` - execute JS in browser with full API. Validates syntax, sends to extension via WebSocket, returns serialized result
 - **Deps:** `@modelcontextprotocol/sdk`, `ws`
 
-### 3.2 Background Script (`extension/background/`)
+### 3.2 Background Script (`foxcode/extension/background/`)
 - **`background.js`** - Multi-session WebSocket manager. Maintains `sessions` Map (port → Session) for N simultaneous MCP server connections. Connect priority: URL hash params (all tabs) > saved sessions. `tabs.onUpdated` listener auto-connects new sessions from URL hash. Per-session reconnect with exponential backoff (3s→30s, max 10 attempts). `evalInBrowser` requests serialized via global queue (dead-session requests skipped). Buffers eval messages (200 cap FIFO) for popup replay. Badge shows unread eval count. No settings form.
 - **`url-params.js`** - Parses connection params from tab URL hash (`#PORT:PASSWORD`). Returns array of `{port, password}` (all matches, deduplicated by port). Port validated against FoxCode range 8787–8886
 - **`browser-api.js`** - Factory creating `api` object with ~36 async helpers + storage sub-methods (DI for testability)
@@ -44,13 +44,13 @@ graph LR
 - **Interfaces:** WebSocket (channel), port (popup), tabs.executeScript (DOM), tabs.sendMessage (content script for eval)
 - **Deps:** Channel plugin running, CSP `unsafe-eval`
 
-### 3.3 Popup Eval Console (`extension/popup/`)
+### 3.3 Popup Eval Console (`foxcode/extension/popup/`)
 - **`format.js`** - Pure formatting helpers: `formatParamValue` (string without JSON escaping, objects as pretty JSON), `formatToolParams` (key-value display)
 - **`popup.js`** - Eval debug UI: displays evalInBrowser requests (tool_use) and responses (tool_result). Receives buffered messages from background on open. No session bar, no chat messages, no markdown
 - **Interfaces:** port connection to background script (`name: 'popup'`)
 - **Deps:** Background script
 
-### 3.4 Content Script (`extension/content/content-script.js`)
+### 3.4 Content Script (`foxcode/extension/content/content-script.js`)
 - **Purpose:** EVAL_IN_PAGE handler - executes JS expressions in page main world via `wrappedJSObject` (Firefox-specific)
 - **Interfaces:** runtime.onMessage listener (EVAL_IN_PAGE action)
 - **Deps:** Active page DOM, wrappedJSObject access
@@ -81,8 +81,8 @@ graph LR
 ## 8. Distribution & Setup
 
 ### Primary: CC Plugin Marketplace
-- **Structure:** `.claude-plugin/marketplace.json` (repo root) -> `foxcode/` (plugin dir)
-- **Plugin contents:** `.claude-plugin/plugin.json` (manifest), `.mcp.json` (MCP server config), `skills/foxcode-run-project-profile/SKILL.md`, `skills/foxcode-run-user-profile/SKILL.md`
+- **Structure:** `.claude-plugin/marketplace.json` (repo root) -> `foxcode/` (plugin dir, self-contained: channel + extension + skills all live inside)
+- **Plugin contents:** `.claude-plugin/plugin.json` (manifest), `.mcp.json` (MCP server config), `channel/` (Node MCP server), `extension/` (Firefox WebExtension assets), `skills/foxcode-run-project-profile/SKILL.md`, `skills/foxcode-run-user-profile/SKILL.md`
 - **MCP auto-load:** Plugin `.mcp.json` declares `foxcode` server (`sh -c "cd ${CLAUDE_PLUGIN_ROOT}/channel && npm install && node server.mjs"`). Auto-installs deps on first run, loads automatically on plugin enable. No npm package needed.
 - **Launch skills:** `/foxcode:foxcode-run-project-profile` (isolated Firefox via web-ext) and `/foxcode:foxcode-run-user-profile` (manual extension loading via about:debugging, auto-open connection page). Both self-contained: prereq check, locate extension, cache paths in `.foxcode/config.json`, launch/guide, verify connectivity
 - **Bundled scripts** (`foxcode/skills/foxcode-run-project-profile/scripts/`): Python 3.9+ utilities shared by both skills
@@ -90,13 +90,13 @@ graph LR
   - `launch_firefox.py` — accepts `--port`/`--password` (passed by skill from `status` response), resolves Firefox+extension via `resolve_env`, launches web-ext with PID lifecycle (`.foxcode/web-ext.pid`): stale/live detection, cleanup on exit (SIGTERM/SIGHUP/normal). Without `--port`/`--password` (dev mode): no `--start-url`, extension auto-discovers via port scan
 
 ### Secondary: OpenCode npm package (NF-7)
-- **Structure:** sibling top-level dir `opencode/` (parallel to `foxcode/`, `extension/`). Published to npm as `@korchasa/foxcode-opencode`.
+- **Structure:** sibling top-level dir `opencode/` (parallel to `foxcode/`). Published to npm as `@korchasa/foxcode-opencode`.
 - **Package layout:** `index.mjs` (plugin entry), `lib/` (paths, seed-skills, mcp-snippet, patcher, handoff, exec, lazy-install, prereq, skill-frontmatter), `bin/foxcode-opencode.mjs` (CLI), `prepack.mjs` (bundle assembly), `bundle/` (created at pack time, contains `extension/`, `channel/`, `skills/`).
 - **Plugin route:** user adds `"plugin": ["@korchasa/foxcode-opencode"]` to `opencode.json`; OpenCode auto-installs via Bun. On `session.created` (earliest plugin-callable hook) the plugin (a) symlinks bundled SKILL.md dirs into `~/.config/opencode/skills/foxcode-run-{project,user}-profile/`, (b) writes `~/.foxcode/opencode-plugin-dir` for Python helpers, (c) lazy-installs channel deps via `npm ci --omit=dev`, (d) emits an MCP snippet to stderr exactly when `mcp.foxcode` is missing from project + global `opencode.json`. Snippet emitted at most once per process.
 - **CLI route (one-shot):** `npx -y @korchasa/foxcode-opencode setup [--write-config]`. Same actions as the plugin, plus `--write-config` patches `opencode.json` directly (plain JSON only; refuses files with `//` or `/*` comments). `uninstall` removes seeded symlinks and the handoff file but never auto-removes `mcp.foxcode` (avoids destructive config mutation). `doctor` prints diagnostics.
 - **Seed semantics:** symlink target check. `created` (new), `kept` (correct symlink), `replaced-dangling` (target moved by nvm/reinstall), `user-dir-kept` (real dir preserved), `copied-fallback` (Windows non-admin perm-denied → recursive copy).
 - **Patcher actions:** `created` (file did not exist), `added-mcp` (mcp key absent), `added-foxcode` (mcp present, foxcode missing), `updated` (foxcode present with different value), `noop` (already correct).
-- **Handoff (`~/.foxcode/opencode-plugin-dir`):** absolute path to plugin root. `resolve_env.py::find_extension_dir` reads this file (mode 0644) before falling back to the CC marketplace clone heuristic. Mirrors the existing `~/.foxcode/port` / `~/.foxcode/password` pattern — env-var propagation through subprocess chains is unreliable.
+- **Handoff (`~/.foxcode/opencode-plugin-dir`):** absolute path to plugin root. `resolve_env.py::find_extension_dir` reads this file (mode 0644) before falling back to the in-plugin extension path (`<plugin>/extension`). Mirrors the existing `~/.foxcode/port` / `~/.foxcode/password` pattern — env-var propagation through subprocess chains is unreliable.
 - **Version sync:** `prepack.mjs` reads `version` from `foxcode/.claude-plugin/plugin.json` (single source of truth) and writes it back into `opencode/package.json` before pack. Keeps CC + OpenCode releases aligned.
 - **Bundle exclusions:** `prepack.mjs` excludes `node_modules/`, `.foxcode/`, `build/`, `.DS_Store` from the copied trees. Channel deps install lazily on first invocation, not at pack time.
 - **Subprocess strategy:** `lib/exec.mjs` wraps `node:child_process.spawn` (no Bun-only `$` template tag) — single code path under both Bun (OpenCode plugin sandbox) and Node (CLI / dev).
@@ -106,7 +106,7 @@ graph LR
 - **MCP startup:** Codex starts `sh -c 'set -e; export FOXCODE_PROJECT_DIR="$PWD"; cd "$(git rev-parse --show-toplevel)/foxcode/channel"; npm ci --omit=dev --silent; exec node server.mjs'`. `git rev-parse --show-toplevel` lets Codex launch from nested repo paths while keeping `FOXCODE_PROJECT_DIR` as the user launch directory.
 - **Skill strategy:** Codex wrapper skills delegate to canonical `foxcode/skills/*/SKILL.md` and only adapt script paths from `${CLAUDE_SKILL_DIR}` to repo-relative paths. Launch semantics and verification remain single-source.
 - **Verification:** `codex mcp get foxcode` validates the project config when Codex is installed. Tier-4 e2e includes runtime `codex` via `@korchasa/ai-ide-cli`.
-- **Deferred distribution:** Codex plugin marketplace packaging is not implemented in this task. It needs a distribution audit because Codex installs plugin copies into `~/.codex/plugins/cache/...`, and the Firefox extension currently lives outside the Claude plugin payload.
+- **Deferred distribution:** Codex plugin marketplace packaging is not implemented in this task. With the extension now bundled inside `foxcode/`, the plugin payload is self-contained — distribution can mirror the CC marketplace layout once Codex marketplace tooling is investigated.
 
 ### Idempotency
 - `.xpi` download: detect existing file, ask re-download or skip

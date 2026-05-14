@@ -34,9 +34,9 @@ Firefox WebExtension for browser automation via Claude Code. Eval debug popup (o
 
 ## Architecture
 - **Channel Plugin** (`foxcode/channel/server.mjs`) - MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
-- **Popup Eval Console** (`extension/popup/`) - On-demand eval debug UI: shows evalInBrowser requests/responses (browser_action popup, zero screen footprint)
-- **Background Script** (`extension/background/background.js`) - WebSocket connection management, eval message buffering, badge updates, tool request handling
-- **Content Script** (`extension/content/content-script.js`) - DOM access, `api.eval()` in page main world
+- **Popup Eval Console** (`foxcode/extension/popup/`) - On-demand eval debug UI: shows evalInBrowser requests/responses (browser_action popup, zero screen footprint)
+- **Background Script** (`foxcode/extension/background/background.js`) - WebSocket connection management, eval message buffering, badge updates, tool request handling
+- **Content Script** (`foxcode/extension/content/content-script.js`) - DOM access, `api.eval()` in page main world
 - **Flow**: Claude Code -> MCP stdio -> Channel Plugin -> WebSocket -> Background -> Popup (eval log)
 
 ## Repository Structure
@@ -59,19 +59,21 @@ foxcode/
 │   │   ├── lib.mjs       #     Shared pure functions, tool definitions
 │   │   ├── validator.mjs #     JS code validation for evalInBrowser
 │   │   └── package.json  #     Dependencies
+│   ├── extension/        #   Firefox WebExtension (Manifest V2) — bundled inside plugin
+│   │   ├── background/   #     Background script, browser-api, dom-helpers
+│   │   ├── popup/        #     Eval debug popup (HTML/CSS/JS)
+│   │   ├── content/      #     Content script (DOM access, api.eval)
+│   │   ├── icons/        #     Extension icon
+│   │   └── manifest.json #     Extension manifest
 │   └── .mcp.json         #   MCP server config (node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs)
-├── extension/            # Firefox WebExtension (Manifest V2)
-│   ├── background/       #   Background script, browser-api, dom-helpers
-│   ├── popup/            #   Eval debug popup (HTML/CSS/JS)
-│   ├── content/          #   Content script (DOM access, api.eval)
-│   ├── icons/            #   Extension icon
-│   └── manifest.json     #   Extension manifest
 ├── opencode/             # OpenCode npm package (@korchasa/foxcode-opencode)
 │   ├── index.mjs         #   Plugin entry: session.created hook (seed + handoff + snippet)
 │   ├── bin/              #   CLI: foxcode-opencode setup|uninstall|doctor
 │   ├── lib/              #   paths, seed-skills, mcp-snippet, patcher, handoff, exec, ...
-│   ├── prepack.mjs       #   Bundle assembly at npm-pack time (copies ../extension, ../foxcode/{channel,skills})
+│   ├── prepack.mjs       #   Bundle assembly at npm-pack time (copies ../foxcode/{extension,channel,skills})
 │   └── test/             #   Plugin + CLI + pack integration tests
+├── .agents/skills/       # Codex-discoverable launch skills (delegate to foxcode/skills bodies)
+├── .codex/config.toml    # Project-scoped Codex MCP server entry (foxcode)
 ├── documents/            # Project docs (SRS, SDS, whiteboards)
 ├── scripts/              # Dev scripts (check.sh, test.sh, dev.sh)
 ├── .mcp.json             # Dev-mode MCP config (local server.mjs)
@@ -103,7 +105,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 
 ### Local Development (contributing to FoxCode)
 - Root `.mcp.json` runs `cd foxcode/channel && npm ci && node server.mjs` with `FOXCODE_PROJECT_DIR="$PWD"` (relative to repo root)
-- Extension loaded via `scripts/dev.sh` (`web-ext run --source-dir extension/`) or manually via `about:debugging`
+- Extension loaded via `scripts/dev.sh` (`web-ext run --source-dir foxcode/extension/`) or manually via `about:debugging`
 - CC: `claude --mcp-config .mcp.json`
 - Workflow: edit code -> reload extension -> test
 - Two foxcode MCP servers run simultaneously in dev sessions: `mcp__foxcode__` (dev mode, root `.mcp.json`, `pluginRoot: null`) and `mcp__plugin_foxcode_foxcode__` (plugin mode, CC plugin install, `pluginRoot: "~/.../marketplaces/..."`, `launchMode: "plugin"`). Use the latter to verify CC plugin runtime behaviour.
@@ -118,8 +120,8 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - Channel inside plugin dir (`foxcode/channel/`): bundled with plugin, no npm package. MCP server auto-installs deps on first run via `sh -c "npm ci && node server.mjs"`
 - CC plugin `.mcp.json` supports `${CLAUDE_PLUGIN_ROOT}` (plugin install dir) and `${CLAUDE_PLUGIN_DATA}` (persistent data dir `~/.claude/plugins/data/{id}/`). Standard env var expansion `${VAR}` also supported
 - Plugin cache (`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`) is an isolated copy - only files from plugin dir are copied, `node_modules/` and files outside plugin dir are excluded. Dependencies must be installed at runtime
-- Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone including `extension/`. Used for `web-ext run`
-- `CLAUDE_PLUGIN_ROOT` at runtime points to the **marketplace clone** plugin dir (`~/.../plugins/marketplaces/<marketplace>/<plugin>/`), NOT the plugin cache. Extension path: `Path(CLAUDE_PLUGIN_ROOT).parent / "extension"`. Verified via `mcp__plugin_foxcode_foxcode__status` → `pluginRoot` field. Before implementing code that reads `CLAUDE_PLUGIN_ROOT`, call that tool to confirm the actual value.
+- Marketplace clone (`~/.claude/plugins/marketplaces/<name>/`) contains the full repo clone. With extension now inside `foxcode/`, both the plugin cache and the marketplace clone carry the extension — distribution no longer depends on the marketplace clone existing
+- `CLAUDE_PLUGIN_ROOT` at runtime points to the **marketplace clone** plugin dir (`~/.../plugins/marketplaces/<marketplace>/<plugin>/`), NOT the plugin cache. Extension path: `Path(CLAUDE_PLUGIN_ROOT) / "extension"`. Verified via `mcp__plugin_foxcode_foxcode__status` → `pluginRoot` field. Before implementing code that reads `CLAUDE_PLUGIN_ROOT`, call that tool to confirm the actual value.
 - Plugin tool permissions follow standard CC permission system (user approves on first use, no auto-allow for plugin MCP tools)
 - URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Server serves info page at `http://localhost:PORT` (no secrets in HTML, shows project name + status). Password passed only in URL hash (`#PORT:PASSWORD`) which is never sent to server. Extension auto-connects via `tabs.onUpdated` listener. Multiple CC sessions coexist (different ports, shared password, N simultaneous WebSocket connections). No manual settings form — connections only via URL hash
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.

@@ -9,7 +9,7 @@
  *   - real `opencode` / `claude` / `codex` binary
  *   - real channel server spawned by the IDE from its native MCP config
  *   - real Firefox loaded via `web-ext run --headless` with the actual
- *     foxcode WebExtension under `extension/`
+ *     foxcode WebExtension under `foxcode/extension/`
  *   - real LLM call (so it costs tokens; gated behind FOXCODE_E2E_IDE=1)
  *
  * Runs via `deno test -A opencode/test/acceptance/ide-task.test.ts`,
@@ -29,7 +29,7 @@ const REPO_ROOT = new URL("../../..", import.meta.url).pathname.replace(/\/$/, "
 const CHANNEL_SERVER = `${REPO_ROOT}/foxcode/channel/server.mjs`;
 const LAUNCH_SCRIPT =
   `${REPO_ROOT}/foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py`;
-const EXTENSION_DIR = `${REPO_ROOT}/extension`;
+const EXTENSION_DIR = `${REPO_ROOT}/foxcode/extension`;
 const TEST_PASSWORD = "test-pw-ide-fixed";
 // All supported IDEs are always exercised. Run the dedicated command
 // (`scripts/test-ide.sh` or `npm run --prefix opencode test:e2e-ide`) to

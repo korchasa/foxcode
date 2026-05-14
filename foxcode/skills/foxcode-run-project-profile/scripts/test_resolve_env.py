@@ -123,15 +123,15 @@ class TestResolveEnv(unittest.TestCase):
         self.assertEqual(data["skillDir"], self.skill_dir)
 
     def test_finds_extension_via_claude_plugin_root(self):
-        """CLAUDE_PLUGIN_ROOT → derive marketplace extension path."""
+        """CLAUDE_PLUGIN_ROOT → derive in-plugin extension path."""
         # Mirrors real CC layout: CLAUDE_PLUGIN_ROOT = .../marketplaces/korchasa/foxcode/
-        # (confirmed via mcp__plugin_foxcode_foxcode__status pluginRoot field)
+        # (confirmed via mcp__plugin_foxcode_foxcode__status pluginRoot field).
+        # Extension now lives inside the plugin dir.
         marketplace_dir = os.path.join(self.tmpdir, "plugins", "marketplaces", "korchasa")
         plugin_root = os.path.join(marketplace_dir, "foxcode")
-        os.makedirs(plugin_root)
-        marketplace_ext = os.path.join(marketplace_dir, "extension")
-        os.makedirs(marketplace_ext)
-        Path(os.path.join(marketplace_ext, "manifest.json")).write_text("{}")
+        plugin_ext = os.path.join(plugin_root, "extension")
+        os.makedirs(plugin_ext)
+        Path(os.path.join(plugin_ext, "manifest.json")).write_text("{}")
 
         result = self._run(
             fmt="json",
@@ -143,7 +143,7 @@ class TestResolveEnv(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         data = json.loads(result.stdout)
-        self.assertEqual(data["extensionDir"], marketplace_ext)
+        self.assertEqual(data["extensionDir"], plugin_ext)
 
 
 class TestConfigCache(unittest.TestCase):
