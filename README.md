@@ -56,7 +56,7 @@ codex mcp get foxcode      # verifies the MCP entry resolves
 codex mcp list             # lists all configured MCP servers
 ```
 
-> **Codex plugin marketplace install is not yet supported.** `codex plugin marketplace add korchasa/foxcode` registers the marketplace, but the Codex plugin loader fails to load the cached payload (looks for `cache/<marketplace>/<plugin>/` without the version subdir Codex itself created). Tracking ticket: ensure compatibility once Codex marketplace install handles CC-style `"source": "./foxcode"` shorthand or once the repo ships a `.codex-plugin/plugin.json`.
+> **Codex plugin marketplace install is not yet supported.** `codex plugin marketplace add korchasa/foxcode` caches the payload correctly, but Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` in MCP server args from the plugin's `.mcp.json` (unlike Claude Code, which does per-element substitution). The MCP server starts but cannot locate `channel/server.mjs`. Tracking: requires Codex upstream to support `${CLAUDE_PLUGIN_ROOT}` substitution in plugin-provided MCP server args.
 
 ## Install in OpenCode
 
