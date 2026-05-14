@@ -29,32 +29,55 @@ Or use commands directly:
 - `/foxcode:foxcode-run-project-profile` — isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
 - `/foxcode:foxcode-run-user-profile` — your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
 
-## Use in Codex
+## Install in Codex
 
-FoxCode ships repo-scoped Codex support:
+Codex (OpenAI Codex CLI) uses the same plugin marketplace format as Claude Code, so the same `korchasa/foxcode` marketplace works in both. Two install paths:
 
-- `.codex/config.toml` registers the `foxcode` MCP server for this project.
-- `.agents/skills/foxcode-run-project-profile` and `.agents/skills/foxcode-run-user-profile` expose the launch workflows to Codex.
+### Global install via Codex plugin marketplace (recommended)
 
-From the repository root, start Codex:
+Add the marketplace and launch:
 
 ```sh
+codex plugin marketplace add korchasa/foxcode
 codex
 ```
 
-Then run one of the Codex skills:
+Codex clones the marketplace into `~/.codex/.tmp/marketplaces/korchasa/` and installs the plugin under `~/.codex/plugins/cache/korchasa/foxcode/<version>/`. The plugin's `.mcp.json` registers the `foxcode` MCP server automatically (`node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs`) and the launch skills appear as `$foxcode-run-project-profile` and `$foxcode-run-user-profile`.
 
-- `$foxcode-run-project-profile` — isolated Firefox via web-ext.
-- `$foxcode-run-user-profile` — your own Firefox via about:debugging.
-
-Diagnostic commands:
+To pull a newer release later:
 
 ```sh
-codex mcp get foxcode
-codex mcp list
+codex plugin marketplace upgrade korchasa
 ```
 
-Codex plugin marketplace packaging is not published yet; the supported path is project-scoped config plus repo-scoped skills.
+### Project-scoped install (works without marketplace)
+
+Clone the repository and run Codex from inside it:
+
+```sh
+git clone https://github.com/korchasa/foxcode.git
+cd foxcode
+codex
+```
+
+The repo ships:
+
+- `.codex/config.toml` — registers the `foxcode` MCP server for this project.
+- `.agents/skills/foxcode-run-{project,user}-profile/` — repo-scoped Codex skills that delegate to the canonical launch logic.
+
+### Run the launch skill
+
+Inside a Codex session run one of:
+
+- `$foxcode-run-project-profile` — isolated Firefox via `web-ext`. Project-local profile.
+- `$foxcode-run-user-profile` — your own Firefox via `about:debugging`.
+
+### Diagnostics
+
+```sh
+codex mcp get foxcode      # verifies the MCP entry resolves
+codex mcp list             # lists all configured MCP servers
+```
 
 ## Install in OpenCode
 

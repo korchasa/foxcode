@@ -101,12 +101,14 @@ graph LR
 - **Bundle exclusions:** `prepack.mjs` excludes `node_modules/`, `.foxcode/`, `build/`, `.DS_Store` from the copied trees. Channel deps install lazily on first invocation, not at pack time.
 - **Subprocess strategy:** `lib/exec.mjs` wraps `node:child_process.spawn` (no Bun-only `$` template tag) — single code path under both Bun (OpenCode plugin sandbox) and Node (CLI / dev).
 
-### Tertiary: Codex project config (NF-8)
-- **Structure:** `.codex/config.toml` declares project-scoped `mcp_servers.foxcode`; `.agents/skills/foxcode-run-{project,user}-profile/` exposes repo-scoped Codex skills.
-- **MCP startup:** Codex starts `sh -c 'set -e; export FOXCODE_PROJECT_DIR="$PWD"; cd "$(git rev-parse --show-toplevel)/foxcode/channel"; npm ci --omit=dev --silent; exec node server.mjs'`. `git rev-parse --show-toplevel` lets Codex launch from nested repo paths while keeping `FOXCODE_PROJECT_DIR` as the user launch directory.
+### Tertiary: Codex (NF-8)
+Two install paths exist; both reuse the artifacts already maintained for CC and need no Codex-specific code.
+
+- **Marketplace install (recommended):** `codex plugin marketplace add korchasa/foxcode`. Codex understands the CC marketplace format (`.claude-plugin/marketplace.json`), clones the repo into `~/.codex/.tmp/marketplaces/korchasa/`, copies `foxcode/` into `~/.codex/plugins/cache/korchasa/foxcode/<version>/`, and honours `${CLAUDE_PLUGIN_ROOT}` in the plugin's `.mcp.json` exactly like CC. Self-contained payload requires NF-9 (extension lives inside `foxcode/`). Refresh with `codex plugin marketplace upgrade korchasa`.
+- **Repo-scoped install:** `.codex/config.toml` declares project-scoped `mcp_servers.foxcode`; `.agents/skills/foxcode-run-{project,user}-profile/` exposes repo-discoverable Codex skills. Use when cloning the repo locally or contributing.
+- **MCP startup (repo path):** Codex runs `sh -c 'set -e; export FOXCODE_PROJECT_DIR="$PWD"; cd "$(git rev-parse --show-toplevel)/foxcode/channel"; npm ci --omit=dev --silent; exec node server.mjs'`. `git rev-parse --show-toplevel` lets Codex launch from nested repo paths while keeping `FOXCODE_PROJECT_DIR` as the user launch directory.
 - **Skill strategy:** Codex wrapper skills delegate to canonical `foxcode/skills/*/SKILL.md` and only adapt script paths from `${CLAUDE_SKILL_DIR}` to repo-relative paths. Launch semantics and verification remain single-source.
-- **Verification:** `codex mcp get foxcode` validates the project config when Codex is installed. Tier-4 e2e includes runtime `codex` via `@korchasa/ai-ide-cli`.
-- **Deferred distribution:** Codex plugin marketplace packaging is not implemented in this task. With the extension now bundled inside `foxcode/`, the plugin payload is self-contained — distribution can mirror the CC marketplace layout once Codex marketplace tooling is investigated.
+- **Verification:** `codex mcp get foxcode` validates the active MCP entry. Tier-4 e2e includes runtime `codex` via `@korchasa/ai-ide-cli`.
 
 ### Idempotency
 - `.xpi` download: detect existing file, ask re-download or skip

@@ -222,7 +222,7 @@
   - [x] Codex launch skills are discoverable from repo scope via `.agents/skills`. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:1`, `.agents/skills/foxcode-run-user-profile/SKILL.md:1`, `opencode/lib/skill-frontmatter.test.mjs:64`
   - [x] Codex launch skills reuse canonical FoxCode skill bodies instead of forking launch logic. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:8`, `.agents/skills/foxcode-run-user-profile/SKILL.md:8`, `foxcode/skills/foxcode-run-project-profile/SKILL.md:1`, `foxcode/skills/foxcode-run-user-profile/SKILL.md:1`
   - [x] Tier-4 acceptance includes Codex alongside Claude Code and OpenCode. Evidence: `opencode/test/acceptance/ide-task.test.ts:37`, `scripts/test-ide.sh:14`
-  - [ ] Published Codex plugin marketplace package. Deferred: with extension now bundled inside `foxcode/` (NF-9), the plugin payload is self-contained, but Codex marketplace tooling still needs investigation.
+  - [x] Codex plugin marketplace install path works against this repo. Evidence: `codex plugin marketplace add korchasa/foxcode` clones the same `.claude-plugin/marketplace.json` used for CC and installs into `~/.codex/plugins/cache/korchasa/foxcode/<version>/`; Codex honours `${CLAUDE_PLUGIN_ROOT}` in `foxcode/.mcp.json:5`. Self-contained payload requires NF-9.
 
 ### 4.9 NF-9: Self-Contained Plugin Payload [important]
 - **Description:** The Firefox extension lives inside the plugin dir (`foxcode/extension/`) instead of at the repo root, so every distribution channel ships the same self-contained payload. Removes the dependency on the CC marketplace clone for extension discovery and unblocks future Codex marketplace packaging.
