@@ -56,7 +56,7 @@ codex mcp get foxcode      # verifies the MCP entry resolves
 codex mcp list             # lists all configured MCP servers
 ```
 
-> **Codex plugin marketplace install is not yet supported.** `codex plugin marketplace add korchasa/foxcode` caches the payload correctly, but Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` in MCP server args from the plugin's `.mcp.json` (unlike Claude Code, which does per-element substitution). The MCP server starts but cannot locate `channel/server.mjs`. Tracking: requires Codex upstream to support `${CLAUDE_PLUGIN_ROOT}` substitution in plugin-provided MCP server args.
+> **Codex plugin marketplace install is not yet supported.** `codex plugin marketplace add korchasa/foxcode` caches the payload correctly, but Codex provides no way for a plugin-bundled MCP server to discover its install directory: it neither substitutes `${CLAUDE_PLUGIN_ROOT}` / `${PLUGIN_ROOT}` placeholders in `.mcp.json` args nor sets `PLUGIN_ROOT`/`CLAUDE_PLUGIN_ROOT` env vars for MCP server processes (per Codex docs those vars exist only for hook commands; empirically confirmed empty in MCP server env). The MCP server starts but cannot locate `channel/server.mjs`. Tracking: upstream Codex issue [#19372](https://github.com/openai/codex/issues/19372).
 
 ## Install in OpenCode
 
