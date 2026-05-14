@@ -87,12 +87,12 @@ jobs:
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
-          jq --arg v "$NEW_VERSION" '.version = $v' extension/manifest.json > tmp.json && mv tmp.json extension/manifest.json
+          jq --arg v "$NEW_VERSION" '.version = $v' foxcode/extension/manifest.json > tmp.json && mv tmp.json foxcode/extension/manifest.json
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/channel/package.json > tmp.json && mv tmp.json foxcode/channel/package.json
           jq --arg v "$NEW_VERSION" '.version = $v | .packages[""].version = $v' foxcode/channel/package-lock.json > tmp.json && mv tmp.json foxcode/channel/package-lock.json
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/.claude-plugin/plugin.json > tmp.json && mv tmp.json foxcode/.claude-plugin/plugin.json
 
-          git add extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json
+          git add foxcode/extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json
           if git diff --cached --quiet; then
             echo "Files already at v${NEW_VERSION}, skipping commit"
           else
@@ -103,7 +103,7 @@ jobs:
 
       - name: Build extension .xpi
         if: steps.check.outputs.releasable == 'true'
-        run: cd extension && zip -r ../foxcode-extension.xpi . -x '*.test.js'
+        run: cd foxcode/extension && zip -r ../../foxcode-extension.xpi . -x '*.test.js'
 
       - name: Create GitHub Release
         if: steps.check.outputs.releasable == 'true'
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Build extension .xpi
-        run: cd extension && zip -r ../foxcode-extension.xpi . -x '*.test.js'
+        run: cd foxcode/extension && zip -r ../../foxcode-extension.xpi . -x '*.test.js'
 
       - name: Upload extension artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
