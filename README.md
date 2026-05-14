@@ -31,28 +31,7 @@ Or use commands directly:
 
 ## Install in Codex
 
-Codex (OpenAI Codex CLI) uses the same plugin marketplace format as Claude Code, so the same `korchasa/foxcode` marketplace works in both. Two install paths:
-
-### Global install via Codex plugin marketplace (recommended)
-
-Add the marketplace and launch:
-
-```sh
-codex plugin marketplace add korchasa/foxcode
-codex
-```
-
-Codex clones the marketplace into `~/.codex/.tmp/marketplaces/korchasa/` and installs the plugin under `~/.codex/plugins/cache/korchasa/foxcode/<version>/`. The plugin's `.mcp.json` registers the `foxcode` MCP server automatically (`node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs`) and the launch skills appear as `$foxcode-run-project-profile` and `$foxcode-run-user-profile`.
-
-To pull a newer release later:
-
-```sh
-codex plugin marketplace upgrade korchasa
-```
-
-### Project-scoped install (works without marketplace)
-
-Clone the repository and run Codex from inside it:
+Codex (OpenAI Codex CLI) currently supports FoxCode only via the **project-scoped** path. Clone the repository and run Codex from inside it:
 
 ```sh
 git clone https://github.com/korchasa/foxcode.git
@@ -65,59 +44,52 @@ The repo ships:
 - `.codex/config.toml` — registers the `foxcode` MCP server for this project.
 - `.agents/skills/foxcode-run-{project,user}-profile/` — repo-scoped Codex skills that delegate to the canonical launch logic.
 
-### Run the launch skill
-
 Inside a Codex session run one of:
 
 - `$foxcode-run-project-profile` — isolated Firefox via `web-ext`. Project-local profile.
 - `$foxcode-run-user-profile` — your own Firefox via `about:debugging`.
 
-### Diagnostics
+Diagnostics:
 
 ```sh
 codex mcp get foxcode      # verifies the MCP entry resolves
 codex mcp list             # lists all configured MCP servers
 ```
 
+> **Codex plugin marketplace install is not yet supported.** `codex plugin marketplace add korchasa/foxcode` registers the marketplace, but the Codex plugin loader fails to load the cached payload (looks for `cache/<marketplace>/<plugin>/` without the version subdir Codex itself created). Tracking ticket: ensure compatibility once Codex marketplace install handles CC-style `"source": "./foxcode"` shorthand or once the repo ships a `.codex-plugin/plugin.json`.
+
 ## Install in OpenCode
 
-FoxCode also ships as an OpenCode plugin via npm. Two routes:
+> **The npm package `@korchasa/foxcode-opencode` is not published yet.** Until then, install from a local clone:
+>
+> ```sh
+> git clone https://github.com/korchasa/foxcode.git
+> cd foxcode/opencode && npm install --omit=dev
+> node bin/foxcode-opencode.mjs setup --write-config
+> ```
+>
+> The CLI seeds launch skills into `~/.config/opencode/skills/`, writes `~/.foxcode/opencode-plugin-dir` so the launch skills can locate the bundled extension, lazily installs channel deps, and patches `opencode.json` with the `mcp.foxcode` entry. After the package is published to npm, the snippets below will work as written.
 
-### One-shot CLI (recommended — single restart)
+Once `@korchasa/foxcode-opencode` is on npm:
 
 ```sh
 npx -y @korchasa/foxcode-opencode setup --write-config
 ```
 
-The CLI seeds `foxcode-run-project-profile` and `foxcode-run-user-profile` skills into `~/.config/opencode/skills/` (as symlinks to the bundled SKILL.md), writes `~/.foxcode/opencode-plugin-dir` so the launch skills can locate the bundled extension, lazily installs channel deps, and patches `opencode.json` with the `mcp.foxcode` entry. Restart OpenCode once and run `/foxcode-run-project-profile`.
-
-`--write-config` requires plain JSON — the CLI refuses files containing `//` or `/*` comments and prints the snippet for manual paste instead.
-
-### Plugin route (auto-update via Bun)
-
-Add to `opencode.json`:
+Plugin route (auto-update via Bun):
 
 ```json
 { "plugin": ["@korchasa/foxcode-opencode"] }
 ```
 
-OpenCode auto-installs the package via Bun on next start. The plugin runs on `session.created`, performs the same seed + handoff steps, and prints the MCP-entry snippet to stderr if `mcp.foxcode` is missing. Paste the snippet into `opencode.json` and restart OpenCode (two restarts total — the trade-off for unattended updates afterwards).
-
-### Diagnostics
+Diagnostics / uninstall:
 
 ```sh
 npx -y @korchasa/foxcode-opencode doctor
-```
-
-Prints prereq check, plugin/bundle paths, handoff state, and `mcp.foxcode` presence.
-
-### Uninstall
-
-```sh
 npx -y @korchasa/foxcode-opencode uninstall
 ```
 
-Removes seeded symlinks (preserves any user-owned real directory it found in their place) and the handoff file. `mcp.foxcode` is **not** auto-removed from `opencode.json` — remove the entry by hand to avoid destructive config mutation.
+Removes seeded symlinks (preserves any user-owned real directory in their place) and the handoff file. `mcp.foxcode` is **not** auto-removed from `opencode.json` — remove the entry by hand to avoid destructive config mutation.
 
 ## Features
 
