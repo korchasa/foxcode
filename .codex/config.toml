@@ -1,0 +1,10 @@
+# Project-scoped Codex configuration for FoxCode.
+# Implements SRS NF-8. Single source of truth for the foxcode MCP server entry
+# when running Codex from this repository.
+
+[mcp_servers.foxcode]
+command = "sh"
+args = [
+  "-c",
+  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; cd \"$(git rev-parse --show-toplevel)/foxcode/channel\"; npm ci --omit=dev --silent; exec node server.mjs",
+]

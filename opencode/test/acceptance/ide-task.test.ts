@@ -1,14 +1,13 @@
 /**
- * Tier-4 acceptance: a real IDE binary (Claude Code / OpenCode) is given a
+ * Tier-4 acceptance: a real IDE binary (Claude Code / OpenCode / Codex) is given a
  * task; the IDE picks the foxcode MCP tool, drives a real headless Firefox
  * via the foxcode channel, and we observe both the tool-use event and the
  * final answer.
  *
  * This is the highest-fidelity test we can write without a human:
  * everything below the IDE is identical to a user's setup —
- *   - real `opencode` / `claude` binary
- *   - real channel server spawned by the IDE from `opencode.json` /
- *     `~/.claude/...` config
+ *   - real `opencode` / `claude` / `codex` binary
+ *   - real channel server spawned by the IDE from its native MCP config
  *   - real Firefox loaded via `web-ext run --headless` with the actual
  *     foxcode WebExtension under `extension/`
  *   - real LLM call (so it costs tokens; gated behind FOXCODE_E2E_IDE=1)
@@ -32,10 +31,10 @@ const LAUNCH_SCRIPT =
   `${REPO_ROOT}/foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py`;
 const EXTENSION_DIR = `${REPO_ROOT}/extension`;
 const TEST_PASSWORD = "test-pw-ide-fixed";
-// Both supported IDEs are always exercised. Run the dedicated command
+// All supported IDEs are always exercised. Run the dedicated command
 // (`scripts/test-ide.sh` or `npm run --prefix opencode test:e2e-ide`) to
 // trigger this test — there is no env-var gate.
-const RUNTIMES: RuntimeId[] = ["opencode", "claude"];
+const RUNTIMES: RuntimeId[] = ["opencode", "claude", "codex"];
 
 // Free port within FoxCode's accepted range (8787–8886).
 async function findFreeFoxcodePort(): Promise<number> {
@@ -71,6 +70,7 @@ async function writePasswordFile(home: string): Promise<void> {
  * Build the typed mcpServers spec the adapter will inject runtime-natively:
  *   - Claude: rendered to a tmp `mcp.json`, passed via `--mcp-config`
  *   - OpenCode: serialised into `OPENCODE_CONFIG_CONTENT` env var
+ *   - Codex: rendered to a tmp `.codex/config.toml` by the adapter
  * Single source of truth — no per-runtime config file writing in this test.
  */
 function buildMcpServers(channelPort: number, fakeHome: string) {

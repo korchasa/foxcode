@@ -1,16 +1,17 @@
 # SRS
 
 ## 1. Intro
-- **Desc:** FoxCode - Firefox WebExtension for browser automation via Claude Code. Eval debug popup (on-demand, zero screen footprint) + headless browser API via MCP server over WebSocket.
+- **Desc:** FoxCode - Firefox WebExtension for browser automation via Claude Code, OpenCode, and Codex. Eval debug popup (on-demand, zero screen footprint) + headless browser API via MCP server over WebSocket.
 - **Def/Abbr:**
   - CC: Claude Code (CLI tool)
-  - Channel: MCP server pushing events into a CC session
+  - Codex: OpenAI Codex CLI / IDE extension
+  - Channel: MCP server exposing FoxCode tools to an agent session
 
 ## 2. General
-- **Context:** Developer runs Claude Code in IDE/terminal. Wants CC to automate the browser. Eval debug popup shows evalInBrowser requests/responses on demand (zero screen footprint).
+- **Context:** Developer runs Claude Code, OpenCode, or Codex in IDE/terminal. Wants the agent to automate the browser. Eval debug popup shows evalInBrowser requests/responses on demand (zero screen footprint).
 - **Assumptions/Constraints:**
   - Firefox 78.0+ required
-  - Claude Code CLI v2.1.80+ installed and running
+  - At least one supported agent installed and running: Claude Code CLI v2.1.80+, OpenCode, or Codex
   - All communication local (localhost), no external servers
   - Cross-platform (macOS primary, Linux/Windows secondary)
 
@@ -213,8 +214,18 @@
   - [x] Subprocess wrapper (`lib/exec.mjs`) uses `node:child_process.spawn` for cross-runtime support (Bun and Node). Evidence: `opencode/lib/exec.test.mjs`
   - [ ] End-to-end smoke test on macOS captured in PR (manual): install OpenCode → install plugin → run `/foxcode-run-project-profile` → run `evalInBrowser({code:'return await navigate("https://example.com")'})`. Evidence: PR transcript
 
+### 4.8 NF-8: Project-Scoped Codex Support [important]
+- **Description:** Codex CLI / IDE users can run FoxCode from this repository without Claude Code plugin installation or OpenCode npm setup. Project-scoped MCP configuration starts the shared channel server, and repo-scoped skills expose the existing launch workflows to Codex.
+- **Scenario:** User opens this repository in Codex → Codex trusts project config → `foxcode` MCP server starts from `.codex/config.toml` → user invokes `$foxcode-run-project-profile` → Firefox launches with the extension → `evalInBrowser` round-trips through the browser.
+- **Acceptance:**
+  - [x] Project-scoped Codex MCP config declares `foxcode` stdio server. Evidence: `.codex/config.toml:1`
+  - [x] Codex launch skills are discoverable from repo scope via `.agents/skills`. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:1`, `.agents/skills/foxcode-run-user-profile/SKILL.md:1`, `opencode/lib/skill-frontmatter.test.mjs:64`
+  - [x] Codex launch skills reuse canonical FoxCode skill bodies instead of forking launch logic. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:8`, `.agents/skills/foxcode-run-user-profile/SKILL.md:8`, `foxcode/skills/foxcode-run-project-profile/SKILL.md:1`, `foxcode/skills/foxcode-run-user-profile/SKILL.md:1`
+  - [x] Tier-4 acceptance includes Codex alongside Claude Code and OpenCode. Evidence: `opencode/test/acceptance/ide-task.test.ts:37`, `scripts/test-ide.sh:14`
+  - [ ] Published Codex plugin marketplace package with bundled extension/channel assets. Deferred: requires separate distribution audit for Codex plugin cache contents.
+
 ## 5. Interfaces
-- **Transport:** Channel Plugin (MCP server inside CC) ↔ WebSocket localhost:8787 ↔ Firefox Extension
+- **Transport:** Channel Plugin (MCP server inside supported agent) ↔ WebSocket localhost:8787 ↔ Firefox Extension
 - **Extension APIs:** browser.browserAction, browser.runtime, browser.tabs, browser.cookies, browser.webNavigation, browser.windows
 - **UI:** Popup eval debug console (browser_action, on-demand)
 
@@ -224,6 +235,6 @@
   - [x] Eval requests/responses visible in popup on demand
   - Removed: Messages sent from sidebar (FR-2 removed)
   - [x] Page content/selection delivered to CC session
-  - [x] CC can pull browser context from terminal
-  - [x] Works with project-specific CC sessions
-  - [x] Launch = run `claude --dangerously-load-development-channels plugin:foxcode@korchasa` from project dir with .mcp.json
+  - [x] Supported agents can pull browser context from terminal
+  - [x] Works with project-specific agent sessions
+  - [x] Launch works via supported agent config: Claude Code plugin `.mcp.json`, OpenCode `opencode.json`, or Codex `.codex/config.toml`

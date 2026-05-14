@@ -20,6 +20,8 @@
 - **Install Channel deps**: `cd foxcode/channel && npm install`
 - **Start Channel server**: `cd foxcode/channel && npm start`
 - **Verify Claude CLI**: `claude --version`
+- **Verify Codex CLI**: `codex --version`
+- **Tier-4 IDE acceptance**: `scripts/test-ide.sh` (requires deno, opencode, claude, codex, python3, npx; costs LLM tokens)
 
 ## Command Scripts
 - `scripts/check.sh` - Comment scan, validate manifest.json, JS syntax check for `extension/` and `foxcode/channel/`

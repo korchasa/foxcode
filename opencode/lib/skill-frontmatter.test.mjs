@@ -60,3 +60,13 @@ test("real bundled skills (project + user profile) parse cleanly", async () => {
     assert.ok(fm.description && fm.description.length > 0);
   }
 });
+
+test("real Codex wrapper skills parse cleanly", async () => {
+  const repoRoot = new URL("../../", import.meta.url).pathname;
+  for (const name of ["foxcode-run-project-profile", "foxcode-run-user-profile"]) {
+    const p = join(repoRoot, ".agents", "skills", name, "SKILL.md");
+    const fm = await parseSkillFile(p);
+    assert.equal(fm.name, name);
+    assert.ok(fm.description && fm.description.length > 0);
+  }
+});

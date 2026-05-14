@@ -1,10 +1,10 @@
-# FoxCode: Claude Code -> Firefox Bridge
+# FoxCode: AI Coding Agent -> Firefox Bridge
 
 > **⚠️ Active Development** - This project is under heavy development. APIs, configuration, and behavior may change without notice. Expect breaking changes between versions.
 
-Firefox WebExtension giving Claude Code browser automation in your real browser — with your sessions, cookies, and extensions. The agent scripts multi-step scenarios in a single call instead of round-tripping per action.
+Firefox WebExtension giving Claude Code, OpenCode, and Codex browser automation in your real browser — with your sessions, cookies, and extensions. The agent scripts multi-step scenarios in a single call instead of round-tripping per action.
 
-FoxCode is a two-part system: a **Claude Code plugin** (MCP server on Node.js) and a **Firefox WebExtension** (popup eval console + browser automation), connected via WebSocket on localhost.
+FoxCode is a two-part system: an **MCP server** (Node.js channel launched by your agent) and a **Firefox WebExtension** (popup eval console + browser automation), connected via WebSocket on localhost.
 
 ## Usage Patterns
 
@@ -28,6 +28,33 @@ Or use commands directly:
 
 - `/foxcode:foxcode-run-project-profile` — isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
 - `/foxcode:foxcode-run-user-profile` — your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
+
+## Use in Codex
+
+FoxCode ships repo-scoped Codex support:
+
+- `.codex/config.toml` registers the `foxcode` MCP server for this project.
+- `.agents/skills/foxcode-run-project-profile` and `.agents/skills/foxcode-run-user-profile` expose the launch workflows to Codex.
+
+From the repository root, start Codex:
+
+```sh
+codex
+```
+
+Then run one of the Codex skills:
+
+- `$foxcode-run-project-profile` — isolated Firefox via web-ext.
+- `$foxcode-run-user-profile` — your own Firefox via about:debugging.
+
+Diagnostic commands:
+
+```sh
+codex mcp get foxcode
+codex mcp list
+```
+
+Codex plugin marketplace packaging is not published yet; the supported path is project-scoped config plus repo-scoped skills.
 
 ## Install in OpenCode
 
@@ -74,28 +101,28 @@ Removes seeded symlinks (preserves any user-owned real directory it found in the
 - **Real browser, real context** — your Firefox with existing sessions, cookies, auth, extensions
 - **Single-call scripting** — full JS scenario in one tool call, no round-trip per action
 - **Rich async API** — ~36 helpers for DOM, navigation, tabs, cookies, screenshots, storage, console capture, dialog handling
-- **Multi-session** — multiple Claude Code sessions connect to one browser simultaneously, each on a unique port
-- **Zero setup** — plugin installs via marketplace, MCP server auto-starts, extension auto-connects via URL hash
+- **Multi-session** — multiple agent sessions connect to one browser simultaneously, each on a unique port
+- **Zero setup for supported paths** — Claude Code plugin, OpenCode package, or Codex project config starts the same MCP server; extension auto-connects via URL hash
 
 ## Architecture
 
 ```mermaid
 graph LR
-  CC["Claude Code<br/>(terminal)"] -->|stdio| MCP["MCP Channel Plugin<br/>(Node.js)"]
+  CC["Claude Code / OpenCode / Codex<br/>(terminal or IDE)"] -->|stdio| MCP["MCP Channel<br/>(Node.js)"]
   MCP -->|"WebSocket<br/>localhost:8787–8886"| EXT["Firefox Extension<br/>(popup + background)"]
   EXT -->|executeScript| TAB["Active Tab DOM"]
   EXT -->|eval via content script| PAGE["Page JS Context"]
 ```
 
-The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension supports multiple simultaneous connections (one per CC session) — auto-connects via URL hash params, or reconnects to saved sessions. No port scanning, no manual settings.
+The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension supports multiple simultaneous connections (one per agent session) — auto-connects via URL hash params, or reconnects to saved sessions. No port scanning, no manual settings.
 
 ## Components
 
-- **Channel Plugin** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging Claude Code -> extension via WebSocket. Installed as a Claude Code plugin, provides MCP tools
+- **Channel** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging agent -> extension via WebSocket. Installed or configured per supported agent, provides MCP tools
 - **Firefox Extension** (`extension/`) - Manifest V2 WebExtension: popup eval console (browser_action), background script for WebSocket + code execution, content script for DOM access in page context
 - **Run Skills** (`foxcode/skills/`) - launch skills for Project Profile and User Profile modes (see Launch)
 
-### MCP tools provided to Claude Code
+### MCP tools provided to agents
 
 - `evalInBrowser(code, timeout?)` - execute JS with browser automation API (click, fill, navigate, snapshot, screenshot, cookies, tabs, etc.)
 - `status()` - server telemetry: port, password, projectDir, uptime, connectedClients, launchMode, client info

@@ -24,6 +24,13 @@ else
   node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json','utf8'))" && echo "manifest.json: valid JSON"
 fi
 
+echo "--- Codex config validation ---"
+if command -v codex &>/dev/null; then
+  codex mcp get foxcode >/dev/null && echo ".codex/config.toml: foxcode MCP OK"
+else
+  echo "codex not found; skipped"
+fi
+
 # JS syntax check
 echo "--- JS syntax check ---"
 node --check foxcode/channel/server.mjs && echo "foxcode/channel/server.mjs: syntax OK"
