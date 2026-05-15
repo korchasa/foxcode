@@ -29,9 +29,120 @@ Or use commands directly:
 - `/foxcode:foxcode-run-project-profile` — isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
 - `/foxcode:foxcode-run-user-profile` — your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
 
+## Install in Any IDE
+
+Paste the prompt below into a Claude Code, Codex, or OpenCode session. The agent detects your IDE, explains every change before making it, and installs foxcode from published sources only.
+
+````
+Install foxcode in the current AI IDE. Follow these steps exactly.
+
+**Step 1 — Detect IDE**
+
+Run all three checks and report results:
+- `echo ${CLAUDE_PRODUCT:-unset}` — if not "unset", IDE is Claude Code
+- `which codex 2>/dev/null` — if a path is returned, IDE is Codex
+- `which opencode 2>/dev/null || ls ~/.config/opencode/ 2>/dev/null` — if anything is returned, IDE is OpenCode
+
+If multiple match, pick the one you are currently running inside.
+If none detected, ask the user which IDE they are using and wait for the answer.
+
+**Step 2 — Explain the plan and ask for confirmation**
+
+Before making any changes, tell the user:
+- Which IDE was detected and why (which check matched)
+- Every command that will run
+- Every file that will be created or modified, and exactly what will be written
+- Any known caveats or limitations for this IDE
+
+Then ask: "Proceed with installation? yes / no" — do not continue until the user confirms.
+
+**Step 3 — Install**
+
+For **Claude Code**:
+1. `/plugin marketplace add korchasa/foxcode`
+   Registers the marketplace source from https://github.com/korchasa/foxcode.
+2. `/plugin install foxcode@korchasa`
+   Installs the plugin: MCP server, Firefox extension, launch skills.
+3. Verify: run `/mcp` and confirm `foxcode` appears in the server list.
+
+For **Codex**:
+Background: Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` in `.mcp.json` args for MCP server
+processes (env vars confirmed empty at runtime; upstream issue #19372). The workaround adds a global
+`[mcp_servers.foxcode]` entry whose shell command locates the cached plugin dir at startup via a
+version-agnostic glob — so no config change is needed when the plugin updates.
+
+1. `codex plugin marketplace add korchasa/foxcode`
+   Downloads and caches the plugin. Installs launch skills.
+2. Check `~/.codex/config.toml` for an existing `[mcp_servers.foxcode]` block.
+   If it already exists, skip step 3.
+3. Append this block to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.foxcode]
+command = "sh"
+args = [
+  "-c",
+  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; npm ci --omit=dev --silent 2>/dev/null; exec node server.mjs",
+]
+```
+
+4. Verify: `grep -A5 'mcp_servers.foxcode' ~/.codex/config.toml`
+
+For **OpenCode**:
+Note: the npm package `@korchasa/foxcode-opencode` is not yet published. If the command below fails
+with a 404 or "package not found" error, stop and report: "OpenCode install is not yet available
+from published sources — check https://github.com/korchasa/foxcode for updates."
+
+1. `npx -y @korchasa/foxcode-opencode setup --write-config`
+   Seeds launch skills into `~/.config/opencode/skills/` and patches
+   `~/.config/opencode/opencode.json` with the `mcp.foxcode` entry.
+2. Verify: `npx -y @korchasa/foxcode-opencode doctor`
+
+**Step 4 — Next steps**
+
+Check that Firefox is installed (`which firefox` or `which firefox-esr`), then launch:
+- Claude Code: `/foxcode:foxcode-run-project-profile`
+- Codex: `$foxcode-run-project-profile`
+- OpenCode: run the `foxcode-run-project-profile` skill
+````
+
 ## Install in Codex
 
-Codex (OpenAI Codex CLI) currently supports FoxCode only via the **project-scoped** path. Clone the repository and run Codex from inside it:
+Two options:
+
+### Global install (recommended)
+
+Use the [Install in Any IDE](#install-in-any-ide) prompt above, or run manually:
+
+```sh
+codex plugin marketplace add korchasa/foxcode
+```
+
+Then append to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.foxcode]
+command = "sh"
+args = [
+  "-c",
+  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; npm ci --omit=dev --silent 2>/dev/null; exec node server.mjs",
+]
+```
+
+The shell command locates the latest cached version via glob — no config change needed on updates.
+
+Diagnostics:
+
+```sh
+codex mcp get foxcode      # verifies the MCP entry resolves
+codex mcp list             # lists all configured MCP servers
+```
+
+> **Why the manual config patch?** `codex plugin marketplace add` caches the plugin correctly and installs its skills, but Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` / `${PLUGIN_ROOT}` placeholders in `.mcp.json` args for MCP server processes, nor does it set those env vars at MCP server runtime (per Codex docs, env vars are available only to hook commands; empirically confirmed empty in MCP server env). Tracking: upstream Codex issue [#19372](https://github.com/openai/codex/issues/19372).
+
+### Project-scoped (simpler, no global config)
+
+Clone the repository and run Codex from inside it:
 
 ```sh
 git clone https://github.com/korchasa/foxcode.git
@@ -42,21 +153,12 @@ codex
 The repo ships:
 
 - `.codex/config.toml` — registers the `foxcode` MCP server for this project.
-- `.agents/skills/foxcode-run-{project,user}-profile/` — repo-scoped Codex skills that delegate to the canonical launch logic.
+- `.agents/skills/foxcode-run-{project,user}-profile/` — repo-scoped Codex skills.
 
 Inside a Codex session run one of:
 
 - `$foxcode-run-project-profile` — isolated Firefox via `web-ext`. Project-local profile.
 - `$foxcode-run-user-profile` — your own Firefox via `about:debugging`.
-
-Diagnostics:
-
-```sh
-codex mcp get foxcode      # verifies the MCP entry resolves
-codex mcp list             # lists all configured MCP servers
-```
-
-> **Codex plugin marketplace install is not yet supported.** `codex plugin marketplace add korchasa/foxcode` caches the payload correctly, but Codex provides no way for a plugin-bundled MCP server to discover its install directory: it neither substitutes `${CLAUDE_PLUGIN_ROOT}` / `${PLUGIN_ROOT}` placeholders in `.mcp.json` args nor sets `PLUGIN_ROOT`/`CLAUDE_PLUGIN_ROOT` env vars for MCP server processes (per Codex docs those vars exist only for hook commands; empirically confirmed empty in MCP server env). The MCP server starts but cannot locate `channel/server.mjs`. Tracking: upstream Codex issue [#19372](https://github.com/openai/codex/issues/19372).
 
 ## Install in OpenCode
 
