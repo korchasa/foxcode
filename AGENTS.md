@@ -16,6 +16,8 @@
 - Do not add fallbacks, default behaviors, or error recovery silently — if the user didn't ask for it, it's an assumption. If you believe a fallback is genuinely needed, ask the user first.
 - Do not use tables in chat output — use two-level lists instead. Tables render poorly in terminal and are harder to scan.
 - Always use relative paths in commands when possible — absolute paths only when required by the tool or context.
+- **Verify before documenting external integrations**: Do not document how a third-party tool behaves (Codex, OpenCode, Claude Code plugin system) until you have empirical evidence (tool output, log, test result). Document the *observed* behavior, not the expected one. No `docs:` commit about external behavior without a quoted tool output confirming it.
+- **No debug commits on main**: Experimental/probe commits (logging, temporary instrumentation, env-var existence checks) MUST go on a temp branch (`git checkout -b debug/...`). Never commit debug code to main. Delete the branch when done. Never force-push main to undo debug commits.
 
 ---
 
@@ -126,6 +128,10 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - URL-based connection with password auth: server generates random password (persisted in `~/.foxcode/password`, mode 0600), validates at HTTP upgrade level (401 on mismatch). Server serves info page at `http://localhost:PORT` (no secrets in HTML, shows project name + status). Password passed only in URL hash (`#PORT:PASSWORD`) which is never sent to server. Extension auto-connects via `tabs.onUpdated` listener. Multiple CC sessions coexist (different ports, shared password, N simultaneous WebSocket connections). No manual settings form — connections only via URL hash
 - CC does NOT expose project dir to MCP servers (`CLAUDE_PROJECT_DIR` unavailable). Workaround: `.mcp.json` shell command exports `FOXCODE_PROJECT_DIR="$PWD"` before `cd` to channel dir. `process.cwd()` in server ≠ user's project dir.
 - When modifying MCP server env/cwd usage, always verify the actual shell command in `.mcp.json` - it may `cd` or modify env before `node` starts.
+- **Codex plugin env vars (PLUGIN_ROOT / CLAUDE_PLUGIN_ROOT)**: Codex sets these env vars ONLY for hook commands (event-driven). MCP server processes receive them empty — empirically confirmed via debug logging (issue [#19372](https://github.com/openai/codex/issues/19372)). Workaround: global `[mcp_servers.foxcode]` entry in `~/.codex/config.toml` with a version-agnostic glob: `ls -d "$HOME/.codex/plugins/cache/korchasa/foxcode/"*/channel | sort -V | tail -1`.
+- **Codex plugin hooks off by default**: Require `[features].plugin_hooks = true` in `~/.codex/config.toml`. Available events: `SessionStart`, `PreToolUse`, `PostToolUse`, `PermissionRequest`, `UserPromptSubmit`, `Stop`. No install-time (`ON_INSTALL`) hook exists.
+- **Codex `[mcp_servers]` TOML**: Shell command in `args` is executed by `sh`, so `$HOME` and `$PWD` are expanded at runtime. Allows version-agnostic path resolution via glob without hard-coded version numbers.
+- **OpenCode `opencode.json` env interpolation**: Uses `{env:VAR}` syntax (e.g. `"FOXCODE_PROJECT_DIR": "{env:PWD}"`). Different from CC (`${VAR}`) and shell (`$VAR`).
 
 ## Documentation Hierarchy
 1. **`AGENTS.md`**: Project vision, constraints, mandatory rules. READ-ONLY reference.
