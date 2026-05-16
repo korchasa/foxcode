@@ -219,7 +219,7 @@
 - **Scenario:** User opens this repository in Codex → Codex trusts project config → `foxcode` MCP server starts from `.codex/config.toml` → user invokes `$foxcode-run-project-profile` → Firefox launches with the extension → `evalInBrowser` round-trips through the browser.
 - **Acceptance:**
   - [x] Project-scoped Codex MCP config declares `foxcode` stdio server. Evidence: `.codex/config.toml:1`
-  - [x] Codex launch skills are discoverable from repo scope via `.agents/skills`. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:1`, `.agents/skills/foxcode-run-user-profile/SKILL.md:1`, `opencode/lib/skill-frontmatter.test.mjs:64`
+  - [x] Codex launch skills are discoverable from repo scope via `.agents/skills`, with `.claude/skills` symlinked to the same source to avoid duplicate skill files. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:1`, `.agents/skills/foxcode-run-user-profile/SKILL.md:1`, `.claude/skills`, `opencode/lib/skill-frontmatter.test.mjs:64`
   - [x] Codex launch skills reuse canonical FoxCode skill bodies instead of forking launch logic. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:8`, `.agents/skills/foxcode-run-user-profile/SKILL.md:8`, `foxcode/skills/foxcode-run-project-profile/SKILL.md:1`, `foxcode/skills/foxcode-run-user-profile/SKILL.md:1`
   - [x] Codex repo skills include acceptance and distribution testing workflows derived from observed project sessions. Evidence: `.agents/skills/foxcode-acceptance-testing/SKILL.md:1`, `.agents/skills/foxcode-distribution-testing/SKILL.md:1`, `bash scripts/check.sh`
   - [x] Tier-4 acceptance includes Codex alongside Claude Code and OpenCode. Evidence: `opencode/test/acceptance/ide-task.test.ts:37`, `scripts/test-ide.sh:14`

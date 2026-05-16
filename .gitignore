@@ -4,7 +4,10 @@ channel/node_modules/
 opencode/bundle/
 opencode/*.tgz
 opencode/deno.lock
-.claude/
+.claude/*
+!.claude/skills
+!.claude/rules/
+!.claude/rules/**
 documents/tasks/
 .DS_Store
 demo-project/
