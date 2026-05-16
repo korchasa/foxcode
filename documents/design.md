@@ -104,9 +104,9 @@ graph LR
 ### Tertiary: Codex (NF-8)
 Currently only the **repo-scoped** path is verified end-to-end. Marketplace install is pending — see SRS NF-8 deferred item.
 
-- **Repo-scoped install (working):** `.codex/config.toml` declares project-scoped `mcp_servers.foxcode`; `.agents/skills/foxcode-run-{project,user}-profile/` exposes repo-discoverable Codex skills. User clones the repo and runs `codex` from inside it.
+- **Repo-scoped install (working):** `.codex/config.toml` declares project-scoped `mcp_servers.foxcode`; `.agents/skills/foxcode-run-{project,user}-profile/` exposes launch skills; `.agents/skills/foxcode-{acceptance,distribution}-testing/` exposes project QA skills. User clones the repo and runs `codex` from inside it.
 - **MCP startup:** Codex runs `sh -c 'set -e; export FOXCODE_PROJECT_DIR="$PWD"; cd "$(git rev-parse --show-toplevel)/foxcode/channel"; NPM_BIN="$(dirname "$(command -v node)")/npm"; "$NPM_BIN" ci --omit=dev --silent; exec node server.mjs'`. `git rev-parse --show-toplevel` lets Codex launch from nested repo paths while keeping `FOXCODE_PROJECT_DIR` as the user launch directory. `NPM_BIN` avoids stale system `npm` when `node` comes from a version manager.
-- **Skill strategy:** Codex wrapper skills delegate to canonical `foxcode/skills/*/SKILL.md` and only adapt script paths from `${CLAUDE_SKILL_DIR}` to repo-relative paths. Launch semantics and verification remain single-source.
+- **Skill strategy:** Codex wrapper launch skills delegate to canonical `foxcode/skills/*/SKILL.md` and only adapt script paths from `${CLAUDE_SKILL_DIR}` to repo-relative paths. QA skills stay repo-scoped only: acceptance testing covers baseline/MCP/browser/IDE tiers; distribution testing covers artifact contents and Claude Code/Codex/OpenCode install paths.
 - **Verification:** `codex mcp get foxcode` validates the active MCP entry. Tier-4 e2e includes runtime `codex` via `@korchasa/ai-ide-cli`.
 - **Marketplace install (pending):** `codex plugin marketplace add korchasa/foxcode` clones the marketplace and Codex lazy-installs the payload under `cache/korchasa/foxcode/<version>/`, but Codex's plugin loader fails to find the payload (looks at `cache/korchasa/foxcode/` without version subdir). Working Codex plugins use `<plugin>/local/` or `<plugin>/<short-sha>/` naming, which Codex appears to derive from object-form `source` in marketplace.json (with `source.source = "git-subdir"`, `source.sha`). Our marketplace.json uses CC's string-shorthand `"source": "./foxcode"`. Suspected fix: convert marketplace.json plugin entry to object form, or ship `.codex-plugin/plugin.json` alongside `.claude-plugin/plugin.json`.
 
@@ -114,4 +114,4 @@ Currently only the **repo-scoped** path is verified end-to-end. Marketplace inst
 - `.xpi` download: detect existing file, ask re-download or skip
 - Safe to re-run
 - OpenCode plugin/CLI: `seedSkills` and `patchOpencodeJson` are idempotent by construction — second run is a no-op when state already matches.
-- Codex repo support: `.codex/config.toml` and `.agents/skills/*` are static project files; re-running Codex reuses the same config.
+- Codex repo support: `.codex/config.toml` and `.agents/skills/*` are static project files; re-running Codex reuses the same config and project QA workflows.
