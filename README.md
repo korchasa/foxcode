@@ -2,7 +2,7 @@
 
 > **⚠️ Active Development** - This project is under heavy development. APIs, configuration, and behavior may change without notice. Expect breaking changes between versions.
 
-Firefox WebExtension giving Claude Code, OpenCode, and Codex browser automation in your real browser — with your sessions, cookies, and extensions. The agent scripts multi-step scenarios in a single call instead of round-tripping per action.
+Firefox WebExtension giving Claude Code and Codex browser automation in your real browser — with your sessions, cookies, and extensions (OpenCode support coming once the npm package ships). The agent scripts multi-step scenarios in a single call instead of round-tripping per action.
 
 FoxCode is a two-part system: an **MCP server** (Node.js channel launched by your agent) and a **Firefox WebExtension** (popup eval console + browser automation), connected via WebSocket on localhost.
 
@@ -12,107 +12,26 @@ FoxCode is a two-part system: an **MCP server** (Node.js channel launched by you
 - **Automate browser operations** — fill forms, click through flows, extract data, manage cookies/storage in one `evalInBrowser` call
 - **Debug with browser context** — inspect DOM or take a snapshot alongside the source, no need to explain what's on screen
 
-## Getting Started
+## Prerequisites
 
-### Install
+- Firefox (any recent version). On Linux, `firefox-esr` works too.
+- Node.js ≥ 18 (the MCP channel runs on it; `node -v` to check).
+- One of: Claude Code, Codex, or OpenCode CLI installed.
 
-Run `/plugin` in Claude Code — it opens an interactive plugin manager. Add the marketplace `korchasa/foxcode` in the Marketplaces tab, then install `foxcode` from the Discover tab.
+## Install in Claude Code
 
-Or use commands directly:
+Native plugin install — fully supported. Installs the MCP channel, the Firefox WebExtension assets, and the launch skills.
+
 ```
 /plugin marketplace add korchasa/foxcode
 /plugin install foxcode@korchasa
 ```
 
-### Launch
-
-- `/foxcode:foxcode-run-project-profile` — isolated Firefox via web-ext with project-local profile (`.foxcode/firefox-profile/`). Self-contained: checks prerequisites, locates extension, caches paths in `.foxcode/config.json`.
-- `/foxcode:foxcode-run-user-profile` — your own Firefox via about:debugging. Self-contained: checks prerequisites, locates extension, guides manual loading, caches paths in `.foxcode/config.json`.
-
-## Install in Any IDE
-
-Paste the prompt below into a Claude Code, Codex, or OpenCode session. The agent detects your IDE, explains every change before making it, and installs foxcode from published sources only.
-
-````
-Install foxcode in the current AI IDE. Follow these steps exactly.
-
-**Step 1 — Detect IDE**
-
-Run all three checks and report results:
-- `echo ${CLAUDE_PRODUCT:-unset}` — if not "unset", IDE is Claude Code
-- `which codex 2>/dev/null` — if a path is returned, IDE is Codex
-- `which opencode 2>/dev/null || ls ~/.config/opencode/ 2>/dev/null` — if anything is returned, IDE is OpenCode
-
-If multiple match, pick the one you are currently running inside.
-If none detected, ask the user which IDE they are using and wait for the answer.
-
-**Step 2 — Explain the plan and ask for confirmation**
-
-Before making any changes, tell the user:
-- Which IDE was detected and why (which check matched)
-- Every command that will run
-- Every file that will be created or modified, and exactly what will be written
-- Any known caveats or limitations for this IDE
-
-Then ask: "Proceed with installation? yes / no" — do not continue until the user confirms.
-
-**Step 3 — Install**
-
-For **Claude Code**:
-1. `/plugin marketplace add korchasa/foxcode`
-   Registers the marketplace source from https://github.com/korchasa/foxcode.
-2. `/plugin install foxcode@korchasa`
-   Installs the plugin: MCP server, Firefox extension, launch skills.
-3. Verify: run `/mcp` and confirm `foxcode` appears in the server list.
-
-For **Codex**:
-Background: Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` in `.mcp.json` args for MCP server
-processes (env vars confirmed empty at runtime; upstream issue #19372). The workaround adds a global
-`[mcp_servers.foxcode]` entry whose shell command locates the cached plugin dir at startup via a
-version-agnostic glob — so no config change is needed when the plugin updates.
-
-1. `codex plugin marketplace add korchasa/foxcode`
-   Downloads and caches the plugin. Installs launch skills.
-2. Check `~/.codex/config.toml` for an existing `[mcp_servers.foxcode]` block.
-   If it already exists, skip step 3.
-3. Append this block to `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.foxcode]
-command = "sh"
-args = [
-  "-c",
-  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; NPM_BIN=\"$(dirname \"$(command -v node)\")/npm\"; \"$NPM_BIN\" ci --omit=dev --silent 2>/dev/null; exec node server.mjs",
-]
-```
-
-4. Verify: `grep -A5 'mcp_servers.foxcode' ~/.codex/config.toml`
-
-For **OpenCode**:
-Note: the npm package `@korchasa/foxcode-opencode` is not yet published. If the command below fails
-with a 404 or "package not found" error, stop and report: "OpenCode install is not yet available
-from published sources — check https://github.com/korchasa/foxcode for updates."
-
-1. `npx -y @korchasa/foxcode-opencode setup --write-config`
-   Seeds launch skills into `~/.config/opencode/skills/` and patches
-   `~/.config/opencode/opencode.json` with the `mcp.foxcode` entry.
-2. Verify: `npx -y @korchasa/foxcode-opencode doctor`
-
-**Step 4 — Next steps**
-
-Check that Firefox is installed (`which firefox` or `which firefox-esr`), then launch:
-- Claude Code: `/foxcode:foxcode-run-project-profile`
-- Codex: `$foxcode-run-project-profile`
-- OpenCode: run the `foxcode-run-project-profile` skill
-````
+Or run `/plugin` for an interactive picker: add the `korchasa/foxcode` marketplace, then install `foxcode`. Verify with `/mcp` — `foxcode` appears in the server list.
 
 ## Install in Codex
 
-Two options:
-
-### Global install (recommended)
-
-Use the [Install in Any IDE](#install-in-any-ide) prompt above, or run manually:
+Native plugin install, then a one-time MCP-server config patch.
 
 ```sh
 codex plugin marketplace add korchasa/foxcode
@@ -129,69 +48,36 @@ args = [
 ]
 ```
 
-The shell command locates the latest cached version via glob — no config change needed on updates.
+The shell command resolves the latest cached version via glob — no config change on plugin updates. Verify with `codex mcp get foxcode` and `codex mcp list`.
 
-Diagnostics:
-
-```sh
-codex mcp get foxcode      # verifies the MCP entry resolves
-codex mcp list             # lists all configured MCP servers
-```
-
-> **Why the manual config patch?** `codex plugin marketplace add` caches the plugin correctly and installs its skills, but Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` / `${PLUGIN_ROOT}` placeholders in `.mcp.json` args for MCP server processes, nor does it set those env vars at MCP server runtime (per Codex docs, env vars are available only to hook commands; empirically confirmed empty in MCP server env). Tracking: upstream Codex issue [#19372](https://github.com/openai/codex/issues/19372).
-
-### Project-scoped (simpler, no global config)
-
-Clone the repository and run Codex from inside it:
-
-```sh
-git clone https://github.com/korchasa/foxcode.git
-cd foxcode
-codex
-```
-
-The repo ships:
-
-- `.codex/config.toml` — registers the `foxcode` MCP server for this project.
-- `.agents/skills/foxcode-run-{project,user}-profile/` — repo-scoped Codex skills.
-
-Inside a Codex session run one of:
-
-- `$foxcode-run-project-profile` — isolated Firefox via `web-ext`. Project-local profile.
-- `$foxcode-run-user-profile` — your own Firefox via `about:debugging`.
+> **Why the manual block?** `codex plugin marketplace add` caches the plugin and installs its skills, but Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` in `.mcp.json` args for MCP server processes, nor does it set the env var at MCP runtime (upstream Codex issue [#19372](https://github.com/openai/codex/issues/19372)). Until that lands, the MCP entry has to be declared in `~/.codex/config.toml`.
 
 ## Install in OpenCode
 
-> **The npm package `@korchasa/foxcode-opencode` is not published yet.** Until then, install from a local clone:
->
-> ```sh
-> git clone https://github.com/korchasa/foxcode.git
-> cd foxcode/opencode && npm install --omit=dev
-> node bin/foxcode-opencode.mjs setup --write-config
-> ```
->
-> The CLI seeds launch skills into `~/.config/opencode/skills/`, writes `~/.foxcode/opencode-plugin-dir` so the launch skills can locate the bundled extension, lazily installs channel deps, and patches `opencode.json` with the `mcp.foxcode` entry. After the package is published to npm, the snippets below will work as written.
+Native install is `opencode plugin @korchasa/foxcode-opencode`, which patches `~/.config/opencode/opencode.json`. The npm package is **not yet published** — watch the [releases page](https://github.com/korchasa/foxcode/releases) for the publication marker. No supported install path exists in the meantime.
 
-Once `@korchasa/foxcode-opencode` is on npm:
+## Launch
 
-```sh
-npx -y @korchasa/foxcode-opencode setup --write-config
+After installing in any IDE, run the launch skill to start Firefox with the extension. Two profiles:
+
+- **Project profile** — isolated Firefox via `web-ext`, project-local profile in `.foxcode/firefox-profile/`. Auto-connects via URL hash. Re-launches preserve the profile.
+- **User profile** — your own Firefox via `about:debugging`. Manual load of the extension; uses saved sessions for connection.
+
+| IDE | Project profile | User profile |
+| --- | --- | --- |
+| Claude Code | `/foxcode:foxcode-run-project-profile` | `/foxcode:foxcode-run-user-profile` |
+| Codex | `$foxcode-run-project-profile` | `$foxcode-run-user-profile` |
+| OpenCode | tell the agent: *run skill `foxcode-run-project-profile`* | tell the agent: *run skill `foxcode-run-user-profile`* |
+
+## First call
+
+After the launch skill reports "Ready.", verify the bridge by asking the agent to run:
+
+```
+evalInBrowser({ code: 'await api.navigate("https://example.com/"); return await api.getTitle();' })
 ```
 
-Plugin route (auto-update via Bun):
-
-```json
-{ "plugin": ["@korchasa/foxcode-opencode"] }
-```
-
-Diagnostics / uninstall:
-
-```sh
-npx -y @korchasa/foxcode-opencode doctor
-npx -y @korchasa/foxcode-opencode uninstall
-```
-
-Removes seeded symlinks (preserves any user-owned real directory in their place) and the handoff file. `mcp.foxcode` is **not** auto-removed from `opencode.json` — remove the entry by hand to avoid destructive config mutation.
+Expected result: `"Example Domain"`. If you see `"No browser extension connected"`, jump to [Troubleshooting](#troubleshooting).
 
 ## Features
 
@@ -199,7 +85,7 @@ Removes seeded symlinks (preserves any user-owned real directory in their place)
 - **Single-call scripting** — full JS scenario in one tool call, no round-trip per action
 - **Rich async API** — ~36 helpers for DOM, navigation, tabs, cookies, screenshots, storage, console capture, dialog handling
 - **Multi-session** — multiple agent sessions connect to one browser simultaneously, each on a unique port
-- **Zero setup for supported paths** — Claude Code plugin, OpenCode package, or Codex project config starts the same MCP server; extension auto-connects via URL hash
+- **One MCP server across IDEs** — Claude Code plugin, Codex plugin, and the planned OpenCode package all start the same MCP channel; extension auto-connects via URL hash
 
 ## Architecture
 
@@ -304,7 +190,9 @@ sequenceDiagram
 - **Reconnect**: per-session exponential backoff (3s → 30s max, 10 attempts). Dead sessions auto-removed
 - **Connection**: both skills verify connectivity via `status` tool (connectedClients > 0)
 
-## Permissions
+## Permissions (Claude Code)
+
+Claude Code only — Codex and OpenCode have their own approval models that govern MCP tool calls independently.
 
 By default, Claude Code asks for approval on every `evalInBrowser` call. To reduce friction, add permission rules to `.claude/settings.json` in your project:
 
@@ -336,8 +224,8 @@ To also auto-approve `evalInBrowser` (use with caution):
 
 ### Popup shows "No active sessions"
 
-- **No sessions** — MCP server not running or extension hasn't connected. Check `/mcp` in Claude Code.
-- **Session shows "(reconnecting…)"** — Server was running but stopped. CC may have exited. After 10 failed reconnect attempts (exponential backoff 3s → 30s) the session is silently removed from the list.
+- **No sessions** — MCP server not running or extension hasn't connected. List MCP servers in your IDE: Claude Code `/mcp`, Codex `codex mcp list`, OpenCode `opencode mcp list`.
+- **Session shows "(reconnecting…)"** — Server was running but stopped. The agent process may have exited. After 10 failed reconnect attempts (exponential backoff 3s → 30s) the session is silently removed from the list.
 - **To connect** — open the connection URL (`http://localhost:PORT#PORT:PASSWORD`) from the skill output, or re-run the launch skill.
 
 ### evalInBrowser returns "No browser extension connected"
