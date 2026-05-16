@@ -175,6 +175,21 @@ def main() -> int:
         url = f"http://localhost:{args.port}#{args.port}:{args.password}"
         start_url_args = ["--start-url", url]
 
+    # Disable Firefox auto-update. Without these, a staged update in
+    # ~/Library/Caches/Mozilla/updates/.../0/ is applied on launch and the
+    # updater can hang while replacing /Applications/Firefox.app, leaving
+    # web-ext with ECONNREFUSED on the remote debugger port. Profile-level
+    # user.js prefs alone are insufficient — staging.enabled must be off
+    # to prevent re-staging on the next run.
+    update_prefs = [
+        "--pref=app.update.enabled=false",
+        "--pref=app.update.auto=false",
+        "--pref=app.update.service.enabled=false",
+        "--pref=app.update.staging.enabled=false",
+        "--pref=app.update.background.scheduling.enabled=false",
+        "--pref=app.update.checkInstallTime=false",
+    ]
+
     # Build web-ext command
     cmd = [
         "npx", "web-ext", "run",
@@ -182,7 +197,7 @@ def main() -> int:
         "--firefox-profile", str(args.profile_dir),
         "--keep-profile-changes",
         f"--firefox={env['firefox']}",
-    ] + start_url_args
+    ] + update_prefs + start_url_args
     if args.headless:
         cmd += ["--args=--headless"]
 

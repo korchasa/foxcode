@@ -247,6 +247,38 @@ class TestWebExtArgs(LaunchTestBase):
                 continue
         self.fail(f"No start-url in stdout: {result.stdout}")
 
+    def test_disables_firefox_auto_update(self):
+        """web-ext receives --pref flags that suppress auto-update and staging.
+
+        Without these, a staged update under ~/Library/Caches/Mozilla/updates
+        is applied on launch and the updater can hang while replacing the
+        Firefox.app bundle, causing ECONNREFUSED on the remote debugger port.
+        """
+        required_prefs = {
+            "app.update.enabled=false",
+            "app.update.auto=false",
+            "app.update.service.enabled=false",
+            "app.update.staging.enabled=false",
+            "app.update.background.scheduling.enabled=false",
+            "app.update.checkInstallTime=false",
+        }
+        result = self._run_launch()
+        for line in result.stdout.splitlines():
+            try:
+                data = json.loads(line)
+                args = data["args"]
+                got = {
+                    a[len("--pref="):]
+                    for a in args
+                    if a.startswith("--pref=")
+                }
+                missing = required_prefs - got
+                self.assertFalse(missing, f"Missing --pref flags: {missing}")
+                return
+            except (json.JSONDecodeError, ValueError, KeyError):
+                continue
+        self.fail(f"No JSON args in stdout: {result.stdout}")
+
     def test_no_start_url_when_credentials_omitted(self):
         """Without --port/--password, web-ext starts without --start-url (dev mode)."""
         result = self._run_launch(pass_credentials=False)
