@@ -4,6 +4,7 @@ channel/node_modules/
 opencode/bundle/
 opencode/*.tgz
 opencode/deno.lock
+opencode/package-lock.json
 .claude/
 documents/tasks/
 .DS_Store
