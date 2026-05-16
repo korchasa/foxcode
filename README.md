@@ -82,7 +82,7 @@ version-agnostic glob — so no config change is needed when the plugin updates.
 command = "sh"
 args = [
   "-c",
-  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; npm ci --omit=dev --silent 2>/dev/null; exec node server.mjs",
+  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; NPM_BIN=\"$(dirname \"$(command -v node)\")/npm\"; \"$NPM_BIN\" ci --omit=dev --silent 2>/dev/null; exec node server.mjs",
 ]
 ```
 
@@ -125,7 +125,7 @@ Then append to `~/.codex/config.toml`:
 command = "sh"
 args = [
   "-c",
-  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; npm ci --omit=dev --silent 2>/dev/null; exec node server.mjs",
+  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; NPM_BIN=\"$(dirname \"$(command -v node)\")/npm\"; \"$NPM_BIN\" ci --omit=dev --silent 2>/dev/null; exec node server.mjs",
 ]
 ```
 

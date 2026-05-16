@@ -158,7 +158,7 @@
   - [x] Legacy `install-prompt.md` removed - plugin is the only install path. Evidence: file deleted
   - [x] Plugin marketplace structure: `.claude-plugin/marketplace.json` at repo root. Evidence: `.claude-plugin/marketplace.json`
   - [x] Plugin manifest: `foxcode/.claude-plugin/plugin.json`. Evidence: `foxcode/.claude-plugin/plugin.json`
-  - [x] Plugin `.mcp.json` declares foxcode MCP server (`node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs`), auto-loads on plugin enable. Evidence: `foxcode/.mcp.json`
+  - [x] Plugin `.mcp.json` declares foxcode MCP server, installs channel deps with the `npm` paired with active `node`, and auto-loads on plugin enable. Evidence: `foxcode/.mcp.json`, `claude mcp list` -> `plugin:foxcode:foxcode ... ✓ Connected`
   - [x] `claude plugin validate .` passes. Evidence: validated locally, `claude plugin validate .` -> "Validation passed"
   - [x] Launch skills are self-contained: check prerequisites, locate extension, cache in `.foxcode/config.json`, launch/guide, verify. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`, `foxcode/skills/foxcode-run-user-profile/SKILL.md`
   - [x] Skills check prerequisites: Node.js ≥18 (project profile), Firefox installed. Clear error with fix instructions per platform. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md` Step 3
@@ -210,7 +210,7 @@
   - [x] `prepack.mjs` syncs version from `foxcode/.claude-plugin/plugin.json`, copies `foxcode/extension/`, `foxcode/channel/`, `foxcode/skills/foxcode-run-{project,user}-profile/` into `bundle/`, excluding `node_modules/`. Evidence: `opencode/test/pack.test.mjs`
   - [x] File-based handoff (`~/.foxcode/opencode-plugin-dir`) consumed by `resolve_env.py` — bundle extension takes priority over CC marketplace heuristic. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/test_resolve_env.py::TestOpencodeHandoffFile`
   - [x] Bundled SKILL.md files have valid OpenCode frontmatter (required `name`, `description`). Evidence: `opencode/lib/skill-frontmatter.test.mjs::real bundled skills (project + user profile) parse cleanly`
-  - [x] CC plugin marketplace path unchanged (no edits to `foxcode/.claude-plugin/`, `foxcode/.mcp.json`, channel sources, skill bodies). Evidence: `git diff main -- foxcode/.claude-plugin foxcode/.mcp.json foxcode/channel foxcode/skills` shows no changes outside additive Python helper extension
+  - [x] CC plugin marketplace path remains self-contained (`foxcode/.claude-plugin/`, `foxcode/.mcp.json`, channel sources, skill bodies). Evidence: `foxcode/.mcp.json` uses in-plugin `channel/`; no external npm package required.
   - [x] Subprocess wrapper (`lib/exec.mjs`) uses `node:child_process.spawn` for cross-runtime support (Bun and Node). Evidence: `opencode/lib/exec.test.mjs`
   - [ ] End-to-end smoke test on macOS captured in PR (manual): install OpenCode → install plugin → run `/foxcode-run-project-profile` → run `evalInBrowser({code:'return await navigate("https://example.com")'})`. Evidence: PR transcript
 
