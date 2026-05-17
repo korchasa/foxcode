@@ -87,7 +87,7 @@ graph LR
 - **Launch skills:** `/foxcode:foxcode-run-project-profile` (isolated Firefox via web-ext) and `/foxcode:foxcode-run-user-profile` (manual extension loading via about:debugging, auto-open connection page). Both self-contained: prereq check, locate extension, cache paths in `.foxcode/config.json`, launch/guide, verify connectivity
 - **Bundled scripts** (`foxcode/skills/foxcode-run-project-profile/scripts/`): Python 3.9+ utilities shared by both skills
   - `resolve_env.py` — discovers Firefox binary (macOS/Linux/Windows), extension dir. Greenfield: saves to `.foxcode/config.json`. Brownfield: reads cache, re-discovers if stale. Output: `--format=json` or `--format=shell`. Does NOT handle port/password — those come only from live MCP `status` (single source of truth; avoids stale `~/.foxcode/port` vs. running server mismatch)
-  - `launch_firefox.py` — accepts `--port`/`--password` (passed by skill from `status` response), resolves Firefox+extension via `resolve_env`, launches web-ext with PID lifecycle (`.foxcode/web-ext.pid`): stale/live detection, cleanup on exit (SIGTERM/SIGHUP/normal). Without `--port`/`--password` (dev mode): no `--start-url`, extension auto-discovers via port scan
+  - `launch_firefox.py` — accepts `--port`/`--password` (passed by skill from `status` response), resolves Firefox+extension via `resolve_env`, launches web-ext as a detached process by default, writes `.foxcode/web-ext.pid`, then returns so the skill can poll `status`. Stale/live PID detection prevents duplicates; port mismatch kills the old process group and relaunches. `--foreground` keeps supervising web-ext and cleans the PID file on exit for `scripts/dev.sh`. Without `--port`/`--password` (dev mode): no `--start-url`, extension auto-discovers via port scan
 
 ### Secondary: OpenCode npm package (NF-7)
 - **Structure:** sibling top-level dir `opencode/` (parallel to `foxcode/`). Published to npm as `@korchasa/foxcode-opencode`.
@@ -100,6 +100,7 @@ graph LR
 - **Version sync:** `prepack.mjs` reads `version` from `foxcode/.claude-plugin/plugin.json` (single source of truth) and writes it back into `opencode/package.json` before pack. Keeps CC + OpenCode releases aligned.
 - **Bundle exclusions:** `prepack.mjs` excludes `node_modules/`, `.foxcode/`, `build/`, `.DS_Store` from the copied trees. Channel deps install lazily on first invocation, not at pack time.
 - **Subprocess strategy:** `lib/exec.mjs` wraps `node:child_process.spawn` (no Bun-only `$` template tag) — single code path under both Bun (OpenCode plugin sandbox) and Node (CLI / dev).
+- **Tier-4 skill acceptance:** `scripts/test-ide-skill.sh` runs `opencode run --command foxcode-run-project-profile`, requires exactly one `foxcode_evalInBrowser`, verifies DuckDuckGo metadata plus third result, and cleans only the web-ext PID it created.
 
 ### Tertiary: Codex (NF-8)
 Currently only the **repo-scoped** path is verified end-to-end. Marketplace install is pending — see SRS NF-8 deferred item.

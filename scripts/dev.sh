@@ -7,4 +7,4 @@ fi
 
 echo "=== FoxCode: dev ==="
 
-python3 foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py
+python3 foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py --foreground

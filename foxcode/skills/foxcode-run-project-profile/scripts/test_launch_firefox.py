@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -45,6 +46,7 @@ class LaunchTestBase(unittest.TestCase):
         # Dirs for PID and profile
         self.pid_file = os.path.join(self.tmpdir, "web-ext.pid")
         self.profile_dir = os.path.join(self.tmpdir, "ff-profile")
+        self.npx_args_file = os.path.join(self.tmpdir, "npx-args.json")
 
         # Port/password supplied by caller (skill) — authoritative from status
         self.port = 8800
@@ -65,24 +67,31 @@ class LaunchTestBase(unittest.TestCase):
         if npx_keepalive:
             Path(fake_npx).write_text(textwrap.dedent("""\
                 #!/usr/bin/env python3
-                import json, sys, signal, time
+                import json, os, sys, signal, time
                 signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
-                print(json.dumps({"args": sys.argv[1:]}), flush=True)
+                if os.environ.get("NPX_ARGS_FILE"):
+                    open(os.environ["NPX_ARGS_FILE"], "w").write(json.dumps({"args": sys.argv[1:]}))
+                else:
+                    print(json.dumps({"args": sys.argv[1:]}), flush=True)
                 while True:
                     time.sleep(0.1)
             """))
         else:
             Path(fake_npx).write_text(textwrap.dedent("""\
                 #!/usr/bin/env python3
-                import json, sys, signal, time
+                import json, os, sys, signal, time
                 signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))
-                print(json.dumps({"args": sys.argv[1:]}), flush=True)
+                if os.environ.get("NPX_ARGS_FILE"):
+                    open(os.environ["NPX_ARGS_FILE"], "w").write(json.dumps({"args": sys.argv[1:]}))
+                else:
+                    print(json.dumps({"args": sys.argv[1:]}), flush=True)
                 if "--wait" in sys.argv:
                     while True:
                         time.sleep(0.1)
             """))
         os.chmod(fake_npx, 0o755)
         env["PATH"] = os.path.dirname(fake_npx) + os.pathsep + env.get("PATH", "")
+        env["NPX_ARGS_FILE"] = self.npx_args_file
 
         if extra_env:
             env.update(extra_env)
@@ -106,6 +115,26 @@ class LaunchTestBase(unittest.TestCase):
             return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, cwd=self.tmpdir)
         return subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=15, cwd=self.tmpdir)
 
+    def _read_pid(self) -> int:
+        return int(Path(self.pid_file).read_text().strip().splitlines()[0])
+
+    def _kill_pid_file_process(self) -> None:
+        if not os.path.exists(self.pid_file):
+            return
+        pid = self._read_pid()
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+    def _read_npx_args(self):
+        deadline = time.time() + 2.0
+        while time.time() < deadline:
+            if os.path.exists(self.npx_args_file):
+                return json.loads(Path(self.npx_args_file).read_text())["args"]
+            time.sleep(0.05)
+        self.fail(f"No npx args file at {self.npx_args_file}")
+
 
 class TestLaunchResolves(LaunchTestBase):
     """launch_firefox.py resolves env and launches web-ext."""
@@ -118,23 +147,20 @@ class TestLaunchResolves(LaunchTestBase):
         self.assertFalse(os.path.exists(self.pid_file))
 
     def test_pid_file_written(self):
-        """PID file is created while process runs."""
-        proc = self._run_launch(background=True, npx_keepalive=True)
+        """Default mode returns after launch and leaves web-ext tracked by PID."""
+        result = self._run_launch(npx_keepalive=True)
         try:
-            for _ in range(50):
-                if os.path.exists(self.pid_file):
-                    break
-                time.sleep(0.1)
+            self.assertEqual(result.returncode, 0, result.stderr)
             self.assertTrue(os.path.exists(self.pid_file))
-            pid = int(Path(self.pid_file).read_text().strip().splitlines()[0])
+            pid = self._read_pid()
             self.assertGreater(pid, 0)
+            os.kill(pid, 0)
         finally:
-            proc.terminate()
-            proc.wait(timeout=5)
+            self._kill_pid_file_process()
 
-    def test_sigterm_cleans_pid(self):
-        """SIGTERM cleans up PID file."""
-        proc = self._run_launch(background=True, npx_keepalive=True)
+    def test_foreground_sigterm_cleans_pid(self):
+        """Foreground mode keeps the old supervising behaviour."""
+        proc = self._run_launch(background=True, npx_keepalive=True, extra_args=["--foreground"])
         for _ in range(50):
             if os.path.exists(self.pid_file):
                 break
@@ -142,6 +168,8 @@ class TestLaunchResolves(LaunchTestBase):
         self.assertTrue(os.path.exists(self.pid_file))
         proc.terminate()
         proc.wait(timeout=5)
+        proc.stdout.close()
+        proc.stderr.close()
         self.assertFalse(os.path.exists(self.pid_file))
 
 
@@ -211,41 +239,29 @@ class TestWebExtArgs(LaunchTestBase):
     def test_passes_extension_and_firefox(self):
         """npx receives web-ext run with resolved paths."""
         result = self._run_launch()
+        self.assertEqual(result.returncode, 0, result.stderr)
         # fake npx prints its args as JSON
-        for line in result.stdout.splitlines():
-            try:
-                data = json.loads(line)
-                args = data["args"]
-                self.assertIn("web-ext", args)
-                self.assertIn("run", args)
-                self.assertIn("--keep-profile-changes", args)
-                # Check --source-dir points to our ext dir
-                idx = args.index("--source-dir")
-                self.assertEqual(args[idx + 1], self.ext_dir)
-                return
-            except (json.JSONDecodeError, ValueError, KeyError):
-                continue
-        self.fail(f"No JSON args in stdout: {result.stdout}")
+        args = self._read_npx_args()
+        self.assertIn("web-ext", args)
+        self.assertIn("run", args)
+        self.assertIn("--keep-profile-changes", args)
+        # Check --source-dir points to our ext dir
+        idx = args.index("--source-dir")
+        self.assertEqual(args[idx + 1], self.ext_dir)
 
     def test_start_url_includes_port_and_password(self):
         """--start-url contains port and password passed explicitly by caller."""
         result = self._run_launch()
-        for line in result.stdout.splitlines():
-            try:
-                data = json.loads(line)
-                args = data["args"]
-                idx = args.index("--start-url")
-                url = args[idx + 1]
-                self.assertIn(str(self.port), url)
-                self.assertIn(self.password, url)
-                self.assertEqual(
-                    url,
-                    f"http://localhost:{self.port}#{self.port}:{self.password}",
-                )
-                return
-            except (json.JSONDecodeError, ValueError, KeyError):
-                continue
-        self.fail(f"No start-url in stdout: {result.stdout}")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = self._read_npx_args()
+        idx = args.index("--start-url")
+        url = args[idx + 1]
+        self.assertIn(str(self.port), url)
+        self.assertIn(self.password, url)
+        self.assertEqual(
+            url,
+            f"http://localhost:{self.port}#{self.port}:{self.password}",
+        )
 
     def test_disables_firefox_auto_update(self):
         """web-ext receives --pref flags that suppress auto-update and staging.
@@ -263,35 +279,22 @@ class TestWebExtArgs(LaunchTestBase):
             "app.update.checkInstallTime=false",
         }
         result = self._run_launch()
-        for line in result.stdout.splitlines():
-            try:
-                data = json.loads(line)
-                args = data["args"]
-                got = {
-                    a[len("--pref="):]
-                    for a in args
-                    if a.startswith("--pref=")
-                }
-                missing = required_prefs - got
-                self.assertFalse(missing, f"Missing --pref flags: {missing}")
-                return
-            except (json.JSONDecodeError, ValueError, KeyError):
-                continue
-        self.fail(f"No JSON args in stdout: {result.stdout}")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = self._read_npx_args()
+        got = {
+            a[len("--pref="):]
+            for a in args
+            if a.startswith("--pref=")
+        }
+        missing = required_prefs - got
+        self.assertFalse(missing, f"Missing --pref flags: {missing}")
 
     def test_no_start_url_when_credentials_omitted(self):
         """Without --port/--password, web-ext starts without --start-url (dev mode)."""
         result = self._run_launch(pass_credentials=False)
         self.assertEqual(result.returncode, 0, result.stderr)
-        for line in result.stdout.splitlines():
-            try:
-                data = json.loads(line)
-                args = data["args"]
-                self.assertNotIn("--start-url", args)
-                return
-            except (json.JSONDecodeError, ValueError, KeyError):
-                continue
-        self.fail(f"No JSON args in stdout: {result.stdout}")
+        args = self._read_npx_args()
+        self.assertNotIn("--start-url", args)
 
     def test_port_without_password_rejected(self):
         """--port without --password is a caller error (invariant: both or neither)."""

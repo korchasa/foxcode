@@ -60,7 +60,8 @@ node --test \
   opencode/test/acceptance/bridge.test.mjs
 
 # Tier 4 (real IDE × real Firefox) is not run by `check`. It lives in:
-#   scripts/test-ide.sh    — Tier 4 (LLM tokens, ~50 s)
+#   scripts/test-ide.sh         — IDEs drive evalInBrowser (LLM tokens, ~50 s)
+#   scripts/test-ide-skill.sh   — OpenCode command skill launches Firefox (LLM tokens)
 
 # Python tests (skill helpers)
 echo "--- Python tests ---"

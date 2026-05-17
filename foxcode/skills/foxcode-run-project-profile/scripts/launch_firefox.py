@@ -12,7 +12,7 @@ If --port/--password are omitted, web-ext starts without a --start-url and
 the extension discovers the server via its own port-range scan (dev mode).
 
 Usage:
-    launch_firefox.py [--port PORT --password PW] [--pid-file PATH] [--profile-dir PATH]
+    launch_firefox.py [--port PORT --password PW] [--pid-file PATH] [--profile-dir PATH] [--foreground]
 
 Cross-platform: macOS, Linux, Windows.
 """
@@ -62,25 +62,83 @@ def _write_pid_file(pid_file: Path, pid: int, port: int | None) -> None:
 def _kill_process(pid: int) -> None:
     """Terminate process: SIGTERM with 2 s grace period, then SIGKILL.
 
-    Uses os.kill(pid, 0) to check liveness — valid here because the target
-    (web-ext) is a child of another launch_firefox.py instance which reaps
-    it promptly via proc.wait(). Do NOT use os.kill(pid, 0) in tests where
-    the process may become a zombie — use Popen.poll() instead.
+    Detached POSIX launches make the web-ext process a process-group leader,
+    so a port change can stop the whole web-ext/Firefox tree. Older PID files
+    may point at a non-group-leader process; in that case fall back to the
+    single PID.
     """
     try:
         if sys.platform == "win32":
-            subprocess.run(["taskkill", "/F", "/PID", str(pid)], check=False)
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], check=False)
             return
-        os.kill(pid, signal.SIGTERM)
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except OSError:
+            os.kill(pid, signal.SIGTERM)
         for _ in range(40):
             time.sleep(0.05)
             try:
                 os.kill(pid, 0)
             except OSError:
                 return
-        os.kill(pid, signal.SIGKILL)
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except OSError:
+            os.kill(pid, signal.SIGKILL)
     except OSError:
         pass
+
+
+def _popen_kwargs(foreground: bool) -> dict:
+    """Build subprocess options for foreground or launch-helper mode."""
+    if foreground:
+        return {}
+    if sys.platform == "win32":
+        return {
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+            "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP,
+        }
+    return {
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "start_new_session": True,
+    }
+
+
+def _wait_foreground(proc: subprocess.Popen, pid_file: Path) -> int:
+    """Supervise web-ext until it exits, cleaning the PID file on shutdown."""
+    shutdown_requested = False
+
+    def on_signal(signum, frame):
+        nonlocal shutdown_requested
+        shutdown_requested = True
+
+    if sys.platform != "win32":
+        signal.signal(signal.SIGTERM, on_signal)
+        signal.signal(signal.SIGHUP, on_signal)
+
+    try:
+        while proc.poll() is None:
+            if shutdown_requested:
+                break
+            try:
+                proc.wait(timeout=0.2)
+            except subprocess.TimeoutExpired:
+                pass
+    except KeyboardInterrupt:
+        shutdown_requested = True
+
+    if shutdown_requested:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
+
+    pid_file.unlink(missing_ok=True)
+    return proc.returncode if proc.returncode is not None else 1
 
 
 def handle_existing_process(pid_file: Path, current_port: int | None) -> bool:
@@ -137,6 +195,10 @@ def main() -> int:
     parser.add_argument(
         "--headless", action="store_true",
         help="Run Firefox in headless mode (no UI). Used by acceptance tests.",
+    )
+    parser.add_argument(
+        "--foreground", action="store_true",
+        help="Keep supervising web-ext until it exits. Default launches and returns.",
     )
     args = parser.parse_args()
 
@@ -201,43 +263,22 @@ def main() -> int:
     if args.headless:
         cmd += ["--args=--headless"]
 
-    # Launch
-    proc = subprocess.Popen(cmd)
+    # Launch. Default mode is a launch helper for IDE skills: return control
+    # after web-ext starts so the skill can poll `status`. Foreground mode is
+    # kept for development scripts that want the old supervising behaviour.
+    proc = subprocess.Popen(cmd, **_popen_kwargs(args.foreground))
     _write_pid_file(args.pid_file, proc.pid, args.port)
 
-    # Signal handling for graceful shutdown
-    shutdown_requested = False
+    if args.foreground:
+        return _wait_foreground(proc, args.pid_file)
 
-    def on_signal(signum, frame):
-        nonlocal shutdown_requested
-        shutdown_requested = True
+    time.sleep(0.5)
+    if proc.poll() is not None:
+        args.pid_file.unlink(missing_ok=True)
+        return proc.returncode if proc.returncode is not None else 1
 
-    if sys.platform != "win32":
-        signal.signal(signal.SIGTERM, on_signal)
-        signal.signal(signal.SIGHUP, on_signal)
-
-    # Wait for process
-    try:
-        while proc.poll() is None:
-            if shutdown_requested:
-                break
-            try:
-                proc.wait(timeout=0.2)
-            except subprocess.TimeoutExpired:
-                pass
-    except KeyboardInterrupt:
-        shutdown_requested = True
-
-    if shutdown_requested:
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            proc.wait()
-
-    args.pid_file.unlink(missing_ok=True)
-    return proc.returncode if proc.returncode is not None else 1
+    print(f"Launched (PID {proc.pid})")
+    return 0
 
 
 if __name__ == "__main__":

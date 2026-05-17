@@ -12,7 +12,8 @@
     "postpack": "node -e \"import('node:fs/promises').then(fs => fs.rm('./bundle', { recursive: true, force: true }))\"",
     "test": "node --test lib/*.test.mjs test/*.test.mjs",
     "test:acceptance": "node --test test/acceptance/mcp.test.mjs test/acceptance/bridge.test.mjs",
-    "test:e2e-ide": "bash ../scripts/test-ide.sh"
+    "test:e2e-ide": "bash ../scripts/test-ide.sh",
+    "test:e2e-skill": "bash ../scripts/test-ide-skill.sh"
   },
   "keywords": [
     "opencode",
