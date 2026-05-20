@@ -8,6 +8,7 @@ opencode/deno.lock
 !.claude/skills
 !.claude/rules/
 !.claude/rules/**
+.codex/config.toml
 documents/tasks/
 .DS_Store
 demo-project/
