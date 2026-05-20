@@ -62,7 +62,7 @@
   - [x] Manifest updated: cookies, webNavigation, `<all_urls>` permissions + CSP unsafe-eval. Evidence: `foxcode/extension/manifest.json:6-11,13`
   - [x] Unit tests for validator, dom-helpers, browser-api. Evidence: `foxcode/channel/validator.test.mjs`, `foxcode/extension/background/dom-helpers.test.js`, `foxcode/extension/background/browser-api.test.js`
   - [ ] Integration test: background executes code -> delegates to tab -> returns result (requires Firefox)
-  - [x] MCP instructions describe API reference. Evidence: `foxcode/channel/lib.mjs:264-303` (evalInBrowser description)
+  - [x] MCP instructions describe API reference, CSS-selector constraint, and text-matching examples. Evidence: `foxcode/channel/lib.mjs:264-317` (evalInBrowser description)
 
 ### 3.6 FR-6: Multi-Session Support
 - **Desc:** Multiple concurrent CC sessions communicate with a single Firefox extension instance. Each session has its own MCP server on a unique port; extension maintains N simultaneous WebSocket connections.
@@ -223,7 +223,7 @@
   - [x] Project-scoped Codex MCP config declares `foxcode` stdio server. Evidence: `.codex/config.toml:1`
   - [x] Codex launch skills are discoverable from repo scope via `.agents/skills`, with `.claude/skills` symlinked to the same source to avoid duplicate skill files. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:1`, `.agents/skills/foxcode-run-user-profile/SKILL.md:1`, `.claude/skills`, `opencode/lib/skill-frontmatter.test.mjs:64`
   - [x] Codex launch skills reuse canonical FoxCode skill bodies instead of forking launch logic. Evidence: `.agents/skills/foxcode-run-project-profile/SKILL.md:8`, `.agents/skills/foxcode-run-user-profile/SKILL.md:8`, `foxcode/skills/foxcode-run-project-profile/SKILL.md:1`, `foxcode/skills/foxcode-run-user-profile/SKILL.md:1`
-  - [x] Codex repo skills include acceptance and distribution testing workflows derived from observed project sessions. Evidence: `.agents/skills/foxcode-acceptance-testing/SKILL.md:1`, `.agents/skills/foxcode-distribution-testing/SKILL.md:1`, `bash scripts/check.sh`
+  - [x] Codex repo skills include acceptance, distribution, and historical usage-analysis workflows derived from observed project sessions. Evidence: `.agents/skills/foxcode-acceptance-testing/SKILL.md:1`, `.agents/skills/foxcode-distribution-testing/SKILL.md:1`, `.agents/skills/foxcode-usage-analysis/SKILL.md:1`, `.agents/skills/foxcode-usage-analysis/scripts/analyze_foxcode_usage.py:1`, `bash scripts/check.sh`
   - [x] Tier-4 acceptance includes Codex alongside Claude Code and OpenCode. Evidence: `opencode/test/acceptance/ide-task.test.ts:37`, `scripts/test-ide.sh:14`
   - [ ] Codex plugin marketplace install path. Empirical (2026-05-15): `codex plugin marketplace add korchasa/foxcode` registers the marketplace and `codex` lazy-installs payload under `~/.codex/plugins/cache/korchasa/foxcode/<version>/`, but Codex plugin loader fails with `failed to load plugin: plugin is not installed path=cache/korchasa/foxcode` — loader does not descend into the version subdir Codex itself created. Working Codex plugins keep payloads in `<plugin>/local/` or `<plugin>/<short-sha>/`. Suspect cause: CC marketplace shorthand `"source": "./foxcode"` is not recognised the same way as `source.source = "git-subdir"` object form. Codex marketplace install therefore remains pending pending either (a) marketplace.json conversion to object form, or (b) shipping `.codex-plugin/plugin.json` alongside `.claude-plugin/plugin.json`.
 

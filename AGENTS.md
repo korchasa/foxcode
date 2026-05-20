@@ -74,7 +74,7 @@ foxcode/
 │   ├── lib/              #   paths, seed-skills, mcp-snippet, patcher, handoff, exec, ...
 │   ├── prepack.mjs       #   Bundle assembly at npm-pack time (copies ../foxcode/{extension,channel,skills})
 │   └── test/             #   Plugin + CLI + pack integration tests
-├── .agents/skills/       # Codex-discoverable launch skills (delegate to foxcode/skills bodies)
+├── .agents/skills/       # Codex/Claude repo skills: launch wrappers, QA, usage analysis
 ├── .codex/config.toml    # Project-scoped Codex MCP server entry (foxcode)
 ├── documents/            # Project docs (SRS, SDS, whiteboards)
 ├── scripts/              # Dev scripts (check.sh, test.sh, dev.sh)

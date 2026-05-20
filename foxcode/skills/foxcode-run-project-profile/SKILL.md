@@ -16,7 +16,7 @@ Launch isolated Firefox with FoxCode extension. Communicate in user's language. 
 
 Call `status`. 
 - Fails -> tell user "MCP server not running", stop.
-- `connectedClients > 0` -> say "Ready." and stop.
+- `connectedClients > 0` -> say "Ready." and stop. Do not restart Firefox in the same session after Ready; reuse the current connected browser first.
 - Otherwise remember `{port, password}` from the response as `PORT0`, `PASSWORD0` — these are authoritative for the current server.
 
 ## 2. Launch Firefox (background bash)
