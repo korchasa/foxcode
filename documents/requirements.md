@@ -167,6 +167,7 @@
   - [x] Port/password for Firefox start-URL sourced exclusively from live MCP `status` (single source of truth). Stale `~/.foxcode/port` cannot produce wrong connect URL. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md` Step 1-2, `foxcode/skills/foxcode-run-project-profile/scripts/test_resolve_env.py::test_does_not_read_foxcode_home`
   - [x] Post-launch verification re-queries `status` on timeout; port/password drift from initial response surfaces as "server restarted" instead of generic failure. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md` Step 3, `foxcode/skills/foxcode-run-user-profile/SKILL.md` Step 4
   - [x] PID tracking prevents duplicate browser instances. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py` (check_stale_pid), `foxcode/skills/foxcode-run-project-profile/scripts/test_launch_firefox.py`
+  - [x] Project-profile launch blocks before `web-ext` when Firefox has a staged applied update (`update.status=applied`, `Updated.app`) or a live `org.mozilla.updater` for the FoxCode URL; diagnostics redact URL hash secrets. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py` (`_check_firefox_update_preflight`), `foxcode/skills/foxcode-run-project-profile/scripts/test_launch_firefox.py::TestFirefoxUpdatePreflight`
   - [x] Skills communicate in user's language (auto-detect from conversation context). Evidence: SKILL.md frontmatter
   - [x] On error: stops, explains what went wrong, suggests fix, does NOT silently skip steps. Evidence: SKILL.md Step 3
 

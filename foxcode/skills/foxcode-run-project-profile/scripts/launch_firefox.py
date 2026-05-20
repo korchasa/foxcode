@@ -18,6 +18,7 @@ Cross-platform: macOS, Linux, Windows.
 """
 
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -104,6 +105,88 @@ def _popen_kwargs(foreground: bool) -> dict:
         "stderr": subprocess.DEVNULL,
         "start_new_session": True,
     }
+
+
+def _sanitize_process_line(line: str) -> str:
+    """Redact FoxCode URL hash secrets from process diagnostics."""
+    return re.sub(
+        r"(http://localhost:\d+#\d+:)[^\s]+",
+        r"\1<redacted>",
+        line,
+    )
+
+
+def _find_staged_firefox_updates(home: Path) -> list[str]:
+    """Return staged Firefox update markers that can block web-ext startup."""
+    root = home / "Library" / "Caches" / "Mozilla" / "updates"
+    if not root.exists():
+        return []
+
+    findings = []
+    for status_file in root.rglob("update.status"):
+        try:
+            status = status_file.read_text(errors="replace").strip()
+        except OSError:
+            continue
+        if status == "applied":
+            findings.append(f"update.status=applied: {status_file}")
+
+    for updated_app in root.rglob("Updated.app"):
+        if updated_app.is_dir():
+            findings.append(f"staged Updated.app: {updated_app}")
+
+    return findings
+
+
+def _find_foxcode_updater_processes(port: int | None) -> list[str]:
+    """Return running Firefox updater processes launched for a FoxCode URL."""
+    if port is None or sys.platform == "win32":
+        return []
+
+    try:
+        result = subprocess.run(
+            ["ps", "-axo", "pid=,comm=,args="],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode != 0:
+        return []
+
+    port_marker = f"http://localhost:{port}"
+    findings = []
+    for line in result.stdout.splitlines():
+        if "org.mozilla.updater" not in line:
+            continue
+        if port_marker not in line:
+            continue
+        findings.append(f"running org.mozilla.updater: {_sanitize_process_line(line.strip())}")
+    return findings
+
+
+def _check_firefox_update_preflight(home: Path, port: int | None) -> list[str]:
+    """Collect Firefox update state that should block launching web-ext."""
+    return [
+        *_find_staged_firefox_updates(home),
+        *_find_foxcode_updater_processes(port),
+    ]
+
+
+def _print_firefox_update_error(findings: list[str]) -> None:
+    print("Error: Firefox update is pending; not launching web-ext.", file=sys.stderr)
+    print("Detected:", file=sys.stderr)
+    for item in findings[:10]:
+        print(f"- {item}", file=sys.stderr)
+    if len(findings) > 10:
+        print(f"- ... {len(findings) - 10} more", file=sys.stderr)
+    print(
+        "Fix: quit all Firefox instances, let the updater finish replacing Firefox.app, "
+        "then re-run the FoxCode launch skill.",
+        file=sys.stderr,
+    )
 
 
 def _wait_foreground(proc: subprocess.Popen, pid_file: Path) -> int:
@@ -228,6 +311,12 @@ def main() -> int:
         pid = int(args.pid_file.read_text().strip().splitlines()[0])
         print(f"Already running (PID {pid})")
         return 0
+
+    update_findings = _check_firefox_update_preflight(Path.home(), args.port)
+    if update_findings:
+        _print_firefox_update_error(update_findings)
+        return 1
+
     args.pid_file.parent.mkdir(parents=True, exist_ok=True)
     args.profile_dir.mkdir(parents=True, exist_ok=True)
 

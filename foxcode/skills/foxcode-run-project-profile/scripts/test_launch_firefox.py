@@ -304,5 +304,84 @@ class TestWebExtArgs(LaunchTestBase):
         self.assertIn("--password", result.stderr)
 
 
+class TestFirefoxUpdatePreflight(LaunchTestBase):
+    """Firefox updater preflight diagnostics."""
+
+    def _write_applied_update(self):
+        update_dir = Path(self.tmpdir) / "Library" / "Caches" / "Mozilla" / "updates" / "abc" / "0"
+        update_dir.mkdir(parents=True)
+        (update_dir / "update.status").write_text("applied\n")
+        return update_dir
+
+    def _write_updated_app(self):
+        update_dir = Path(self.tmpdir) / "Library" / "Caches" / "Mozilla" / "updates" / "abc" / "0"
+        updated_app = update_dir / "Updated.app"
+        updated_app.mkdir(parents=True)
+        return updated_app
+
+    def test_blocks_launch_when_applied_update_is_staged(self):
+        """A staged applied update is reported before web-ext launch."""
+        update_dir = self._write_applied_update()
+
+        result = self._run_launch()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Firefox update is pending", result.stderr)
+        self.assertIn("update.status=applied", result.stderr)
+        self.assertIn(str(update_dir / "update.status"), result.stderr)
+        self.assertFalse(os.path.exists(self.npx_args_file))
+
+    def test_blocks_launch_when_updated_app_is_staged(self):
+        """A staged Updated.app is reported before web-ext launch."""
+        updated_app = self._write_updated_app()
+
+        result = self._run_launch()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Firefox update is pending", result.stderr)
+        self.assertIn("Updated.app", result.stderr)
+        self.assertIn(str(updated_app), result.stderr)
+        self.assertFalse(os.path.exists(self.npx_args_file))
+
+    def test_blocks_launch_when_foxcode_updater_process_is_running(self):
+        """A live org.mozilla.updater for the FoxCode URL is reported."""
+        fake_ps = Path(self.tmpdir) / "bin" / "ps"
+        fake_ps.parent.mkdir(parents=True, exist_ok=True)
+        fake_ps.write_text(textwrap.dedent(f"""\
+            #!/bin/sh
+            cat <<'EOF'
+            123 org.mozilla.updater http://localhost:{self.port}#{self.port}:secret
+            EOF
+        """))
+        fake_ps.chmod(0o755)
+
+        result = self._run_launch()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Firefox update is pending", result.stderr)
+        self.assertIn("org.mozilla.updater", result.stderr)
+        self.assertIn(f"http://localhost:{self.port}", result.stderr)
+        self.assertNotIn(self.password, result.stderr)
+        self.assertFalse(os.path.exists(self.npx_args_file))
+
+    def test_ignores_updater_process_when_credentials_are_omitted(self):
+        """Dev mode has no authoritative port, so updater process checks are skipped."""
+        fake_ps = Path(self.tmpdir) / "bin" / "ps"
+        fake_ps.parent.mkdir(parents=True, exist_ok=True)
+        fake_ps.write_text(textwrap.dedent("""\
+            #!/bin/sh
+            cat <<'EOF'
+            123 org.mozilla.updater http://localhost:8795#8795:secret
+            EOF
+        """))
+        fake_ps.chmod(0o755)
+
+        result = self._run_launch(pass_credentials=False)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        args = self._read_npx_args()
+        self.assertNotIn("--start-url", args)
+
+
 if __name__ == "__main__":
     unittest.main()

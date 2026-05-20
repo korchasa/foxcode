@@ -234,6 +234,11 @@ To also auto-approve `evalInBrowser` (use with caution):
 - Connection dropped — check popup for session status. Re-open the connection URL.
 - Password mismatch — if `~/.foxcode/password` was regenerated (e.g. deleted and server restarted), the extension's saved session has a stale token. Fix: re-open the connection URL (`http://localhost:PORT#PORT:PASSWORD`) from `status` tool output, or delete `~/.foxcode/password` and restart both server and extension.
 
+### Project profile launch reports "Firefox update is pending"
+
+- Firefox has a staged applied update or a live updater process for the FoxCode connection URL. The launch skill stops before `web-ext` so the failure is explicit instead of timing out with `connectedClients: 0`.
+- Fix: quit all Firefox instances, let the updater finish replacing Firefox.app, then re-run the launch skill.
+
 ### evalInBrowser timeout
 
 Default timeout is 30s. If exceeded: `Browser tool request timed out after 30000ms`.
