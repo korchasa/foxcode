@@ -2,6 +2,62 @@ import { describe, it, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { WebSocketServer, WebSocket } from 'ws'
+import { spawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const SERVER = join(__dirname, 'server.mjs')
+const OWN_VERSION = JSON.parse(
+  readFileSync(join(__dirname, 'package.json'), 'utf8'),
+).version
+
+function runServer(args) {
+  return new Promise((resolve) => {
+    const proc = spawn(process.execPath, [SERVER, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, FOXCODE_PORT: '0' },
+    })
+    let out = ''
+    let err = ''
+    proc.stdout.on('data', (b) => { out += b })
+    proc.stderr.on('data', (b) => { err += b })
+    const killTimer = setTimeout(() => proc.kill('SIGKILL'), 3000)
+    proc.on('exit', (code, signal) => {
+      clearTimeout(killTimer)
+      resolve({ code, signal, stdout: out, stderr: err })
+    })
+  })
+}
+
+describe('CLI flags', () => {
+  it('--version prints version from own package.json and exits 0', async () => {
+    const r = await runServer(['--version'])
+    assert.equal(r.code, 0, `expected exit 0, got code=${r.code} signal=${r.signal}\nstderr: ${r.stderr}`)
+    assert.match(r.stdout.trim(), new RegExp(`^${OWN_VERSION.replace(/\./g, '\\.')}$`))
+  })
+
+  it('-v is an alias for --version', async () => {
+    const r = await runServer(['-v'])
+    assert.equal(r.code, 0)
+    assert.match(r.stdout.trim(), new RegExp(`^${OWN_VERSION.replace(/\./g, '\\.')}$`))
+  })
+
+  it('--help prints usage and exits 0 without opening a port', async () => {
+    const r = await runServer(['--help'])
+    assert.equal(r.code, 0)
+    assert.match(r.stdout, /Usage:/)
+    assert.match(r.stdout, /--version/)
+    assert.match(r.stdout, /--help/)
+  })
+
+  it('-h is an alias for --help', async () => {
+    const r = await runServer(['-h'])
+    assert.equal(r.code, 0)
+    assert.match(r.stdout, /Usage:/)
+  })
+})
 
 /**
  * Helper: create an HTTP server with upgrade-level token auth (same pattern as server.mjs).

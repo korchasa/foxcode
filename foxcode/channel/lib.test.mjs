@@ -6,8 +6,11 @@ import {
   TOOL_DEFINITIONS,
   buildPongMessage, PROTOCOL_VERSION, createHttpServer, BASE_PORT, PORT_RANGE, portStorage,
   passwordStorage,
+  getServerMeta,
+  resolveProjectDir,
 } from './lib.mjs'
 import { createServer } from 'node:http'
+import { readFileSync } from 'node:fs'
 
 describe('nextId', () => {
   beforeEach(() => { state.seq = 0 })
@@ -196,5 +199,68 @@ describe('TOOL_DEFINITIONS', () => {
     assert.deepEqual(tool.inputSchema.required, ['code'])
     assert.ok(tool.inputSchema.properties.code)
     assert.ok(tool.inputSchema.properties.timeout)
+  })
+})
+
+describe('getServerMeta', () => {
+  const ownPkg = JSON.parse(
+    readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+  )
+
+  it('returns name from channel package.json (not from plugin manifest)', () => {
+    const meta = getServerMeta()
+    assert.equal(meta.name, ownPkg.name)
+  })
+
+  it('returns version from channel package.json', () => {
+    const meta = getServerMeta()
+    assert.equal(meta.version, ownPkg.version)
+  })
+
+  it('lib.mjs does not depend on parent .claude-plugin/ directory', () => {
+    const src = readFileSync(new URL('./lib.mjs', import.meta.url), 'utf8')
+    assert.ok(
+      !src.includes('.claude-plugin'),
+      'lib.mjs must not reference ../.claude-plugin/',
+    )
+  })
+
+  it('server.mjs sources name/version via getServerMeta (no plugin manifest require)', () => {
+    const src = readFileSync(new URL('./server.mjs', import.meta.url), 'utf8')
+    assert.ok(
+      !src.includes('.claude-plugin'),
+      'server.mjs must not reference ../.claude-plugin/',
+    )
+  })
+})
+
+describe('resolveProjectDir', () => {
+  it('returns FOXCODE_PROJECT_DIR when set to a non-empty string', () => {
+    assert.equal(resolveProjectDir({ FOXCODE_PROJECT_DIR: '/u/p' }), '/u/p')
+  })
+
+  it('falls back to process.cwd() when FOXCODE_PROJECT_DIR is unset', () => {
+    assert.equal(resolveProjectDir({}), process.cwd())
+  })
+
+  it('falls back to process.cwd() when FOXCODE_PROJECT_DIR is an empty string', () => {
+    assert.equal(resolveProjectDir({ FOXCODE_PROJECT_DIR: '' }), process.cwd())
+  })
+
+  it('defaults env arg to process.env', () => {
+    const saved = process.env.FOXCODE_PROJECT_DIR
+    try {
+      process.env.FOXCODE_PROJECT_DIR = '/from/env'
+      assert.equal(resolveProjectDir(), '/from/env')
+    } finally {
+      if (saved === undefined) delete process.env.FOXCODE_PROJECT_DIR
+      else process.env.FOXCODE_PROJECT_DIR = saved
+    }
+  })
+
+  it('server.mjs has no remaining inline FOXCODE_PROJECT_DIR || cwd fallbacks', () => {
+    const src = readFileSync(new URL('./server.mjs', import.meta.url), 'utf8')
+    const matches = src.match(/FOXCODE_PROJECT_DIR\s*\|\|\s*process\.cwd\(\)/g) || []
+    assert.equal(matches.length, 0, 'use resolveProjectDir() instead of inline ||')
   })
 })

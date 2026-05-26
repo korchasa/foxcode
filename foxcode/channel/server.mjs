@@ -17,13 +17,32 @@ import { WebSocketServer } from 'ws'
 import {
   nextId, buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
   buildPongMessage, createHttpServer, buildConnectionPage,
-  passwordStorage,
+  passwordStorage, getServerMeta, resolveProjectDir,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
-import { createRequire } from 'node:module'
 
-const require = createRequire(import.meta.url)
-const pluginMeta = require('../.claude-plugin/plugin.json')
+const pluginMeta = getServerMeta()
+
+const argv = process.argv.slice(2)
+if (argv.includes('--version') || argv.includes('-v')) {
+  process.stdout.write(`${pluginMeta.version}\n`)
+  process.exit(0)
+}
+if (argv.includes('--help') || argv.includes('-h')) {
+  process.stdout.write(
+    [
+      `Usage: ${pluginMeta.name} [--help] [--version]`,
+      '',
+      '  --help, -h     Show this help message',
+      '  --version, -v  Print version and exit',
+      '',
+      'With no flags, runs as an MCP stdio server bridging an MCP host',
+      'to a Firefox extension over a localhost WebSocket.',
+      '',
+    ].join('\n'),
+  )
+  process.exit(0)
+}
 
 const explicitPort = process.env.FOXCODE_PORT != null ? Number(process.env.FOXCODE_PORT) : null
 
@@ -47,7 +66,7 @@ const clients = new Set()
 if (httpServer) {
   httpServer.on('request', (req, res) => {
     if (req.method === 'GET' && req.url === '/') {
-      const projectDir = process.env.FOXCODE_PROJECT_DIR || process.cwd()
+      const projectDir = resolveProjectDir()
       const html = buildConnectionPage(PORT, { projectDir, version: pluginMeta.version })
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       res.end(html)
@@ -160,7 +179,7 @@ function handleExtensionMessage(msg, ws) {
         pendingRequests: pendingToolRequests.size,
         nodeVersion: process.version,
         pluginRoot: process.env.CLAUDE_PLUGIN_ROOT,
-        projectDir: process.env.FOXCODE_PROJECT_DIR || process.cwd(),
+        projectDir: resolveProjectDir(),
       })
       if (ws.readyState === 1) ws.send(JSON.stringify(pong))
       break
@@ -207,7 +226,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         const status = {
           port: PORT,
           password: PASSWORD,
-          projectDir: process.env.FOXCODE_PROJECT_DIR || process.cwd(),
+          projectDir: resolveProjectDir(),
           uptime: process.uptime(),
           connectedClients: clients.size,
           pendingRequests: pendingToolRequests.size,

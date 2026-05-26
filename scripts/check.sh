@@ -69,4 +69,11 @@ python3 -W ignore::ResourceWarning -m unittest discover \
   -s foxcode/skills/foxcode-run-project-profile/scripts \
   -p 'test_*.py'
 
+# Opt-in: smoke-test the published @korchasa/foxcode-channel via npx.
+# Off by default so the check pipeline does not depend on the npm registry.
+if [[ "${FOXCODE_SMOKE:-0}" == "1" ]]; then
+  echo "--- Smoke (npx channel) ---"
+  bash "$(dirname "$0")/test-npx-channel.sh"
+fi
+
 echo "=== check complete ==="

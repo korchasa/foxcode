@@ -8,6 +8,20 @@ import { randomBytes } from 'node:crypto'
 import { homedir } from 'node:os'
 import { join, dirname } from 'node:path'
 
+export function resolveProjectDir(env = process.env) {
+  const v = env.FOXCODE_PROJECT_DIR
+  return v && v.length > 0 ? v : process.cwd()
+}
+
+let cachedServerMeta = null
+export function getServerMeta() {
+  if (cachedServerMeta) return cachedServerMeta
+  const pkgUrl = new URL('./package.json', import.meta.url)
+  const pkg = JSON.parse(readFileSync(pkgUrl, 'utf8'))
+  cachedServerMeta = { name: pkg.name, version: pkg.version }
+  return cachedServerMeta
+}
+
 /**
  * Sequence counter for message IDs.
  * Exposed as object so tests can reset it.

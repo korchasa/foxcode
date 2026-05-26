@@ -24,5 +24,7 @@
 - **Tier-4 IDE acceptance**: `scripts/test-ide.sh` (requires deno, opencode, claude, codex, python3, npx; costs LLM tokens)
 
 ## Command Scripts
-- `scripts/check.sh` - Comment scan, validate manifest.json, JS syntax check for `foxcode/extension/` and `foxcode/channel/`
+- `scripts/check.sh` - Comment scan, validate manifest.json, JS syntax check for `foxcode/extension/` and `foxcode/channel/`. Opt-in: `FOXCODE_SMOKE=1 bash scripts/check.sh` additionally runs the npx-channel smoke test.
 - `scripts/dev.sh` - Open Firefox with extension loaded (via `web-ext run` if available)
+- `scripts/release.sh [--dry-run] X.Y.Z` - Lock-step SemVer bump across `foxcode/.claude-plugin/plugin.json`, `foxcode/channel/package.json`, `opencode/package.json`, and the pinned `@korchasa/foxcode-channel@…` literal in `foxcode/.mcp.json`. Prints `npm publish` / `git tag` follow-ups; does not run them.
+- `scripts/test-npx-channel.sh [--print]` - Smoke test for the published `@korchasa/foxcode-channel` npm package: runs `npx -y @korchasa/foxcode-channel@<version-from-channel/package.json> --version` in an isolated `HOME`/`npm_config_cache`.
