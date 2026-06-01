@@ -9,7 +9,6 @@ opencode/deno.lock
 !.claude/rules/
 !.claude/rules/**
 .codex/config.toml
-documents/tasks/
 .DS_Store
 demo-project/
 .foxcode/

@@ -199,7 +199,7 @@
 
 ### 4.7 NF-7: Easy Install in OpenCode [important]
 - **Description:** Secondary install path = OpenCode plugin npm package (`@korchasa/foxcode-opencode`). User adds one entry to the `plugin` array in `opencode.json`; the package auto-seeds launch skills into `~/.config/opencode/skills/`, writes `~/.foxcode/opencode-plugin-dir` so the existing Python helpers locate the bundled extension, and emits an MCP entry snippet for the user. CLI fallback (`npx -y @korchasa/foxcode-opencode setup [--write-config]`) for one-shot install or CI.
-- **Tasks:** [add-opencode-support](tasks/2026/05/add-opencode-support.md)
+- **Tasks:** [add-opencode-support](tasks/2026/05/add-opencode-support.md); npx-migration of the OpenCode MCP snippet tracked under [unify-mcp-distribution-via-npx](tasks/2026/06/unify-mcp-distribution-via-npx.md)
 - **Scenario:** User runs `npx -y @korchasa/foxcode-opencode setup --write-config` from a project dir → CLI seeds skills, writes handoff, lazily installs channel deps, patches `opencode.json` → user starts OpenCode → runs `/foxcode-run-project-profile` → `evalInBrowser` round-trips against Firefox. Plugin route (no CLI): user adds `"plugin": ["@korchasa/foxcode-opencode"]` to `opencode.json`, OpenCode auto-installs via Bun, plugin runs on `session.created`, prints MCP snippet to stderr → user pastes snippet → restart → done.
 - **Acceptance:**
   - [x] `opencode/` package layout: `package.json`, `index.mjs` (plugin entry), `lib/` (paths, seed-skills, mcp-snippet, patcher, handoff, exec, lazy-install, prereq, skill-frontmatter), `bin/foxcode-opencode.mjs` (CLI), `prepack.mjs`, `test/`. Evidence: `ls opencode/`, `node --test opencode/lib/*.test.mjs opencode/test/*.test.mjs`
@@ -218,6 +218,7 @@
 
 ### 4.8 NF-8: Project-Scoped Codex Support [important]
 - **Description:** Codex CLI / IDE users can run and validate FoxCode from this repository without Claude Code plugin installation or OpenCode npm setup. Project-scoped MCP configuration starts the shared channel server, and repo-scoped skills expose launch plus release-validation workflows to Codex.
+- **Tasks:** [unify-mcp-distribution-via-npx](tasks/2026/06/unify-mcp-distribution-via-npx.md) (active); superseded: [codex-plugin-marketplace-payload](tasks/2026/05/codex-plugin-marketplace-payload.md), [distribute-channel-via-npm](tasks/2026/05/distribute-channel-via-npm.md)
 - **Scenario:** User opens this repository in Codex → Codex trusts project config → `foxcode` MCP server starts from `.codex/config.toml` → user invokes `$foxcode-run-project-profile` → Firefox launches with the extension → `evalInBrowser` round-trips through the browser.
 - **Acceptance:**
   - [x] Project-scoped Codex MCP config declares `foxcode` stdio server. Evidence: `.codex/config.toml:1`
