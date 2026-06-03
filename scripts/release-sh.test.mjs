@@ -26,7 +26,9 @@ const dryRun = (version = '9.9.9-test') => {
   return r.stdout;
 };
 
-test('release.sh: lockstep file-set matches ci.yml auto-release', () => {
+test('release.sh: always bumps the JSON lockstep file-set', () => {
+  // Files release.sh ALWAYS mentions in its dry-run output. Must mirror
+  // ci.yml::auto-release::Bump version and tag.
   const out = dryRun();
   const expected = [
     'foxcode/extension/manifest.json',
@@ -34,7 +36,6 @@ test('release.sh: lockstep file-set matches ci.yml auto-release', () => {
     'foxcode/channel/package-lock.json',
     'foxcode/.claude-plugin/plugin.json',
     'opencode/package.json',
-    'foxcode/.mcp.json',
   ];
   for (const path of expected) {
     assert.match(
@@ -43,6 +44,24 @@ test('release.sh: lockstep file-set matches ci.yml auto-release', () => {
       `dry-run output does not mention ${path} — lockstep drift vs ci.yml auto-release`,
     );
   }
+});
+
+test('release.sh: rewrites foxcode/.mcp.json pin if the file already contains one', () => {
+  // .mcp.json is conditional — the script bumps the pin literal IFF the
+  // file already has `foxcode-channel@…`. Pre-Phase-1 main has the old
+  // `npm ci → node server.mjs` form without a pin, so this test reads
+  // the file and only asserts under the same precondition the script uses.
+  const mcpPath = resolve(repo, 'foxcode/.mcp.json');
+  const mcp = readFileSync(mcpPath, 'utf8');
+  if (!/foxcode-channel@/.test(mcp)) {
+    return;
+  }
+  const out = dryRun();
+  assert.match(
+    out,
+    /foxcode\/\.mcp\.json/,
+    'dry-run output omits foxcode/.mcp.json even though the file contains a foxcode-channel@ pin',
+  );
 });
 
 test('release.sh: header declares CI as the authoritative releaser', () => {
