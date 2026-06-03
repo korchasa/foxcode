@@ -2,7 +2,7 @@
 
 > **⚠️ Active Development** - This project is under heavy development. APIs, configuration, and behavior may change without notice. Expect breaking changes between versions.
 
-Firefox WebExtension giving Claude Code and Codex browser automation in your real browser — with your sessions, cookies, and extensions (OpenCode support coming once the npm package ships). The agent scripts multi-step scenarios in a single call instead of round-tripping per action.
+Firefox WebExtension giving Claude Code, Codex, and OpenCode browser automation in your real browser — with your sessions, cookies, and extensions. The agent scripts multi-step scenarios in a single call instead of round-tripping per action.
 
 FoxCode is a two-part system: an **MCP server** (Node.js channel launched by your agent) and a **Firefox WebExtension** (popup eval console + browser automation), connected via WebSocket on localhost.
 
@@ -41,20 +41,36 @@ Then append to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.foxcode]
-command = "sh"
-args = [
-  "-c",
-  "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; PLUGIN_DIR=$(ls -d \"$HOME/.codex/plugins/cache/korchasa/foxcode/\"*/channel 2>/dev/null | sort -V | tail -1); [ -n \"$PLUGIN_DIR\" ] || { echo 'foxcode plugin cache not found — run: codex plugin marketplace add korchasa/foxcode' >&2; exit 1; }; cd \"$PLUGIN_DIR\"; NPM_BIN=\"$(dirname \"$(command -v node)\")/npm\"; [ -x \"$NPM_BIN\" ] || NPM_BIN=\"$(command -v npm)\"; [ -x \"$NPM_BIN\" ] || { echo 'foxcode: npm not found alongside node or in PATH' >&2; exit 1; }; \"$NPM_BIN\" ci --omit=dev --silent; exec node server.mjs",
-]
+command = "npx"
+args = ["-y", "foxcode-channel@0.18.0"]
 ```
 
-The shell command resolves the latest cached version via glob — no config change on plugin updates. Verify with `codex mcp get foxcode` and `codex mcp list`.
+Verify with `codex mcp get foxcode` and `codex mcp list`. The channel is resolved on first launch from npm and cached by npx; no glob over `~/.codex/plugins/cache/...` is needed.
 
-> **Why the manual block?** `codex plugin marketplace add` caches the plugin and installs its skills, but Codex does not substitute `${CLAUDE_PLUGIN_ROOT}` in `.mcp.json` args for MCP server processes, nor does it set the env var at MCP runtime (upstream Codex issue [#19372](https://github.com/openai/codex/issues/19372)). Until that lands, the MCP entry has to be declared in `~/.codex/config.toml`.
+> **Why a separate `[mcp_servers]` block?** `codex plugin marketplace add` caches the plugin assets (skills + Firefox extension), but Codex does not currently start MCP server processes declared in a plugin's `.mcp.json` (upstream Codex issue [#19372](https://github.com/openai/codex/issues/19372)). Declaring the entry in `~/.codex/config.toml` is the supported way to run a per-plugin MCP server until that lands. The npm-distributed channel makes the entry version-pinned and free of shell glob.
+
+### Migration from earlier (`sh -c "... npm ci ... node server.mjs"`)
+
+If your `~/.codex/config.toml` still has the older `sh -c "…npm ci…exec node server.mjs"` block, replace the entire `[mcp_servers.foxcode]` stanza with the two-line `npx` form above. The npm-distributed channel removes the `npm ci`-on-launch step and the plugin-cache glob, so the bump is purely a config-file edit.
 
 ## Install in OpenCode
 
-Native install is `opencode plugin @korchasa/foxcode-opencode`, which patches `~/.config/opencode/opencode.json`. The npm package is **not yet published** — watch the [releases page](https://github.com/korchasa/foxcode/releases) for the publication marker. No supported install path exists in the meantime.
+Add the MCP server to `~/.config/opencode/opencode.json` (or your project's `opencode.json`):
+
+```json
+{
+  "mcp": {
+    "foxcode": {
+      "type": "local",
+      "command": ["npx", "-y", "foxcode-channel@0.18.0"],
+      "environment": { "FOXCODE_PROJECT_DIR": "{env:PWD}" },
+      "enabled": true
+    }
+  }
+}
+```
+
+The `@korchasa/foxcode-opencode` npm package automates this patch plus the run-skill symlinks; once published, `opencode plugin add @korchasa/foxcode-opencode` will replace the manual edit.
 
 ## Launch
 
@@ -85,7 +101,7 @@ Expected result: `"Example Domain"`. If you see `"No browser extension connected
 - **Single-call scripting** — full JS scenario in one tool call, no round-trip per action
 - **Rich async API** — ~36 helpers for DOM, navigation, tabs, cookies, screenshots, storage, console capture, dialog handling
 - **Multi-session** — multiple agent sessions connect to one browser simultaneously, each on a unique port
-- **One MCP server across IDEs** — Claude Code plugin, Codex plugin, and the planned OpenCode package all start the same MCP channel; extension auto-connects via URL hash
+- **One MCP server across IDEs** — Claude Code plugin, Codex plugin, and OpenCode all launch the same npm-distributed channel (`npx -y foxcode-channel@<pinned>`); extension auto-connects via URL hash
 
 ## Architecture
 
@@ -101,7 +117,7 @@ The MCP server binds to a random port in range 8787–8886 and persists it in `~
 
 ## Components
 
-- **Channel** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging agent -> extension via WebSocket. Installed or configured per supported agent, provides MCP tools
+- **Channel** (`foxcode/channel/`) - MCP server (Node.js, ES modules) bridging agent -> extension via WebSocket. Published to npm as `foxcode-channel` (unscoped); every IDE plugin's MCP snippet launches it via `npx -y foxcode-channel@<pinned>`
 - **Firefox Extension** (`foxcode/extension/`) - Manifest V2 WebExtension bundled inside the plugin: popup eval console (browser_action), background script for WebSocket + code execution, content script for DOM access in page context
 - **Run Skills** (`foxcode/skills/`) - launch skills for Project Profile and User Profile modes (see Launch)
 
@@ -255,4 +271,4 @@ Default timeout is 30s. If exceeded: `Browser tool request timed out after 30000
    ```json
    {"mcpServers": {"foxcode": {"command": "...", "env": {"FOXCODE_PORT": "8800"}}}}
    ```
-5. **Check dependencies:** `cd foxcode/channel && npm install`
+5. **Verify the channel resolves from npm:** `npx -y foxcode-channel@0.18.0 --version` should print the pinned version. A network or registry error here means npx cannot fetch the package — fix DNS/registry before re-running the launch skill.
