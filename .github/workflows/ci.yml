@@ -112,11 +112,16 @@ jobs:
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/.claude-plugin/plugin.json > tmp.json && mv tmp.json foxcode/.claude-plugin/plugin.json
           jq --arg v "$NEW_VERSION" '.version = $v' opencode/package.json > tmp.json && mv tmp.json opencode/package.json
 
-          # Pin literal: foxcode-channel@<old> -> foxcode-channel@<new> in CC plugin .mcp.json.
-          # Without this the just-bumped channel version is not consumed by the plugin install.
-          sed -i -E "s/foxcode-channel@[0-9A-Za-z.\\-]+/foxcode-channel@${NEW_VERSION}/g" foxcode/.mcp.json
+          # Pin literals: foxcode-channel@<old> -> foxcode-channel@<new>.
+          # All three files carry an exact pin that gates the channel
+          # version downstream IDEs resolve. Must move in lockstep with
+          # foxcode/channel/package.json above; release.sh:PIN_FILES is
+          # the source of the same list.
+          for pin_file in foxcode/.mcp.json scripts/build-plugin-payload.mjs opencode/lib/foxcode-mcp-entry.mjs; do
+            sed -i -E "s/foxcode-channel@[0-9A-Za-z.\\-]+/foxcode-channel@${NEW_VERSION}/g" "$pin_file"
+          done
 
-          git add foxcode/extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json opencode/package.json foxcode/.mcp.json
+          git add foxcode/extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json opencode/package.json foxcode/.mcp.json scripts/build-plugin-payload.mjs opencode/lib/foxcode-mcp-entry.mjs
           if git diff --cached --quiet; then
             echo "Files already at v${NEW_VERSION}, skipping commit"
           else

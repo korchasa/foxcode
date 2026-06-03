@@ -110,22 +110,30 @@ if [[ -f "$LOCK" ]]; then
   fi
 fi
 
-# Pin literal: foxcode-channel@<old> → foxcode-channel@<new> in CC plugin .mcp.json.
-MCP="foxcode/.mcp.json"
-if [[ -f "$MCP" ]] && grep -q 'foxcode-channel@' "$MCP"; then
-  OLD_PIN=$(grep -oE 'foxcode-channel@[0-9A-Za-z.\-]+' "$MCP" | head -1)
-  NEW_PIN="foxcode-channel@${NEW_VERSION}"
-  echo "  ${MCP}: ${OLD_PIN} → ${NEW_PIN}"
-  if [[ $DRY_RUN -eq 0 ]]; then
-    node -e "
-      const fs = require('fs');
-      const p = '$MCP';
-      const src = fs.readFileSync(p, 'utf8');
-      const re = /foxcode-channel@[0-9A-Za-z.\-]+/g;
-      fs.writeFileSync(p, src.replace(re, '$NEW_PIN'));
-    "
+# Pin literals: foxcode-channel@<old> → foxcode-channel@<new>.
+# Always rewrites every occurrence; auto-release in ci.yml uses the same
+# regex so the local preview and the CI release stay in lockstep.
+PIN_FILES=(
+  foxcode/.mcp.json
+  scripts/build-plugin-payload.mjs
+  opencode/lib/foxcode-mcp-entry.mjs
+)
+NEW_PIN="foxcode-channel@${NEW_VERSION}"
+for pin_file in "${PIN_FILES[@]}"; do
+  if [[ -f "$pin_file" ]] && grep -q 'foxcode-channel@' "$pin_file"; then
+    OLD_PIN=$(grep -oE 'foxcode-channel@[0-9A-Za-z.\-]+' "$pin_file" | head -1)
+    echo "  ${pin_file}: ${OLD_PIN} → ${NEW_PIN}"
+    if [[ $DRY_RUN -eq 0 ]]; then
+      node -e "
+        const fs = require('fs');
+        const p = '$pin_file';
+        const src = fs.readFileSync(p, 'utf8');
+        const re = /foxcode-channel@[0-9A-Za-z.\-]+/g;
+        fs.writeFileSync(p, src.replace(re, '$NEW_PIN'));
+      "
+    fi
   fi
-fi
+done
 
 echo
 echo "Next steps:"

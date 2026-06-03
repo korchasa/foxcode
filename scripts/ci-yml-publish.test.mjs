@@ -56,10 +56,9 @@ test('ci.yml: post-publish gate verifies tarball exists on registry (P0.8)', () 
   );
 });
 
-test('ci.yml: auto-release bumps lockstep file-set including opencode + .mcp.json pin', () => {
-  // The current auto-release misses opencode/package.json and the
-  // foxcode-channel@… pin in foxcode/.mcp.json. Lockstep without them is
-  // impossible.
+test('ci.yml: auto-release bumps lockstep file-set including opencode + pin literals', () => {
+  // The lockstep file-set must include every pin literal in the repo
+  // so a release never ships a payload that resolves a stale channel.
   assert.match(
     yml,
     /opencode\/package\.json/,
@@ -69,6 +68,16 @@ test('ci.yml: auto-release bumps lockstep file-set including opencode + .mcp.jso
     yml,
     /foxcode-channel@/,
     'auto-release does not rewrite the foxcode-channel@… pin in foxcode/.mcp.json',
+  );
+  assert.match(
+    yml,
+    /scripts\/build-plugin-payload\.mjs/,
+    'auto-release does not bump the CHANNEL_SPEC literal in scripts/build-plugin-payload.mjs (Codex payload pin)',
+  );
+  assert.match(
+    yml,
+    /opencode\/lib\/foxcode-mcp-entry\.mjs/,
+    'auto-release does not bump the CHANNEL_SPEC literal in opencode/lib/foxcode-mcp-entry.mjs (OpenCode emitter pin)',
   );
 });
 

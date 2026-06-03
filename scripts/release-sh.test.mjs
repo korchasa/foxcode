@@ -26,7 +26,7 @@ const dryRun = (version = '9.9.9-test') => {
   return r.stdout;
 };
 
-test('release.sh: always bumps the JSON lockstep file-set', () => {
+test('release.sh: always bumps the JSON + pin-literal lockstep file-set', () => {
   // Files release.sh ALWAYS mentions in its dry-run output. Must mirror
   // ci.yml::auto-release::Bump version and tag.
   const out = dryRun();
@@ -36,6 +36,10 @@ test('release.sh: always bumps the JSON lockstep file-set', () => {
     'foxcode/channel/package-lock.json',
     'foxcode/.claude-plugin/plugin.json',
     'opencode/package.json',
+    // CHANNEL_SPEC literal in the Codex payload builder.
+    'scripts/build-plugin-payload.mjs',
+    // CHANNEL_SPEC literal in the OpenCode mcp entry source.
+    'opencode/lib/foxcode-mcp-entry.mjs',
   ];
   for (const path of expected) {
     assert.match(
