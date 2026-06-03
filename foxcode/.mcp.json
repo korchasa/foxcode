@@ -1,13 +1,8 @@
 {
   "mcpServers": {
     "foxcode": {
-      "command": "sh",
-      "args": [
-        "-c",
-        "set -e; export FOXCODE_PROJECT_DIR=\"$PWD\"; cd \"$1\"/channel; NPM_BIN=\"$(dirname \"$(command -v node)\")/npm\"; [ -x \"$NPM_BIN\" ] || NPM_BIN=\"$(command -v npm)\"; [ -x \"$NPM_BIN\" ] || { echo 'foxcode: npm not found alongside node or in PATH' >&2; exit 1; }; \"$NPM_BIN\" ci --omit=dev --silent; exec node server.mjs",
-        "foxcode-channel",
-        "${CLAUDE_PLUGIN_ROOT}"
-      ]
+      "command": "npx",
+      "args": ["-y", "foxcode-channel@0.18.0"]
     }
   }
 }
