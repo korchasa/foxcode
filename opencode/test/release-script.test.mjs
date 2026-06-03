@@ -76,13 +76,17 @@ describe('scripts/release.sh', () => {
     }
   })
 
-  it('prints required manual follow-up commands (npm publish, git tag)', () => {
+  it('directs the operator to CI as the authoritative releaser', () => {
+    // release.sh is a local preview only — the real publish runs in
+    // .github/workflows/ci.yml::auto-release. It must NOT instruct the user
+    // to run `npm publish` (that path was silently skipped for 4 months and
+    // is the root cause of documents/tasks/2026/06/unify-mcp-distribution-via-npx.md).
     const out = execFileSync(SCRIPT, ['--dry-run', '99.99.99'], {
       cwd: REPO,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-    assert.match(out, /npm publish/)
-    assert.match(out, /git tag/)
+    assert.match(out, /CI|workflows/i)
+    assert.doesNotMatch(out, /npm publish/)
   })
 })

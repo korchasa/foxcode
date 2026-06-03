@@ -17,9 +17,10 @@ describe('scripts/test-npx-channel.sh', () => {
     assert.ok((st.mode & 0o111) !== 0, 'script must be executable')
   })
 
-  it('targets the @korchasa/foxcode-channel npm package', () => {
+  it('targets the published foxcode-channel npm package', () => {
     const src = readFileSync(SCRIPT, 'utf8')
-    assert.match(src, /@korchasa\/foxcode-channel/)
+    assert.match(src, /foxcode-channel/)
+    assert.doesNotMatch(src, /@korchasa\/foxcode-channel/)
     assert.match(src, /npx/)
   })
 
@@ -41,7 +42,8 @@ describe('scripts/test-npx-channel.sh', () => {
     const channelVersion = JSON.parse(
       readFileSync(join(REPO, 'foxcode/channel/package.json'), 'utf8'),
     ).version
-    assert.match(out, new RegExp(`@korchasa/foxcode-channel@${channelVersion.replace(/\./g, '\\.')}`))
+    assert.match(out, new RegExp(`foxcode-channel@${channelVersion.replace(/\./g, '\\.')}`))
+    assert.doesNotMatch(out, /@korchasa\/foxcode-channel/)
   })
 })
 

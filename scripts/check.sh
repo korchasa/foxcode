@@ -49,7 +49,10 @@ node --test \
   foxcode/extension/background/*.test.js \
   foxcode/extension/popup/*.test.js \
   opencode/lib/*.test.mjs \
-  opencode/test/*.test.mjs
+  opencode/test/*.test.mjs \
+  scripts/ci-yml-publish.test.mjs \
+  scripts/release-sh.test.mjs \
+  scripts/test-npx-channel-mcp.test.mjs
 
 # Acceptance: MCP-stdio protocol + WebSocket bridge end-to-end.
 # Spawn the channel as a subprocess and exercise the full RPC path
@@ -69,7 +72,7 @@ python3 -W ignore::ResourceWarning -m unittest discover \
   -s foxcode/skills/foxcode-run-project-profile/scripts \
   -p 'test_*.py'
 
-# Opt-in: smoke-test the published @korchasa/foxcode-channel via npx.
+# Opt-in: smoke-test the published foxcode-channel via npx.
 # Off by default so the check pipeline does not depend on the npm registry.
 if [[ "${FOXCODE_SMOKE:-0}" == "1" ]]; then
   echo "--- Smoke (npx channel) ---"

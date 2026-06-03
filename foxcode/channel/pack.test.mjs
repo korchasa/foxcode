@@ -23,11 +23,8 @@ before(() => {
 })
 
 describe('npm pack', () => {
-  it('package name is scoped under @korchasa', () => {
-    assert.ok(
-      packJson.name.startsWith('@korchasa/'),
-      `name must be scoped under @korchasa, got ${packJson.name}`,
-    )
+  it('package name matches the published foxcode-channel package', () => {
+    assert.equal(packJson.name, 'foxcode-channel')
   })
 
   it('includes the three runtime source files and package.json', () => {
@@ -53,7 +50,7 @@ describe('npm pack', () => {
     assert.equal(ownPkg.bin && ownPkg.bin['foxcode-channel'], 'server.mjs')
   })
 
-  it('declares publishConfig.access = public so first scoped publish succeeds', () => {
-    assert.equal(ownPkg.publishConfig && ownPkg.publishConfig.access, 'public')
+  it('does not declare scoped publishConfig for the unscoped package', () => {
+    assert.equal(ownPkg.publishConfig, undefined)
   })
 })
