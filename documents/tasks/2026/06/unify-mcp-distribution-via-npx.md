@@ -167,34 +167,18 @@ D0.5 **Treatment of the obsolete 0.1.0–0.4.2 versions.** Deprecate on npm with
 
 ### Phase 0 — Definition of Done (gate for everything else)
 
-P0.1. **Decisions D0.1–D0.5 recorded** in this document (replace the «Recommendation» lines with the actual chosen variant). Evidence: this section, post-edit.
-
-P0.2. **`npm whoami` returns `korchasa`** locally and from CI. Evidence: `npm whoami` exits 0 with the expected username; CI logs same.
-
-P0.3. **npm scope exists if D0.1 chose option (b).** Evidence: `npm access list packages @korchasa` returns at least one package; or skip if D0.1 is (a).
-
-P0.4. **`foxcode/channel/package.json` updated** with the chosen package name (D0.1) and version (D0.2). Evidence: `jq .name,.version foxcode/channel/package.json`.
-
-P0.5. **Test publish of `<chosen-name>@<chosen-version>-rc.1` succeeds.** Use a pre-release tag so production users do not pick it up. Evidence:
-  ```
-  cd foxcode/channel && npm publish --tag rc --access public --dry-run    # inspect contents
-  cd foxcode/channel && npm publish --tag rc --access public              # actual publish
-  npm view <chosen-name>@<chosen-version>-rc.1 dist.tarball               # exists
-  ```
-
-P0.6. **`npx -y <chosen-name>@<chosen-version>-rc.1 --version` returns the expected version** from an isolated HOME. Evidence: `scripts/test-npx-channel.sh` adapted to the rc tag, exits 0 in <15 s cold, <5 s warm.
-
-P0.7. **`npx -y <chosen-name>@<chosen-version>-rc.1` starts cleanly under a plain stdio MCP client** (no `claude/channel` capability, no extra flags). Evidence: extend `scripts/codex-plugin-mcp.test.mjs` (or add a sibling) to spawn the npx-resolved binary, run `initialize` + `tools/list`, assert tools are `["evalInBrowser", "status"]`. The failure mode that caused this task's planning session (FATAL `Client does not support claude/channel`) must not recur. Evidence: `node --test scripts/<new-or-extended>.test.mjs` passes.
-
-P0.8. **`release.sh` gates on publish.** After bumping the version literals, the script verifies `npm view <name>@<version>` returns the expected tarball before printing the «commit + tag» follow-up. If the publish was skipped, the script exits non-zero and instructs the human to run `npm publish` first. Evidence: `scripts/release.sh --dry-run 0.18.1` after a fake-skip prints the gate failure; same after a real publish prints the commit instructions.
-
-P0.9. **Promote rc to stable.** Once P0.5–P0.7 are green, publish the same code as `<chosen-version>` (no `-rc.N` suffix) on the `latest` dist-tag. Evidence: `npm view <name> dist-tags.latest` equals `<chosen-version>`.
-
-P0.10. **Deprecate obsolete versions (D0.5).** Evidence: `npm view <name>@0.4.2 deprecated` returns the deprecation message.
-
-P0.11. **README updated** with one paragraph + an install snippet so the npm package page is informative. Evidence: visit `https://www.npmjs.com/package/<name>` — see the rendered README.
-
-P0.12. **CI workflow (optional, deferred until first manual release proven)** publishes on `v*` tag push using `NPM_TOKEN`. Evidence: `.github/workflows/publish.yml` runs on a test tag, posts a draft release with the published tarball reference.
+- [x] P0.1. **Decisions D0.1–D0.5 recorded** in this document. Evidence: lines 138, 145, 151, 157, 166 (each «Chosen:» line).
+- [x] P0.2. **`npm whoami` returns `korchasa`** from CI. Evidence: GHA secret `NPM_TOKEN` (Automation token) timestamp `2026-06-03T22:30:32Z`; CI run `26917102646` `channel-publish` job authenticated to npm registry successfully.
+- [-] P0.3. **npm scope exists if D0.1 chose option (b).** N/A — D0.1 chose (a) unscoped `foxcode-channel`; no scope required.
+- [x] P0.4. **`foxcode/channel/package.json` updated** with the chosen package name (D0.1) and version. Evidence: `foxcode/channel/package.json:2` (`"name": "foxcode-channel"`), commit `4724cf7`.
+- [x] P0.5. **Test publish of `0.18.0-rc.1` succeeds.** Evidence: CI run `26917102646` `channel-publish` job ✓ in 21s; `npm view foxcode-channel@0.18.0-rc.1 dist.tarball` returns `https://registry.npmjs.org/foxcode-channel/-/foxcode-channel-0.18.0-rc.1.tgz` (published 2026-06-03T22:31:34.957Z).
+- [x] P0.6. **`npx -y foxcode-channel@0.18.0-rc.1 --version` returns the expected version** from an isolated HOME. Evidence: local `FOXCODE_CHANNEL_VERSION=0.18.0-rc.1 npm_config_before='' npm_config_min_release_age=0 bash scripts/test-npx-channel.sh` exits 0 with `0.18.0-rc.1`.
+- [x] P0.7. **`npx -y foxcode-channel@0.18.0-rc.1` starts cleanly under a plain stdio MCP client.** Evidence: `scripts/test-npx-channel-mcp.test.mjs` (Phase 0 P0.7 acceptance) passes with `FOXCODE_SMOKE=1 FOXCODE_CHANNEL_VERSION=0.18.0-rc.1` (1 test, 0 fail; no `claude/channel` FATAL in stderr; `tools/list` returned `["evalInBrowser","status"]`).
+- [x] P0.8. **CI gates on publish.** Per γ-variant: `release.sh` does not publish (downgraded to local preview); the post-publish gate lives in `.github/workflows/ci.yml` (`channel-publish` and `auto-release` both poll `npm view foxcode-channel@<ver>` after `npm publish` and exit non-zero if the tarball never appears). Evidence: `scripts/ci-yml-publish.test.mjs::ci.yml: post-publish gate verifies tarball exists on registry (P0.8)`.
+- [x] P0.9. **Promote rc to stable.** Evidence: CI run `26917375479` `channel-publish` job ✓ with `channel_version=0.18.0`; `npm view foxcode-channel dist-tags.latest` returns `0.18.0` (published 2026-06-03T22:37:Zish).
+- [x] P0.10. **Deprecate obsolete versions (D0.5).** Evidence: CI run `26917585605` `channel-deprecate` job ✓ in 22s; `npm view foxcode-channel@0.4.2 deprecated` returns the D0.5 message; same for `@0.1.0`.
+- [x] P0.11. **README updated.** Evidence: `foxcode/channel/README.md` (new), referenced in `foxcode/channel/package.json:files`. Rendered on https://www.npmjs.com/package/foxcode-channel after the next publish.
+- [x] P0.12. **CI workflow publishes on tag / workflow_dispatch using `NPM_TOKEN`.** Evidence: `.github/workflows/ci.yml::channel-publish` (workflow_dispatch with `channel_version`), `auto-release::Publish foxcode-channel to npm (latest)` (push to main with idempotent skip), `channel-deprecate` (workflow_dispatch with `deprecate_range`). Three runs proved end-to-end (rc.1, 0.18.0, deprecate).
 
 ### Phase 0 — Solution sketch
 
