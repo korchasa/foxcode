@@ -14,11 +14,11 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$SCRIPT_DIR/.." && pwd)
 
-VERSION=$(node -e "
+VERSION="${FOXCODE_CHANNEL_VERSION:-$(node -e "
   process.stdout.write(
     JSON.parse(require('fs').readFileSync('$REPO/foxcode/channel/package.json','utf8')).version,
   )
-")
+")}"
 
 SPEC="foxcode-channel@${VERSION}"
 CMD=(npx -y "$SPEC" --version)
