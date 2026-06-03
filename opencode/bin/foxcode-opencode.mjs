@@ -15,7 +15,7 @@
 import { join } from "node:path";
 import { existsSync, lstatSync, unlinkSync } from "node:fs";
 
-import { resolveFromModule, bundlePaths, channelServerPath, userSkillsDir, handoffFilePath, userOpencodeJson } from "../lib/paths.mjs";
+import { resolveFromModule, bundlePaths, userSkillsDir, handoffFilePath, userOpencodeJson } from "../lib/paths.mjs";
 import { runSetup } from "../lib/setup.mjs";
 import { readHandoff, clearHandoff } from "../lib/handoff.mjs";
 import { buildMcpSnippet, findConfigWithFoxcode } from "../lib/mcp-snippet.mjs";
@@ -23,7 +23,6 @@ import { checkPrereqs } from "../lib/prereq.mjs";
 
 const PLUGIN_ROOT = resolveFromModule(import.meta.url, "..");
 const PATHS = bundlePaths(PLUGIN_ROOT);
-const CHANNEL_SERVER = channelServerPath(PLUGIN_ROOT);
 
 function printSetupReport(r, writeConfig) {
   console.log(`Plugin root: ${r.pluginRoot} (artefacts: ${r.paths.source})`);
@@ -35,14 +34,13 @@ function printSetupReport(r, writeConfig) {
     console.log(`  skill ${name}: ${action}`);
   }
   console.log(`  handoff: ${r.handoff}`);
-  console.log(`  channel deps: ${r.channelDeps}`);
   if (writeConfig) {
     console.log(`  opencode.json (${r.configTarget}): ${r.configAction}`);
   } else if (r.configFound) {
     console.log(`  opencode.json: mcp.foxcode already present in ${r.configFound}`);
   } else {
     console.log("\nAdd the following to opencode.json (rerun OpenCode after):\n");
-    console.log(buildMcpSnippet(r.channelServer));
+    console.log(buildMcpSnippet());
   }
 }
 
@@ -90,8 +88,8 @@ async function cmdDoctor() {
   for (const p of prereq.problems) console.log(`  - ${p}`);
   console.log(`Plugin root:    ${PLUGIN_ROOT} (${PATHS.source})`);
   console.log(`Bundle skills:  ${PATHS.skills}`);
-  console.log(`Bundle channel: ${PATHS.channel}`);
   console.log(`Bundle ext:     ${PATHS.extension}`);
+  console.log(`Channel:        resolved via npx (foxcode-channel@<pin>; see opencode.json)`);
   console.log(`User skills:    ${userSkillsDir()}`);
   console.log(`Handoff file:   ${handoffFilePath()} -> ${(await readHandoff(handoffFilePath())) ?? "(none)"}`);
   const found = await findConfigWithFoxcode([

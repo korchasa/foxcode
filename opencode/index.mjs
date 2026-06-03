@@ -46,7 +46,7 @@ async function bootstrap() {
     log(
       `[foxcode-opencode] No mcp.foxcode entry in opencode.json. ` +
       `Add the snippet below and restart OpenCode:\n\n` +
-      buildMcpSnippet(report.channelServer),
+      buildMcpSnippet(),
     );
     didEmitSnippetThisProcess = true;
   }

@@ -33,7 +33,8 @@ test("runSetup with writeConfig=true patches project opencode.json", async () =>
       assert.equal(r.configAction, "added-mcp");
       assert.equal(r.configTarget, join(project, "opencode.json"));
       const obj = JSON.parse(readFileSync(join(project, "opencode.json"), "utf8"));
-      assert.ok(obj.mcp.foxcode.command[1].endsWith("server.mjs"));
+      assert.equal(obj.mcp.foxcode.command[0], "npx");
+      assert.match(obj.mcp.foxcode.command[2], /^foxcode-channel@\d+\.\d+\.\d+/);
     });
   });
 });

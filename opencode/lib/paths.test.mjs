@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { resolveFromModule, bundlePaths, channelServerPath, userSkillsDir, handoffFilePath, userOpencodeJson } from "./paths.mjs";
+import { resolveFromModule, bundlePaths, userSkillsDir, handoffFilePath, userOpencodeJson } from "./paths.mjs";
 import { withTmp, withEnv } from "./test-helpers.mjs";
 
 test("resolveFromModule resolves '.' to plugin root when caller is index-adjacent", async () => {
@@ -61,14 +61,6 @@ test("bundlePaths falls back to repo-relative paths in dev mode", async () => {
     assert.equal(p.extension, join(tmp, "foxcode", "extension"));
     assert.equal(p.channel, join(tmp, "foxcode", "channel"));
     assert.equal(p.skills, join(tmp, "foxcode", "skills"));
-  });
-});
-
-test("channelServerPath joins bundle/dev channel with server.mjs", async () => {
-  await withTmp(async (tmp) => {
-    const pluginRoot = join(tmp, "opencode");
-    mkdirSync(pluginRoot, { recursive: true });
-    assert.equal(channelServerPath(pluginRoot), join(tmp, "foxcode", "channel", "server.mjs"));
   });
 });
 
