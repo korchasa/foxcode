@@ -1,0 +1,23 @@
+{
+  "name": "foxcode",
+  "description": "Firefox browser UI for Codex sessions with browser automation via evalInBrowser.",
+  "version": "0.17.0",
+  "author": {
+    "name": "korchasa"
+  },
+  "repository": "https://github.com/korchasa/foxcode",
+  "homepage": "https://github.com/korchasa/foxcode",
+  "license": "MIT",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "FoxCode",
+    "shortDescription": "Browser automation in Firefox for Codex.",
+    "developerName": "korchasa",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ]
+  }
+}
