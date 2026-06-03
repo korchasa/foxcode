@@ -30,7 +30,8 @@
   "files": [
     "server.mjs",
     "lib.mjs",
-    "validator.mjs"
+    "validator.mjs",
+    "README.md"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",
