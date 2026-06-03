@@ -24,9 +24,11 @@ const repo = resolve(here, '..');
 
 const SMOKE = process.env.FOXCODE_SMOKE === '1';
 
-const VERSION = JSON.parse(
-  readFileSync(resolve(repo, 'foxcode/channel/package.json'), 'utf8'),
-).version;
+const VERSION =
+  process.env.FOXCODE_CHANNEL_VERSION ||
+  JSON.parse(
+    readFileSync(resolve(repo, 'foxcode/channel/package.json'), 'utf8'),
+  ).version;
 const SPEC = `foxcode-channel@${VERSION}`;
 
 function findFreePort() {

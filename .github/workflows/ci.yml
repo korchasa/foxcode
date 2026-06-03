@@ -8,9 +8,20 @@ on:
   workflow_dispatch:
     inputs:
       channel_version:
-        description: 'foxcode-channel version to publish (e.g. 0.18.0-rc.1 or 0.18.0). Prereleases (containing "-") publish to dist-tag rc; clean SemVer publishes to latest.'
-        required: true
+        description: 'foxcode-channel version to publish (e.g. 0.18.0-rc.1 or 0.18.0). Prereleases (containing "-") publish to dist-tag rc; clean SemVer publishes to latest. Leave empty to skip publish.'
+        required: false
         type: string
+        default: ''
+      deprecate_range:
+        description: 'foxcode-channel SemVer range to deprecate, e.g. <=0.4.2. Leave empty to skip deprecate. Requires deprecate_message.'
+        required: false
+        type: string
+        default: ''
+      deprecate_message:
+        description: 'Deprecation message shown by npm on install. Required if deprecate_range is set.'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   test:
@@ -165,7 +176,7 @@ jobs:
     # The auto-release path above handles the in-line plugin+channel lockstep
     # release on every push to main.
     needs: test
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.channel_version != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -237,6 +248,68 @@ jobs:
             sleep 10
           done
           echo "FAIL: foxcode-channel@${CHANNEL_VERSION} not found on registry after 60s" >&2
+          exit 1
+
+  channel-deprecate:
+    # Manual one-shot deprecate path (Phase 0 P0.10 and any future
+    # post-publish hygiene). Marks a SemVer range of foxcode-channel as
+    # deprecated on the npm registry with the supplied message. Keeps
+    # NPM_TOKEN in CI only (D0.3).
+    needs: test
+    if: github.event_name == 'workflow_dispatch' && inputs.deprecate_range != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Validate deprecate inputs
+        env:
+          RANGE: ${{ inputs.deprecate_range }}
+          MSG: ${{ inputs.deprecate_message }}
+        run: |
+          if [ -z "$MSG" ]; then
+            echo "deprecate_message is required when deprecate_range is set" >&2
+            exit 1
+          fi
+          # Whitelist SemVer-range characters; rejects shell-meta and quotes.
+          if ! echo "$RANGE" | grep -qE '^[][<>=! 0-9A-Za-z.,|^~*\\-]+$'; then
+            echo "deprecate_range contains characters outside the SemVer-range whitelist: $RANGE" >&2
+            exit 1
+          fi
+
+      - name: npm deprecate
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RANGE: ${{ inputs.deprecate_range }}
+          MSG: ${{ inputs.deprecate_message }}
+        run: npm deprecate "foxcode-channel@${RANGE}" "$MSG"
+
+      - name: Verify deprecation appears on registry
+        env:
+          RANGE: ${{ inputs.deprecate_range }}
+        run: |
+          # Pick a concrete version from the range to verify the deprecation
+          # text was recorded. For the canonical Phase-0 case `<=0.4.2`,
+          # 0.4.2 itself is a stable probe.
+          PROBE=$(echo "$RANGE" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)
+          if [ -z "$PROBE" ]; then
+            echo "Could not extract a concrete probe version from range '$RANGE'; skipping verify"
+            exit 0
+          fi
+          for attempt in 1 2 3 4 5 6; do
+            DEP=$(npm view "foxcode-channel@${PROBE}" deprecated 2>/dev/null || true)
+            if [ -n "$DEP" ]; then
+              echo "Verified: foxcode-channel@${PROBE} carries deprecation: $DEP"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: deprecation not yet visible for ${PROBE}, sleeping 10s"
+            sleep 10
+          done
+          echo "FAIL: deprecation not visible on foxcode-channel@${PROBE} after 60s" >&2
           exit 1
 
   build:

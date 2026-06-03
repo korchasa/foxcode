@@ -72,6 +72,24 @@ test('ci.yml: auto-release bumps lockstep file-set including opencode + .mcp.jso
   );
 });
 
+test('ci.yml: channel-deprecate job exists with deprecate_range workflow_dispatch input (P0.10)', () => {
+  assert.match(
+    yml,
+    /deprecate_range:/,
+    'workflow_dispatch.inputs.deprecate_range missing — required for npm deprecate via CI',
+  );
+  assert.match(
+    yml,
+    /channel-deprecate:/,
+    'channel-deprecate job missing — npm deprecate must run via CI to keep NPM_TOKEN in GHA only (D0.3)',
+  );
+  assert.match(
+    yml,
+    /npm deprecate/,
+    '`npm deprecate` step missing',
+  );
+});
+
 test('ci.yml: auto-release rc-tag handling derives npm dist-tag from version', () => {
   // Prereleases (0.18.0-rc.1) must publish with --tag rc; stable with default
   // (latest). The workflow needs an explicit derivation, not a hardcoded tag.
