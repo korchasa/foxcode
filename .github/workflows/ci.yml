@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      channel_version:
+        description: 'foxcode-channel version to publish (e.g. 0.18.0-rc.1 or 0.18.0). Prereleases (containing "-") publish to dist-tag rc; clean SemVer publishes to latest.'
+        required: true
+        type: string
 
 jobs:
   test:
@@ -43,6 +49,7 @@ jobs:
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 20
+          registry-url: 'https://registry.npmjs.org'
           cache: npm
           cache-dependency-path: foxcode/channel/package-lock.json
 
@@ -67,7 +74,7 @@ jobs:
             fi
           fi
 
-      - name: Bump version and tag
+      - name: Bump version and tag (lockstep across plugin/channel/opencode/.mcp.json)
         id: version
         if: steps.check.outputs.releasable == 'true'
         run: |
@@ -87,12 +94,18 @@ jobs:
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
 
+          # JSON file-set: extension manifest + plugin + channel + lockfile + opencode package.
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/extension/manifest.json > tmp.json && mv tmp.json foxcode/extension/manifest.json
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/channel/package.json > tmp.json && mv tmp.json foxcode/channel/package.json
           jq --arg v "$NEW_VERSION" '.version = $v | .packages[""].version = $v' foxcode/channel/package-lock.json > tmp.json && mv tmp.json foxcode/channel/package-lock.json
           jq --arg v "$NEW_VERSION" '.version = $v' foxcode/.claude-plugin/plugin.json > tmp.json && mv tmp.json foxcode/.claude-plugin/plugin.json
+          jq --arg v "$NEW_VERSION" '.version = $v' opencode/package.json > tmp.json && mv tmp.json opencode/package.json
 
-          git add foxcode/extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json
+          # Pin literal: foxcode-channel@<old> -> foxcode-channel@<new> in CC plugin .mcp.json.
+          # Without this the just-bumped channel version is not consumed by the plugin install.
+          sed -i -E "s/foxcode-channel@[0-9A-Za-z.\\-]+/foxcode-channel@${NEW_VERSION}/g" foxcode/.mcp.json
+
+          git add foxcode/extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json opencode/package.json foxcode/.mcp.json
           if git diff --cached --quiet; then
             echo "Files already at v${NEW_VERSION}, skipping commit"
           else
@@ -100,6 +113,39 @@ jobs:
           fi
           git tag -f "v${NEW_VERSION}"
           git push --follow-tags origin main
+
+      - name: Publish foxcode-channel to npm (latest)
+        if: steps.check.outputs.releasable == 'true'
+        working-directory: foxcode/channel
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Idempotency: if the version was already published out-of-band
+          # (via workflow_dispatch for rc → promote-to-stable), skip the
+          # publish step. The post-publish gate below still verifies the
+          # tarball is on the registry, so silent skip is impossible.
+          if npm view "foxcode-channel@${NEW_VERSION}" version >/dev/null 2>&1; then
+            echo "foxcode-channel@${NEW_VERSION} already on registry — skipping publish"
+            exit 0
+          fi
+          npm publish --access public --tag latest
+
+      - name: Post-publish gate (P0.8) — registry must list the new version
+        if: steps.check.outputs.releasable == 'true'
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if npm view "foxcode-channel@${NEW_VERSION}" dist.tarball >/dev/null 2>&1; then
+              echo "Verified: foxcode-channel@${NEW_VERSION} on the registry"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: not yet visible on registry, sleeping 10s"
+            sleep 10
+          done
+          echo "FAIL: foxcode-channel@${NEW_VERSION} not found on registry after 60s" >&2
+          exit 1
 
       - name: Build extension .xpi
         if: steps.check.outputs.releasable == 'true'
@@ -112,6 +158,86 @@ jobs:
           tag_name: v${{ steps.version.outputs.version }}
           files: foxcode-extension.xpi
           generate_release_notes: true
+
+  channel-publish:
+    # Manual channel-only publish path. Used for prerelease (rc) and
+    # out-of-band stable publishes that must NOT bump the plugin SemVer.
+    # The auto-release path above handles the in-line plugin+channel lockstep
+    # release on every push to main.
+    needs: test
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+          cache-dependency-path: foxcode/channel/package-lock.json
+
+      - name: Validate channel_version input
+        env:
+          CHANNEL_VERSION: ${{ github.event.inputs.channel_version }}
+        run: |
+          if [ -z "$CHANNEL_VERSION" ]; then
+            echo "channel_version input is required" >&2
+            exit 1
+          fi
+          if ! echo "$CHANNEL_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "channel_version is not SemVer: $CHANNEL_VERSION" >&2
+            exit 1
+          fi
+          # Registry collision check: do not re-publish an existing version.
+          if npm view "foxcode-channel@${CHANNEL_VERSION}" version >/dev/null 2>&1; then
+            echo "foxcode-channel@${CHANNEL_VERSION} already exists on the registry" >&2
+            exit 1
+          fi
+
+      - name: Write channel version into package.json
+        env:
+          CHANNEL_VERSION: ${{ github.event.inputs.channel_version }}
+        run: |
+          jq --arg v "$CHANNEL_VERSION" '.version = $v' foxcode/channel/package.json > tmp.json && mv tmp.json foxcode/channel/package.json
+          jq --arg v "$CHANNEL_VERSION" '.version = $v | .packages[""].version = $v' foxcode/channel/package-lock.json > tmp.json && mv tmp.json foxcode/channel/package-lock.json
+
+      - name: Derive npm dist-tag from version
+        id: dist
+        env:
+          CHANNEL_VERSION: ${{ github.event.inputs.channel_version }}
+        run: |
+          # Prereleases (contain "-") publish to dist-tag rc to keep latest clean.
+          if echo "$CHANNEL_VERSION" | grep -q '-'; then
+            echo "tag=rc" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish foxcode-channel to npm
+        working-directory: foxcode/channel
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DIST_TAG: ${{ steps.dist.outputs.tag }}
+        run: |
+          # DIST_TAG is constrained to "rc" or "latest" by the previous step;
+          # still passed via env for the no-direct-interpolation pattern.
+          npm publish --access public --tag "$DIST_TAG"
+
+      - name: Post-publish gate (P0.8) — registry must list the new version
+        env:
+          CHANNEL_VERSION: ${{ github.event.inputs.channel_version }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if npm view "foxcode-channel@${CHANNEL_VERSION}" dist.tarball >/dev/null 2>&1; then
+              echo "Verified: foxcode-channel@${CHANNEL_VERSION} on the registry"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: not yet visible on registry, sleeping 10s"
+            sleep 10
+          done
+          echo "FAIL: foxcode-channel@${CHANNEL_VERSION} not found on registry after 60s" >&2
+          exit 1
 
   build:
     needs: test

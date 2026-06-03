@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Smoke test: published @korchasa/foxcode-channel resolves via npx and
+# Smoke test: published foxcode-channel resolves via npx and
 # returns the expected version. Uses an isolated HOME so the test runs
 # against a clean npx cache.
 #
@@ -20,7 +20,7 @@ VERSION=$(node -e "
   )
 ")
 
-SPEC="@korchasa/foxcode-channel@${VERSION}"
+SPEC="foxcode-channel@${VERSION}"
 CMD=(npx -y "$SPEC" --version)
 
 if [[ "${1:-}" == "--print" ]]; then

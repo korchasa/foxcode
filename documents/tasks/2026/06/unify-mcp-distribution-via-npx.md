@@ -135,26 +135,26 @@ D0.1 **Package name.** Two options:
   - **(a) Unscoped `foxcode-channel`** — continues the dormant npm package. Reuses existing maintainer ownership (`korchasa`). Requires deprecating 0.1.0…0.4.2 on npm with a clear message pointing at the current major. Requires bumping past 0.4.2 (recommend `0.5.0` for a major-shape change *or* `0.18.0` to align with plugin SemVer).
   - **(b) Scoped `@korchasa/foxcode-channel`** — requires creating the `@korchasa` npm scope first (free public scope: `npm access public @korchasa/foxcode-channel` after first `npm publish --access=public`). Clean slate, but leaves the obsolete unscoped artifact in place forever and forks the discoverability story.
 
-  **Recommendation:** (a) — single discoverable name, fewer moving parts, single deprecation step. The 4-month-old code on 0.1–0.4 was never widely adopted (no install traffic visible in `npm view` download stats for that window — verify and record).
+  **Chosen: (a) Unscoped `foxcode-channel`** (recorded 2026-06-02). Single discoverable name, reuses `korchasa` ownership, single deprecation step against 0.1.0–0.4.2.
 
 D0.2 **Version baseline.** Two sub-options conditional on D0.1:
   - **(a-1)** Continue unscoped line: bump to `0.5.0` (signals a major shape change while staying SemVer-clean).
   - **(a-2)** Continue unscoped line: jump to `0.18.0` to align with the plugin's current SemVer (`v0.17.1` → next plugin release is `v0.18.0`). Keeps channel and plugin in lockstep.
   - **(b-1)** Scoped: start at `0.18.0` for plugin alignment.
 
-  **Recommendation:** (a-2). Plugin/channel/OpenCode lockstep is already a constraint of this task; jumping to 0.18.0 keeps a single SemVer line everywhere from now on. The 0.1–0.4 unscoped versions get deprecated with a pointer to «0.18.0+».
+  **Chosen: (a-2) jump to `0.18.0`** (recorded 2026-06-02). Aligns channel SemVer with the next plugin release; single SemVer line for plugin/channel/OpenCode lockstep going forward. `<pinned>` literal throughout the rest of this document = `0.18.0` once Phase 0 P0.9 promotes it to `latest`.
 
 D0.3 **npm credentials.** Two options:
   - **Personal account `korchasa`** with a granular token scoped to publish-only for `foxcode-channel` and (later) `@korchasa/foxcode-opencode`. Stored in `~/.npmrc` for local releases; replicated as a GitHub Actions secret (`NPM_TOKEN`) for automation.
   - **Org account** — not applicable; this is a personal project.
 
-  **Recommendation:** personal account + granular token. Document the token's expiry; renewal is a calendar reminder, not a task gate.
+  **Chosen: personal account `korchasa` + granular token, token lives ONLY in GitHub Actions secret `NPM_TOKEN`** (recorded 2026-06-02). No local `~/.npmrc` token by policy — all publishes go through CI (see D0.4). Local `npm publish` from a developer machine is disallowed. Token scope: publish + read on packages `foxcode-channel` and `@korchasa/foxcode-opencode`. Expiry: calendar reminder, not a task gate.
 
 D0.4 **Publish automation.** Two options:
   - **Manual but gated**: keep `release.sh` printing `npm publish` as a step, but add a post-release verification (`npm view foxcode-channel@<ver>`) that fails the script if the publish was skipped. Forces the human to actually run it.
   - **CI-driven publish on tag**: GitHub Actions workflow that publishes on `v*` tag push using `NPM_TOKEN`. Removes the human-skip-step risk entirely.
 
-  **Recommendation:** start with the manual-but-gated form (lower setup cost, fewer secrets to leak), then add CI publish-on-tag once one or two manual releases have been verified.
+  **Chosen: (b) CI-driven publish on tag** (recorded 2026-06-02). `.github/workflows/publish.yml` triggers on push of `v*` tags (and, for the first rc, a dedicated `channel-v*-rc.*` tag pattern), authenticates with `NPM_TOKEN`, runs `npm publish` from `foxcode/channel/`. Local `release.sh` only bumps version literals, commits, tags, and pushes — it never calls `npm publish` directly. P0.12 is therefore part of Phase 0, not deferred. P0.8 (release-script post-publish gate via `npm view`) still applies: the script polls the registry after pushing the tag and exits non-zero if CI did not publish within a timeout.
 
 D0.5 **Treatment of the obsolete 0.1.0–0.4.2 versions.** Deprecate on npm with a stderr message guiding users to the new line:
   ```
@@ -162,6 +162,8 @@ D0.5 **Treatment of the obsolete 0.1.0–0.4.2 versions.** Deprecate on npm with
     'foxcode-channel <=0.4.2 implements an obsolete MCP architecture (claude/channel experimental capability). Use foxcode-channel@>=0.18.0 for the current MCP-only protocol.'
   ```
   This makes the obsolete artifact discoverable but loud about its status; it does not unpublish (npm forbids unpublish after 72h).
+
+  **Chosen: deprecate `<=0.4.2` with the message above** (recorded 2026-06-02). Executed via CI (one-shot workflow dispatch or manual `npm deprecate` step in the publish workflow) after P0.9 promotes `0.18.0` to `latest`.
 
 ### Phase 0 — Definition of Done (gate for everything else)
 

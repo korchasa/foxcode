@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
-# FoxCode release helper.
+# FoxCode release helper — LOCAL PREVIEW ONLY.
 #
-# Bumps the SemVer in three lock-stepped files and prints the follow-up
-# commands the user must run by hand (npm publish + git tag).
+# The real release runs in CI (.github/workflows/ci.yml `auto-release` job):
+# on each push to main with conventional-commit prefixes feat/fix/perf/refactor/
+# build, the workflow bumps the lockstep file-set, tags `vX.Y.Z`, publishes
+# `foxcode-channel` to npm via NPM_TOKEN, and creates a GitHub Release.
+#
+# This script reproduces the same bump locally so an operator can preview the
+# diff before pushing. It does NOT commit, tag, or publish.
 #
 # Usage:
 #   scripts/release.sh [--dry-run] X.Y.Z[-prerelease]
 #
 # --dry-run prints the planned edits without touching any file.
 #
-# Files updated:
+# Lockstep file-set (must match ci.yml::auto-release::Bump version and tag):
+#   foxcode/extension/manifest.json
 #   foxcode/.claude-plugin/plugin.json
 #   foxcode/channel/package.json
+#   foxcode/channel/package-lock.json   (.version + .packages[""].version)
 #   opencode/package.json
-# Forward-compat: if foxcode/.mcp.json contains a pinned
-# `@korchasa/foxcode-channel@<old>` literal, that literal is bumped too.
+#   foxcode/.mcp.json                   (foxcode-channel@<old> pin → <new>)
 
 set -euo pipefail
 
@@ -25,7 +31,7 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run) DRY_RUN=1 ;;
     -h|--help)
-      sed -n '2,17p' "$0"
+      sed -n '2,22p' "$0"
       exit 0
       ;;
     *)
@@ -43,24 +49,27 @@ if [[ -z "$NEW_VERSION" ]]; then
   exit 64
 fi
 
-# SemVer validation (loose: major.minor.patch with optional -prerelease.X)
+# SemVer validation (loose: major.minor.patch with optional -prerelease.X).
 if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
   echo "release.sh: invalid SemVer: $NEW_VERSION" >&2
   exit 64
 fi
 
-# Resolve repo root (script lives in <repo>/scripts/)
+# Resolve repo root (script lives in <repo>/scripts/).
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$REPO"
 
+# Files where .version is the only field rewritten.
 FILES=(
+  foxcode/extension/manifest.json
   foxcode/.claude-plugin/plugin.json
   foxcode/channel/package.json
   opencode/package.json
 )
 
-echo "FoxCode release → ${NEW_VERSION}"
+echo "FoxCode release preview → ${NEW_VERSION}"
+echo "(local preview; the real release is performed by CI on push to main.)"
 if [[ $DRY_RUN -eq 1 ]]; then
   echo "(dry-run: no files will be modified)"
 fi
@@ -74,7 +83,6 @@ for rel in "${FILES[@]}"; do
   OLD_VERSION=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('$rel','utf8')).version)")
   echo "  ${rel}: ${OLD_VERSION} → ${NEW_VERSION}"
   if [[ $DRY_RUN -eq 0 ]]; then
-    # node-based edit preserves JSON formatting via a 2-space pretty print.
     node -e "
       const fs = require('fs');
       const path = '$rel';
@@ -85,27 +93,43 @@ for rel in "${FILES[@]}"; do
   fi
 done
 
-# Optional: bump pinned @korchasa/foxcode-channel@X.Y.Z literal in .mcp.json
+# package-lock.json needs both .version and .packages[""].version.
+LOCK="foxcode/channel/package-lock.json"
+if [[ -f "$LOCK" ]]; then
+  OLD_LOCK_VERSION=$(node -e "process.stdout.write(JSON.parse(require('fs').readFileSync('$LOCK','utf8')).version)")
+  echo "  ${LOCK}: ${OLD_LOCK_VERSION} → ${NEW_VERSION}"
+  if [[ $DRY_RUN -eq 0 ]]; then
+    node -e "
+      const fs = require('fs');
+      const p = '$LOCK';
+      const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+      j.version = '$NEW_VERSION';
+      if (j.packages && j.packages['']) j.packages[''].version = '$NEW_VERSION';
+      fs.writeFileSync(p, JSON.stringify(j, null, 2) + '\n');
+    "
+  fi
+fi
+
+# Pin literal: foxcode-channel@<old> → foxcode-channel@<new> in CC plugin .mcp.json.
 MCP="foxcode/.mcp.json"
-if [[ -f "$MCP" ]] && grep -q '@korchasa/foxcode-channel@' "$MCP"; then
-  OLD_PIN=$(grep -oE '@korchasa/foxcode-channel@[0-9A-Za-z.\-]+' "$MCP" | head -1)
-  NEW_PIN="@korchasa/foxcode-channel@${NEW_VERSION}"
+if [[ -f "$MCP" ]] && grep -q 'foxcode-channel@' "$MCP"; then
+  OLD_PIN=$(grep -oE 'foxcode-channel@[0-9A-Za-z.\-]+' "$MCP" | head -1)
+  NEW_PIN="foxcode-channel@${NEW_VERSION}"
   echo "  ${MCP}: ${OLD_PIN} → ${NEW_PIN}"
   if [[ $DRY_RUN -eq 0 ]]; then
-    # Use node for safe in-place rewrite (avoids sed -i portability issues).
     node -e "
       const fs = require('fs');
       const p = '$MCP';
       const src = fs.readFileSync(p, 'utf8');
-      const re = /@korchasa\/foxcode-channel@[0-9A-Za-z.\-]+/g;
+      const re = /foxcode-channel@[0-9A-Za-z.\-]+/g;
       fs.writeFileSync(p, src.replace(re, '$NEW_PIN'));
     "
   fi
 fi
 
 echo
-echo "Next steps (run by hand when ready):"
-echo "  1. Inspect the diff: git diff -- ${FILES[*]} ${MCP}"
-echo "  2. Publish channel:  (cd foxcode/channel && npm publish)"
-echo "  3. Commit + tag:     git commit -am 'chore(release): v${NEW_VERSION}' && git tag v${NEW_VERSION}"
-echo "  4. Push:             git push origin HEAD --tags"
+echo "Next steps:"
+echo "  1. Inspect the diff:    git diff"
+echo "  2. Commit + push:       git commit -am 'feat: …' && git push origin main"
+echo "  3. CI auto-release:     .github/workflows/ci.yml bumps the same files, tags v${NEW_VERSION},"
+echo "                          publishes foxcode-channel to npm, and creates the GitHub Release."
