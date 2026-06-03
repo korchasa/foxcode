@@ -22,9 +22,14 @@ export function resolveFromModule(callerUrl, relative) {
 }
 
 /**
- * Compute the absolute paths to bundled artifacts (extension, channel, skills).
+ * Compute the absolute paths to bundled artifacts (extension + skills).
  * In a published package they live under `<pluginRoot>/bundle/`; in dev,
- * sources live under `../foxcode/{extension,channel,skills}` relative to opencode/.
+ * sources live under `../foxcode/{extension,skills}` relative to opencode/.
+ *
+ * The channel runtime is no longer bundled (resolved via npx). The
+ * `channel` key is preserved here for callers that still want to display
+ * a path for diagnostics — but it points at a directory that no longer
+ * exists post-prepack.
  */
 export function bundlePaths(pluginRoot) {
   const bundleDir = join(pluginRoot, "bundle");
@@ -43,11 +48,6 @@ export function bundlePaths(pluginRoot) {
     skills: join(repoRoot, "foxcode", "skills"),
     source: "dev",
   };
-}
-
-/** Absolute path to the bundled channel server.mjs entry. */
-export function channelServerPath(pluginRoot) {
-  return join(bundlePaths(pluginRoot).channel, "server.mjs");
 }
 
 /**

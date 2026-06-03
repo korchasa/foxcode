@@ -14,8 +14,8 @@ const COMMENT_PATTERN = /(^|\s)(\/\/|\/\*)/m;
  *
  * Returns one of: "created", "added-mcp", "added-foxcode", "updated", "noop".
  */
-export async function patchOpencodeJson(configPath, channelServerAbsPath) {
-  const entry = buildFoxcodeMcpEntry(channelServerAbsPath);
+export async function patchOpencodeJson(configPath) {
+  const entry = buildFoxcodeMcpEntry();
 
   if (!existsSync(configPath)) {
     await mkdir(dirname(configPath), { recursive: true });

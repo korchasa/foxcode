@@ -6,10 +6,12 @@ import { buildFoxcodeMcpEntry } from "./foxcode-mcp-entry.mjs";
  * Build the JSON snippet for the user to paste into opencode.json.
  * Returns a string with a leading `// Add to opencode.json …` comment
  * followed by a `mcp.foxcode` block whose shape comes from the single
- * source of truth in foxcode-mcp-entry.mjs.
+ * source of truth in foxcode-mcp-entry.mjs. Under the npx distribution
+ * model, the entry needs no path argument — the channel is resolved by
+ * `npx -y foxcode-channel@<pin>`.
  */
-export function buildMcpSnippet(channelServerAbsPath) {
-  const cfg = { mcp: { foxcode: buildFoxcodeMcpEntry(channelServerAbsPath) } };
+export function buildMcpSnippet() {
+  const cfg = { mcp: { foxcode: buildFoxcodeMcpEntry() } };
   return `// Add to opencode.json (rerun OpenCode after):\n${JSON.stringify(cfg, null, 2)}`;
 }
 

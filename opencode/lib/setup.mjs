@@ -1,10 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { bundlePaths, channelServerPath, userSkillsDir, handoffFilePath, userOpencodeJson } from "./paths.mjs";
+import { bundlePaths, userSkillsDir, handoffFilePath, userOpencodeJson } from "./paths.mjs";
 import { seedSkills } from "./seed-skills.mjs";
 import { writeHandoff } from "./handoff.mjs";
-import { ensureChannelDeps } from "./lazy-install.mjs";
 import { findConfigWithFoxcode } from "./mcp-snippet.mjs";
 import { patchOpencodeJson } from "./patcher.mjs";
 import { checkPrereqs } from "./prereq.mjs";
@@ -21,8 +20,7 @@ import { checkPrereqs } from "./prereq.mjs";
  *   writeConfig  — when true, patch opencode.json with mcp.foxcode entry
  *
  * Outputs:
- *   { prereq, paths, skills, handoff, channelDeps, configAction, configFound,
- *     channelServer }
+ *   { prereq, paths, skills, handoff, configAction, configFound }
  *
  * Throws only when prereqs themselves cannot be evaluated. All other
  * branches surface as fields on the report so the caller can decide
@@ -30,17 +28,14 @@ import { checkPrereqs } from "./prereq.mjs";
  */
 export async function runSetup({ pluginRoot, project, writeConfig }) {
   const paths = bundlePaths(pluginRoot);
-  const channelServer = channelServerPath(pluginRoot);
 
   const prereq = await checkPrereqs();
   const report = {
     pluginRoot,
     paths,
-    channelServer,
     prereq,
     skills: null,
     handoff: null,
-    channelDeps: null,
     configAction: null,
     configFound: null,
   };
@@ -52,13 +47,12 @@ export async function runSetup({ pluginRoot, project, writeConfig }) {
   });
   await writeHandoff(handoffFilePath(), pluginRoot);
   report.handoff = handoffFilePath();
-  report.channelDeps = await ensureChannelDeps(paths.channel);
 
   if (writeConfig) {
     const target = existsSync(join(project, "opencode.json"))
       ? join(project, "opencode.json")
       : userOpencodeJson();
-    report.configAction = await patchOpencodeJson(target, channelServer);
+    report.configAction = await patchOpencodeJson(target);
     report.configTarget = target;
   } else {
     report.configFound = await findConfigWithFoxcode([

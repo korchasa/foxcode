@@ -53,7 +53,8 @@ test("setup --write-config patches project opencode.json", () => {
     assert.equal(r.status, 0, r.stderr);
     const obj = JSON.parse(readFileSync(join(cwd, "opencode.json"), "utf8"));
     assert.equal(obj.model, "sonnet");
-    assert.ok(obj.mcp.foxcode.command[1].endsWith("server.mjs"));
+    assert.equal(obj.mcp.foxcode.command[0], "npx");
+    assert.match(obj.mcp.foxcode.command[2], /^foxcode-channel@\d+\.\d+\.\d+/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -94,7 +95,7 @@ test("doctor reports state and exits 0 on healthy env", () => {
     assert.equal(r.status, 0, r.stderr);
     assert.match(r.stdout, /Prereqs: ok/);
     assert.match(r.stdout, /Plugin root:/);
-    assert.match(r.stdout, /Bundle channel:/);
+    assert.match(r.stdout, /Channel:\s+resolved via npx/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

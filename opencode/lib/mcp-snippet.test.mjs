@@ -6,11 +6,11 @@ import { join } from "node:path";
 
 import { buildMcpSnippet, hasFoxcodeMcp, readJsonOrNull, findConfigWithFoxcode } from "./mcp-snippet.mjs";
 
-test("buildMcpSnippet contains the absolute server path and node command", () => {
-  const s = buildMcpSnippet("/abs/path/server.mjs");
+test("buildMcpSnippet emits the npx-resolved channel form", () => {
+  const s = buildMcpSnippet();
   assert.match(s, /\/\/ Add to opencode\.json/);
-  assert.match(s, /"command": \[\s*"node",\s*"\/abs\/path\/server\.mjs"\s*\]/);
   assert.match(s, /"type": "local"/);
+  assert.match(s, /"command": \[\s*"npx",\s*"-y",\s*"foxcode-channel@\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?"\s*\]/);
   assert.match(s, /"FOXCODE_PROJECT_DIR": "\{env:PWD\}"/);
 });
 
