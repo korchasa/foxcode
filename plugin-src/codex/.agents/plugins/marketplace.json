@@ -1,0 +1,32 @@
+{
+  "name": "korchasa",
+  "interface": {
+    "displayName": "korchasa"
+  },
+  "owner": {
+    "name": "korchasa"
+  },
+  "description": "Marketplace for Kor Chasa Codex plugins.",
+  "plugins": [
+    {
+      "name": "foxcode",
+      "source": {
+        "source": "local",
+        "path": "./plugins/foxcode"
+      },
+      "description": "Firefox browser automation for Codex via FoxCode.",
+      "version": "0.17.0",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "keywords": [
+        "browser",
+        "automation",
+        "firefox",
+        "mcp"
+      ],
+      "category": "Developer Tools"
+    }
+  ]
+}

@@ -53,6 +53,10 @@ node --test \
   scripts/ci-yml-publish.test.mjs \
   scripts/release-sh.test.mjs \
   scripts/cc-mcp-snippet.test.mjs \
+  scripts/codex-payload-pin.test.mjs \
+  scripts/codex-plugin-payload.test.mjs \
+  scripts/codex-plugin-install.test.mjs \
+  scripts/codex-plugin-mcp.test.mjs \
   scripts/test-npx-channel-mcp.test.mjs
 
 # Acceptance: MCP-stdio protocol + WebSocket bridge end-to-end.
