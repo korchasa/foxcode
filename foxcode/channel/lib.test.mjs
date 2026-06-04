@@ -193,6 +193,15 @@ describe('TOOL_DEFINITIONS', () => {
     assert.equal(tool.inputSchema.required, undefined)
   })
 
+  it('status description names extensionDir as a returned field', () => {
+    const tool = TOOL_DEFINITIONS.find(t => t.name === 'status')
+    assert.match(
+      tool.description,
+      /extensionDir/,
+      'status TOOL_DEFINITIONS description must document extensionDir field',
+    )
+  })
+
   it('all tools have name, description, inputSchema', () => {
     for (const tool of TOOL_DEFINITIONS) {
       assert.ok(tool.name, `tool missing name`)

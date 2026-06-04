@@ -259,7 +259,7 @@ background:#888;margin-right:6px;vertical-align:middle}
 export const TOOL_DEFINITIONS = [
   {
     name: 'status',
-    description: 'Get server status and telemetry. Always works, does not require browser connection. Returns port, password, projectDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion.',
+    description: 'Get server status and telemetry. Always works, does not require browser connection. Returns port, password, projectDir, extensionDir, uptime, connectedClients, pendingRequests, nodeVersion, serverVersion.',
     inputSchema: {
       type: 'object',
       properties: {},

@@ -266,6 +266,7 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
           port: PORT,
           password: PASSWORD,
           projectDir: resolveProjectDir(),
+          extensionDir: findExtensionDir(),
           uptime: process.uptime(),
           connectedClients: clients.size,
           pendingRequests: pendingToolRequests.size,

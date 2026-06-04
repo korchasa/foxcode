@@ -7,8 +7,9 @@ description: Launch FoxCode in User Profile mode from Codex. Guides extension lo
 
 Use the canonical skill at `foxcode/skills/foxcode-run-user-profile/SKILL.md`.
 
-Follow it exactly, with this Codex path adaptation:
+Codex notes:
 
-- When the canonical skill says to run `${CLAUDE_SKILL_DIR}/../foxcode-run-project-profile/scripts/resolve_env.py`, run `foxcode/skills/foxcode-run-project-profile/scripts/resolve_env.py` from the repository root.
-- Keep `status` as the only source of truth for `port` and `password`.
+- The flow is MCP-only. No Python script invocation.
+- The foxcode MCP server is registered in `~/.codex/config.toml` as `npx -y foxcode-channel@<pinned>`. The channel npm package ships the Firefox extension; `status` returns its absolute path via `extensionDir`.
+- `port`, `password`, and `extensionDir` come exclusively from the live `status` response — never read `~/.foxcode/*` directly.
 - Communicate in the user's language. Keep output minimal unless something fails.

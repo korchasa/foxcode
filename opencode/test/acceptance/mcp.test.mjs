@@ -156,6 +156,10 @@ test("channel status tool returns telemetry without browser connection", async (
       assert.equal(parsed.port, port, "status must echo bound port");
       assert.equal(parsed.connectedClients, 0, "no extension connected → 0 clients");
       assert.ok(typeof parsed.uptime === "number", "uptime must be numeric");
+      assert.ok(typeof parsed.extensionDir === "string" && parsed.extensionDir.length > 0,
+        "status must include extensionDir (absolute path to bundled extension)");
+      assert.ok(parsed.extensionDir.endsWith("/extension") || /[\\/]extension$/.test(parsed.extensionDir),
+        `extensionDir must point to .../extension, got: ${parsed.extensionDir}`);
     } finally {
       await client.close();
     }
