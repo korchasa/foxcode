@@ -304,74 +304,111 @@ class TestWebExtArgs(LaunchTestBase):
         self.assertIn("--password", result.stderr)
 
 
-class TestFirefoxUpdatePreflight(LaunchTestBase):
-    """Firefox updater preflight diagnostics."""
+class TestFirefoxUpdatePreparation(LaunchTestBase):
+    """Pre-launch cleanup: purge staged update markers + kill stale updaters.
 
-    def _write_applied_update(self):
-        update_dir = Path(self.tmpdir) / "Library" / "Caches" / "Mozilla" / "updates" / "abc" / "0"
+    Replaces the older block-on-detection behaviour. A staged in-place
+    .app swap by the Mozilla updater hangs web-ext (ECONNREFUSED on the
+    remote debugger port — see commit edcad6f). Instead of refusing to
+    launch, the script removes the markers so the swap never starts.
+    """
+
+    def _channel_dir(self) -> Path:
+        return Path(self.tmpdir) / "Library" / "Caches" / "Mozilla" / "updates" / "Applications" / "Firefox Moirai"
+
+    def _write_full_staged_update(self) -> tuple[Path, Path]:
+        channel = self._channel_dir()
+        update_dir = channel / "updates" / "0"
         update_dir.mkdir(parents=True)
         (update_dir / "update.status").write_text("applied\n")
-        return update_dir
+        (update_dir / "update.version").write_text("152.0\n")
+        (update_dir / "update.mar").write_text("fake-mar")
+        (update_dir / "Updated.app").mkdir()
+        (channel / "active-update.xml").write_text("<updates/>")
+        return channel, update_dir
 
-    def _write_updated_app(self):
-        update_dir = Path(self.tmpdir) / "Library" / "Caches" / "Mozilla" / "updates" / "abc" / "0"
-        updated_app = update_dir / "Updated.app"
-        updated_app.mkdir(parents=True)
-        return updated_app
-
-    def test_blocks_launch_when_applied_update_is_staged(self):
-        """A staged applied update is reported before web-ext launch."""
-        update_dir = self._write_applied_update()
+    def test_purges_full_staged_update_and_launches(self):
+        """Every staged-update marker is removed and web-ext launches normally."""
+        channel, update_dir = self._write_full_staged_update()
 
         result = self._run_launch()
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Firefox update is pending", result.stderr)
-        self.assertIn("update.status=applied", result.stderr)
-        self.assertIn(str(update_dir / "update.status"), result.stderr)
-        self.assertFalse(os.path.exists(self.npx_args_file))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for filename in ("update.status", "update.version", "update.mar"):
+            self.assertFalse(
+                (update_dir / filename).exists(),
+                f"{filename} should have been purged",
+            )
+        self.assertFalse(
+            (update_dir / "Updated.app").exists(),
+            "Updated.app should have been purged",
+        )
+        self.assertFalse(
+            (channel / "active-update.xml").exists(),
+            "active-update.xml should have been purged",
+        )
+        self.assertIn("Purged", result.stdout)
+        self.assertTrue(os.path.exists(self.npx_args_file))
 
-    def test_blocks_launch_when_updated_app_is_staged(self):
-        """A staged Updated.app is reported before web-ext launch."""
-        updated_app = self._write_updated_app()
+    def test_purges_only_update_status(self):
+        """A lone update.status marker is enough to trigger purge + launch."""
+        update_dir = self._channel_dir() / "updates" / "0"
+        update_dir.mkdir(parents=True)
+        status = update_dir / "update.status"
+        status.write_text("applied\n")
 
         result = self._run_launch()
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Firefox update is pending", result.stderr)
-        self.assertIn("Updated.app", result.stderr)
-        self.assertIn(str(updated_app), result.stderr)
-        self.assertFalse(os.path.exists(self.npx_args_file))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(status.exists(), "update.status not purged")
+        self.assertIn("Purged", result.stdout)
 
-    def test_blocks_launch_when_foxcode_updater_process_is_running(self):
-        """A live org.mozilla.updater for the FoxCode URL is reported."""
+    def test_purge_idempotent_on_clean_home(self):
+        """No cache dir → no-op, launch still succeeds, no Purged log line."""
+        result = self._run_launch()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("Purged", result.stdout)
+
+    def test_kills_stale_foxcode_updater(self):
+        """A live org.mozilla.updater for our FoxCode URL is SIGTERM'd."""
+        blocker = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
         fake_ps = Path(self.tmpdir) / "bin" / "ps"
         fake_ps.parent.mkdir(parents=True, exist_ok=True)
         fake_ps.write_text(textwrap.dedent(f"""\
             #!/bin/sh
             cat <<'EOF'
-            123 org.mozilla.updater http://localhost:{self.port}#{self.port}:secret
+            {blocker.pid} org.mozilla.updater http://localhost:{self.port}#{self.port}:secret
             EOF
         """))
         fake_ps.chmod(0o755)
 
-        result = self._run_launch()
+        try:
+            result = self._run_launch()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("Killed", result.stdout)
+            deadline = time.time() + 2.0
+            while time.time() < deadline and blocker.poll() is None:
+                time.sleep(0.05)
+            self.assertIsNotNone(
+                blocker.poll(),
+                "stale org.mozilla.updater should have been killed",
+            )
+        finally:
+            if blocker.poll() is None:
+                blocker.terminate()
+            blocker.wait()
 
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Firefox update is pending", result.stderr)
-        self.assertIn("org.mozilla.updater", result.stderr)
-        self.assertIn(f"http://localhost:{self.port}", result.stderr)
-        self.assertNotIn(self.password, result.stderr)
-        self.assertFalse(os.path.exists(self.npx_args_file))
-
-    def test_ignores_updater_process_when_credentials_are_omitted(self):
-        """Dev mode has no authoritative port, so updater process checks are skipped."""
+    def test_skips_kill_when_credentials_omitted(self):
+        """Dev mode has no authoritative port → updater kill is skipped."""
         fake_ps = Path(self.tmpdir) / "bin" / "ps"
         fake_ps.parent.mkdir(parents=True, exist_ok=True)
         fake_ps.write_text(textwrap.dedent("""\
             #!/bin/sh
             cat <<'EOF'
-            123 org.mozilla.updater http://localhost:8795#8795:secret
+            99999 org.mozilla.updater http://localhost:8795#8795:secret
             EOF
         """))
         fake_ps.chmod(0o755)
@@ -379,8 +416,7 @@ class TestFirefoxUpdatePreflight(LaunchTestBase):
         result = self._run_launch(pass_credentials=False)
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        args = self._read_npx_args()
-        self.assertNotIn("--start-url", args)
+        self.assertNotIn("Killed", result.stdout)
 
 
 if __name__ == "__main__":

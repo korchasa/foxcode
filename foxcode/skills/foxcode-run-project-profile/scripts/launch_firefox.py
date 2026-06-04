@@ -18,7 +18,7 @@ Cross-platform: macOS, Linux, Windows.
 """
 
 import os
-import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -107,39 +107,52 @@ def _popen_kwargs(foreground: bool) -> dict:
     }
 
 
-def _sanitize_process_line(line: str) -> str:
-    """Redact FoxCode URL hash secrets from process diagnostics."""
-    return re.sub(
-        r"(http://localhost:\d+#\d+:)[^\s]+",
-        r"\1<redacted>",
-        line,
-    )
+def _purge_staged_firefox_updates(home: Path) -> list[str]:
+    """Remove staged Firefox update markers so the in-place .app swap can't run.
 
+    A staged update under ~/Library/Caches/Mozilla/updates/.../0/ is applied at
+    Firefox startup; the updater can hang while replacing Firefox.app, leaving
+    web-ext with ECONNREFUSED on the remote debugger port (commit edcad6f).
+    Wiping update.status / Updated.app / update.mar / update.version /
+    active-update.xml before launch makes Firefox skip the swap entirely. The
+    matching --pref=app.update.*=false flags then prevent the launched profile
+    from re-staging on the same run.
 
-def _find_staged_firefox_updates(home: Path) -> list[str]:
-    """Return staged Firefox update markers that can block web-ext startup."""
+    Returns the list of removed paths (for logging).
+    """
     root = home / "Library" / "Caches" / "Mozilla" / "updates"
     if not root.exists():
         return []
 
-    findings = []
-    for status_file in root.rglob("update.status"):
-        try:
-            status = status_file.read_text(errors="replace").strip()
-        except OSError:
-            continue
-        if status == "applied":
-            findings.append(f"update.status=applied: {status_file}")
-
+    removed: list[str] = []
+    for filename in ("update.status", "update.version", "update.mar", "active-update.xml"):
+        for path in root.rglob(filename):
+            try:
+                path.unlink()
+                removed.append(str(path))
+            except OSError:
+                continue
     for updated_app in root.rglob("Updated.app"):
         if updated_app.is_dir():
-            findings.append(f"staged Updated.app: {updated_app}")
+            try:
+                shutil.rmtree(updated_app)
+                removed.append(str(updated_app))
+            except OSError:
+                continue
+    return removed
 
-    return findings
 
+def _kill_stale_foxcode_updaters(port: int | None) -> list[int]:
+    """SIGTERM org.mozilla.updater processes whose args reference our FoxCode URL.
 
-def _find_foxcode_updater_processes(port: int | None) -> list[str]:
-    """Return running Firefox updater processes launched for a FoxCode URL."""
+    Some staged updates leave a `org.mozilla.updater` process spinning for hours
+    after its parent Firefox exited (observed on macOS: PID 14045 alive 17h+).
+    If the process holds our FoxCode start URL, kill it so the next web-ext run
+    doesn't inherit the same zombie. Without --port we skip this — dev mode has
+    no authoritative URL marker to match against.
+
+    Returns the list of killed PIDs (for logging).
+    """
     if port is None or sys.platform == "win32":
         return []
 
@@ -157,36 +170,36 @@ def _find_foxcode_updater_processes(port: int | None) -> list[str]:
         return []
 
     port_marker = f"http://localhost:{port}"
-    findings = []
+    killed: list[int] = []
     for line in result.stdout.splitlines():
         if "org.mozilla.updater" not in line:
             continue
         if port_marker not in line:
             continue
-        findings.append(f"running org.mozilla.updater: {_sanitize_process_line(line.strip())}")
-    return findings
+        try:
+            pid = int(line.split()[0])
+        except (ValueError, IndexError):
+            continue
+        try:
+            os.kill(pid, signal.SIGTERM)
+            killed.append(pid)
+        except OSError:
+            continue
+    return killed
 
 
-def _check_firefox_update_preflight(home: Path, port: int | None) -> list[str]:
-    """Collect Firefox update state that should block launching web-ext."""
-    return [
-        *_find_staged_firefox_updates(home),
-        *_find_foxcode_updater_processes(port),
-    ]
+def _prepare_firefox_for_launch(home: Path, port: int | None) -> None:
+    """Clear Firefox update state that would block web-ext launch.
 
-
-def _print_firefox_update_error(findings: list[str]) -> None:
-    print("Error: Firefox update is pending; not launching web-ext.", file=sys.stderr)
-    print("Detected:", file=sys.stderr)
-    for item in findings[:10]:
-        print(f"- {item}", file=sys.stderr)
-    if len(findings) > 10:
-        print(f"- ... {len(findings) - 10} more", file=sys.stderr)
-    print(
-        "Fix: quit all Firefox instances, let the updater finish replacing Firefox.app, "
-        "then re-run the FoxCode launch skill.",
-        file=sys.stderr,
-    )
+    Always succeeds (never blocks launch). Prints a summary line per action
+    performed so the operator can see what was reclaimed.
+    """
+    purged = _purge_staged_firefox_updates(home)
+    killed = _kill_stale_foxcode_updaters(port)
+    if purged:
+        print(f"Purged {len(purged)} staged Firefox update marker(s)")
+    if killed:
+        print(f"Killed {len(killed)} stale org.mozilla.updater process(es): {killed}")
 
 
 def _wait_foreground(proc: subprocess.Popen, pid_file: Path) -> int:
@@ -312,10 +325,7 @@ def main() -> int:
         print(f"Already running (PID {pid})")
         return 0
 
-    update_findings = _check_firefox_update_preflight(Path.home(), args.port)
-    if update_findings:
-        _print_firefox_update_error(update_findings)
-        return 1
+    _prepare_firefox_for_launch(Path.home(), args.port)
 
     args.pid_file.parent.mkdir(parents=True, exist_ok=True)
     args.profile_dir.mkdir(parents=True, exist_ok=True)
