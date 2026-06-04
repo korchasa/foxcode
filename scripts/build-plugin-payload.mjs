@@ -5,7 +5,7 @@ import path from 'node:path';
 // promoted to npm `latest` by P0.9. Updated in lockstep with
 // foxcode/channel/package.json; the codex-payload-pin.test.mjs lockstep
 // assertion catches drift.
-export const CHANNEL_SPEC = 'foxcode-channel@0.18.0';
+export const CHANNEL_SPEC = 'foxcode-channel@0.18.1';
 
 // npx-distribution model: payload ships only static assets (extension +
 // skills + manifests + .mcp.json snippet). The channel runtime is
