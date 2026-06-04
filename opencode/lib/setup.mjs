@@ -1,9 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { bundlePaths, userSkillsDir, handoffFilePath, userOpencodeJson } from "./paths.mjs";
+import { bundlePaths, userSkillsDir, userOpencodeJson } from "./paths.mjs";
 import { seedSkills } from "./seed-skills.mjs";
-import { writeHandoff } from "./handoff.mjs";
 import { findConfigWithFoxcode } from "./mcp-snippet.mjs";
 import { patchOpencodeJson } from "./patcher.mjs";
 import { checkPrereqs } from "./prereq.mjs";
@@ -35,7 +34,6 @@ export async function runSetup({ pluginRoot, project, writeConfig }) {
     paths,
     prereq,
     skills: null,
-    handoff: null,
     configAction: null,
     configFound: null,
   };
@@ -45,8 +43,6 @@ export async function runSetup({ pluginRoot, project, writeConfig }) {
     bundleSkillsDir: paths.skills,
     userSkillsDir: userSkillsDir(),
   });
-  await writeHandoff(handoffFilePath(), pluginRoot);
-  report.handoff = handoffFilePath();
 
   if (writeConfig) {
     const target = existsSync(join(project, "opencode.json"))

@@ -20,6 +20,13 @@ import {
   passwordStorage, getServerMeta, resolveProjectDir,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
+import { createLaunchHandler } from './launch/tool.mjs'
+import { findExtensionDir, findFirefox } from './launch/discover.mjs'
+import { prepareFirefoxForLaunch } from './launch/prepare.mjs'
+import {
+  spawnWebExt, writePidFile, handleExistingProcess, killProcessGroup,
+} from './launch/spawn.mjs'
+import { homedir } from 'node:os'
 
 const pluginMeta = getServerMeta()
 
@@ -31,10 +38,11 @@ if (argv.includes('--version') || argv.includes('-v')) {
 if (argv.includes('--help') || argv.includes('-h')) {
   process.stdout.write(
     [
-      `Usage: ${pluginMeta.name} [--help] [--version]`,
+      `Usage: ${pluginMeta.name} [--help] [--version] [--launch-foreground]`,
       '',
-      '  --help, -h     Show this help message',
-      '  --version, -v  Print version and exit',
+      '  --help, -h             Show this help message',
+      '  --version, -v          Print version and exit',
+      '  --launch-foreground    Launch Firefox+extension and supervise until SIGTERM/SIGINT',
       '',
       'With no flags, runs as an MCP stdio server bridging an MCP host',
       'to a Firefox extension over a localhost WebSocket.',
@@ -43,6 +51,7 @@ if (argv.includes('--help') || argv.includes('-h')) {
   )
   process.exit(0)
 }
+const LAUNCH_FOREGROUND_MODE = argv.includes('--launch-foreground')
 
 const explicitPort = process.env.FOXCODE_PORT != null ? Number(process.env.FOXCODE_PORT) : null
 
@@ -140,8 +149,18 @@ function requestFromBrowser(tool, params = {}) {
   })
 }
 
+/** Waiters for the next extension connection (resolved on ws "connection"). */
+const pendingConnectWaiters = new Set()
+
+function waitForClient() {
+  if (hasClients()) return Promise.resolve()
+  return new Promise((resolve) => { pendingConnectWaiters.add(resolve) })
+}
+
 if (httpServer) wss.on('connection', (ws) => {
   clients.add(ws)
+  for (const resolve of pendingConnectWaiters) resolve()
+  pendingConnectWaiters.clear()
   ws.on('close', () => {
     clients.delete(ws)
     if (clients.size === 0) clientInfo = null
@@ -197,6 +216,26 @@ function handleExtensionMessage(msg, ws) {
   }
 }
 
+// --- launchBrowser handler ---
+
+const launchHandler = createLaunchHandler({
+  hasClients,
+  projectDir: () => resolveProjectDir(),
+  port: () => PORT,
+  password: () => PASSWORD,
+  prepare: (home, port) => prepareFirefoxForLaunch(home, port),
+  findExtensionDir: () => findExtensionDir(),
+  findFirefox: () => findFirefox(),
+  spawn: (opts) => {
+    const child = spawnWebExt(opts)
+    return { child, pid: child.pid }
+  },
+  handleExisting: handleExistingProcess,
+  writePidFile,
+  waitForClient,
+  home: homedir(),
+})
+
 // --- MCP server ---
 
 const mcp = new Server(
@@ -239,6 +278,13 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
         }
         return { content: [{ type: 'text', text: JSON.stringify(status) }] }
       }
+      case 'launchBrowser': {
+        const result = await launchHandler({
+          timeout: typeof args.timeout === 'number' ? args.timeout : undefined,
+          headless: !!args.headless,
+        })
+        return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+      }
       case 'evalInBrowser': {
         const { valid, error } = validateCode(args.code)
         if (!valid) {
@@ -263,10 +309,17 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
 
 function shutdown(reason) {
   process.stderr.write(`foxcode: shutdown (${reason})\n`)
+  const managed = launchHandler.getManaged?.()
+  if (managed?.pid) {
+    process.stderr.write(`foxcode: terminating Firefox process group ${managed.pid}\n`)
+    // Fire-and-forget: do not block shutdown on grace period.
+    killProcessGroup(managed.pid, { graceMs: 1500 }).catch(() => {})
+    launchHandler.clearManaged?.()
+  }
   for (const ws of clients) ws.terminate()
   if (httpServer) wss.close()
   if (httpServer) httpServer.close()
-  process.exit(0)
+  setTimeout(() => process.exit(0), 200).unref()
 }
 
 process.stdin.on('end', () => shutdown('stdin closed'))
@@ -279,9 +332,28 @@ mcp.oninitialized = () => {
   process.stderr.write('foxcode: initialized\n')
 }
 
-await mcp.connect(new StdioServerTransport())
-if (PORT) {
-  process.stderr.write(`foxcode: ws://localhost:${PORT}\n`)
+if (LAUNCH_FOREGROUND_MODE) {
+  // CLI mode used by scripts/dev.sh: launch Firefox+extension and supervise
+  // until SIGTERM/SIGINT — no MCP stdio transport is attached.
+  if (PORT) {
+    process.stderr.write(`foxcode: ws://localhost:${PORT}\n`)
+  } else {
+    process.stderr.write('foxcode: no free port in range, cannot launch\n')
+    process.exit(1)
+  }
+  process.stderr.write('foxcode: launch-foreground mode\n')
+  const r = await launchHandler({ timeout: 60_000 })
+  process.stderr.write(`foxcode: launch ${r.status}\n`)
+  if (r.status !== 'connected' && r.status !== 'already-connected' && r.status !== 'already-running') {
+    process.exit(1)
+  }
+  // Block until a signal arrives; shutdown() handles cleanup.
+  await new Promise(() => {})
 } else {
-  process.stderr.write('foxcode: no free port in range, running without WebSocket\n')
+  await mcp.connect(new StdioServerTransport())
+  if (PORT) {
+    process.stderr.write(`foxcode: ws://localhost:${PORT}\n`)
+  } else {
+    process.stderr.write('foxcode: no free port in range, running without WebSocket\n')
+  }
 }

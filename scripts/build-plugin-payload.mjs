@@ -7,11 +7,12 @@ import path from 'node:path';
 // assertion catches drift.
 export const CHANNEL_SPEC = 'foxcode-channel@0.18.0';
 
-// npx-distribution model: payload ships only static assets (extension +
-// skills + manifests + .mcp.json snippet). The channel runtime is
-// resolved by `npx -y <CHANNEL_SPEC>` on first IDE invocation; nothing
-// in the payload needs the channel source.
-const RUNTIME_DIRS = ['extension', 'skills'];
+// npx-distribution model: payload ships only static assets (skills +
+// manifests + .mcp.json snippet). Both the channel runtime AND the
+// Firefox extension are resolved by `npx -y <CHANNEL_SPEC>` on first IDE
+// invocation; the channel npm package bundles its own copy of the
+// extension. Nothing in the payload needs the extension source either.
+const RUNTIME_DIRS = ['skills'];
 
 async function readJson(file) {
   return JSON.parse(await readFile(file, 'utf8'));

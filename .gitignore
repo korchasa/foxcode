@@ -4,6 +4,8 @@ channel/node_modules/
 opencode/bundle/
 opencode/*.tgz
 opencode/deno.lock
+foxcode/channel/extension/
+foxcode/channel/*.tgz
 .claude/*
 !.claude/skills
 !.claude/rules/

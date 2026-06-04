@@ -4,13 +4,12 @@
  *
  *   1. Read version from foxcode/.claude-plugin/plugin.json (single source of truth)
  *      and write it back into opencode/package.json.
- *   2. Copy ../foxcode/extension and ../foxcode/skills/foxcode-run-* into ./bundle/
- *      (excluding node_modules/, build/, .foxcode/).
+ *   2. Copy ../foxcode/skills/foxcode-run-* into ./bundle/skills/.
  *
- * The channel runtime is NOT bundled. Under the unified-npx distribution
- * (Phase 3 of documents/tasks/2026/06/unify-mcp-distribution-via-npx.md),
- * opencode.json points at `npx -y foxcode-channel@<pin>` and the npm
- * registry resolves the channel on first IDE invocation.
+ * The channel runtime AND the Firefox extension are NOT bundled. The channel
+ * is resolved via `npx -y foxcode-channel@<pin>` and ships the extension
+ * inside that npm package (see foxcode/channel/prepack.mjs). OpenCode's
+ * bundle is now skills-only.
  */
 import { cp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -62,9 +61,6 @@ async function main() {
 
   if (existsSync(BUNDLE)) await rm(BUNDLE, { recursive: true, force: true });
   await mkdir(BUNDLE, { recursive: true });
-
-  console.log("prepack: copying foxcode/extension/");
-  await copyTree(join(REPO_ROOT, "foxcode", "extension"), join(BUNDLE, "extension"));
 
   await mkdir(join(BUNDLE, "skills"), { recursive: true });
   for (const name of ["foxcode-run-project-profile", "foxcode-run-user-profile"]) {

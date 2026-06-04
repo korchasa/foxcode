@@ -53,6 +53,10 @@ Verify with `codex mcp get foxcode` and `codex mcp list`. The channel is resolve
 
 If your `~/.codex/config.toml` still has the older `sh -c "…npm ci…exec node server.mjs"` block, replace the entire `[mcp_servers.foxcode]` stanza with the two-line `npx` form above. The npm-distributed channel removes the `npm ci`-on-launch step and the plugin-cache glob, so the bump is purely a config-file edit.
 
+### Migration from 0.18.x — Firefox launch moved into the MCP server
+
+Starting in 0.19.0 the channel ships a `launchBrowser` MCP tool and the Python launch helpers (`launch_firefox.py`, `resolve_env.py`) are gone. The Project-Profile skill is now two MCP calls — `status` then `launchBrowser` — and the Firefox extension is bundled inside `foxcode-channel` itself; IDE plugin payloads no longer carry an `extension/` directory. Behaviour change: the launched Firefox is tied to the MCP process, so closing the IDE (or letting the channel exit) now closes Firefox with it. To upgrade cleanly, delete the stale local state (`rm -rf ~/.foxcode/ .foxcode/`) and re-run the launch skill.
+
 ## Install in OpenCode
 
 Add the MCP server to `~/.config/opencode/opencode.json` (or your project's `opencode.json`):

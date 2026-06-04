@@ -1,47 +1,32 @@
 ---
 name: foxcode-run-project-profile
 description: >
-  Launch FoxCode in Project Profile mode. Checks prerequisites, launches Firefox via web-ext, verifies connectivity.
+  Launch FoxCode in Project Profile mode via the foxcode MCP server (`launchBrowser` tool). Two tool calls, no Python.
 ---
 
 # FoxCode Run — Project Profile
 
-Launch isolated Firefox with FoxCode extension. Communicate in user's language. Be concise — minimal output, no explanations unless something fails.
+Launch isolated Firefox with the FoxCode extension. Talk to the user in their language. Be concise — minimal output, no explanations unless something fails.
 
-**IMPORTANT**: Minimize tool calls. Each call costs ~3s of overhead. Combine bash commands. Use parallel calls where noted.
+The Firefox lifecycle is owned by the MCP channel: when the IDE session ends or the channel is killed, the launched Firefox closes with it.
 
-**Source of truth**: port and password come only from the MCP `status` response. Never read `~/.foxcode/port` or `~/.foxcode/password` — they are server-internal and may be stale vs. the server this skill is actually talking to.
+## 1. Status
 
-## 1. Initial status
+Call MCP tool `status`.
 
-Call `status`. 
-- Fails -> tell user "MCP server not running", stop.
-- `connectedClients > 0` -> say "Ready." and stop. Do not restart Firefox in the same session after Ready; reuse the current connected browser first.
-- Otherwise remember `{port, password}` from the response as `PORT0`, `PASSWORD0` — these are authoritative for the current server.
+- Fails → tell user "MCP server not running", stop.
+- `connectedClients > 0` → say "Ready." and stop. Do not relaunch in the same session.
 
-## 2. Launch Firefox (background bash)
+## 2. Launch
 
-Run, substituting the values from step 1:
+Call MCP tool `launchBrowser` (no arguments are required; defaults work).
 
-```bash
-python3 "${CLAUDE_SKILL_DIR}/scripts/launch_firefox.py" --port <PORT0> --password <PASSWORD0>
-```
+The tool reply is JSON. Interpret `status`:
 
-Idempotent:
-- Already running on same port -> prints `Already running (PID X)`, exit 0 -> continue to step 3.
-- Running on different port (stale session) -> kills old Firefox, prints `Port changed (OLD -> NEW)...`, relaunches -> continue to step 3.
-- Launched -> PID saved to `.foxcode/web-ext.pid`.
-- Fails -> report stderr, stop.
+- `connected` → "Ready."
+- `already-connected` → "Ready."
+- `already-running` → "Ready." (a managed Firefox is already alive on the current port).
+- `timeout` → relay the JSON reply unchanged; suggest the user reload the extension and re-run the skill.
+- `error` → relay `reason`; common causes are missing Firefox binary or no free WebSocket port.
 
-## 3. Verify connection
-
-```bash
-sleep 5
-```
-
-Then poll `status` every 3s, max 3 retries.
-
-- `connectedClients > 0` -> "Ready."
-- All retries exhausted -> call `status` one final time and compare with step 1:
-  - `port` or `password` differ from `PORT0`/`PASSWORD0` -> "MCP server restarted during launch (port/password rotated). Re-run skill."
-  - Unchanged -> "No connection. Firefox may not have opened the start URL, or the extension is unloaded. Reload the extension via about:debugging and re-run skill."
+That is the whole flow — no Python, no `${CLAUDE_SKILL_DIR}/scripts/*`, no PID files to manage from the agent side.

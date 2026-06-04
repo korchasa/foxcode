@@ -9,7 +9,9 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test lib.test.mjs validator.test.mjs server.test.mjs"
+    "prepack": "node prepack.mjs",
+    "postpack": "node -e \"import('node:fs/promises').then(fs => fs.rm('./extension', { recursive: true, force: true }))\"",
+    "test": "node --test lib.test.mjs validator.test.mjs server.test.mjs launch/*.test.mjs"
   },
   "keywords": [
     "claude-code",
@@ -31,7 +33,11 @@
     "server.mjs",
     "lib.mjs",
     "validator.mjs",
-    "README.md"
+    "launch/",
+    "extension/",
+    "README.md",
+    "!**/*.test.mjs",
+    "!**/*.test.js"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",

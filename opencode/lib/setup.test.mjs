@@ -8,7 +8,7 @@ import { withTmp, withEnv } from "./test-helpers.mjs";
 
 const PLUGIN_ROOT = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
 
-test("runSetup seeds skills, writes handoff, returns configFound=null when mcp absent", async () => {
+test("runSetup seeds skills, returns configFound=null when mcp absent, no handoff file", async () => {
   await withTmp(async (tmp) => {
     const project = join(tmp, "project");
     mkdirSync(project, { recursive: true });
@@ -18,7 +18,12 @@ test("runSetup seeds skills, writes handoff, returns configFound=null when mcp a
       assert.deepEqual(Object.values(r.skills).sort(), ["created", "created"]);
       assert.equal(r.configFound, null);
       assert.equal(r.configAction, null);
-      assert.ok(existsSync(r.handoff));
+      assert.equal(r.handoff, undefined, "report should no longer surface a handoff path");
+      assert.equal(
+        existsSync(join(tmp, "home", ".foxcode", "opencode-plugin-dir")),
+        false,
+        "handoff file must not be written under the new npx-channel model",
+      );
     });
   });
 });

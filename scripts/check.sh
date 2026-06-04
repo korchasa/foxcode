@@ -12,7 +12,7 @@ echo "=== FoxCode: check ==="
 echo "--- Comment scan ---"
 grep -rn "TODO\|FIXME\|HACK\|XXX\|debugger\|console\.log" \
   foxcode/extension/ \
-  foxcode/channel/server.mjs foxcode/channel/lib.mjs \
+  foxcode/channel/server.mjs foxcode/channel/lib.mjs foxcode/channel/launch/*.mjs \
   opencode/index.mjs opencode/lib opencode/bin opencode/prepack.mjs \
   2>/dev/null || echo "No issues found."
 
@@ -35,6 +35,10 @@ fi
 echo "--- JS syntax check ---"
 node --check foxcode/channel/server.mjs && echo "foxcode/channel/server.mjs: syntax OK"
 node --check foxcode/channel/lib.mjs && echo "foxcode/channel/lib.mjs: syntax OK"
+node --check foxcode/channel/prepack.mjs && echo "foxcode/channel/prepack.mjs: syntax OK"
+for f in foxcode/channel/launch/*.mjs; do
+  node --check "$f" && echo "$f: syntax OK"
+done
 node --check opencode/index.mjs && echo "opencode/index.mjs: syntax OK"
 node --check opencode/prepack.mjs && echo "opencode/prepack.mjs: syntax OK"
 node --check opencode/bin/foxcode-opencode.mjs && echo "opencode/bin/foxcode-opencode.mjs: syntax OK"
@@ -46,6 +50,7 @@ done
 echo "--- Tests ---"
 node --test \
   foxcode/channel/*.test.mjs \
+  foxcode/channel/launch/*.test.mjs \
   foxcode/extension/background/*.test.js \
   foxcode/extension/popup/*.test.js \
   opencode/lib/*.test.mjs \
@@ -70,12 +75,6 @@ node --test \
 # Tier 4 (real IDE × real Firefox) is not run by `check`. It lives in:
 #   scripts/test-ide.sh         — IDEs drive evalInBrowser (LLM tokens, ~50 s)
 #   scripts/test-ide-skill.sh   — OpenCode command skill launches Firefox (LLM tokens)
-
-# Python tests (skill helpers)
-echo "--- Python tests ---"
-python3 -W ignore::ResourceWarning -m unittest discover \
-  -s foxcode/skills/foxcode-run-project-profile/scripts \
-  -p 'test_*.py'
 
 # Opt-in: smoke-test the published foxcode-channel via npx.
 # Off by default so the check pipeline does not depend on the npm registry.

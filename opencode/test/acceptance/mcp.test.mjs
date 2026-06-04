@@ -104,7 +104,7 @@ test("channel responds to MCP initialize handshake", async () => {
   });
 });
 
-test("channel exposes status and evalInBrowser tools after initialization", async () => {
+test("channel exposes status, launchBrowser, evalInBrowser tools after initialization", async () => {
   await withTmp(async (tmp) => {
     const home = join(tmp, "home");
     mkdirSync(home, { recursive: true });
@@ -119,10 +119,13 @@ test("channel exposes status and evalInBrowser tools after initialization", asyn
       const result = await client.request("tools/list", {});
       assert.ok(Array.isArray(result.tools), "tools/list must return tools array");
       const names = result.tools.map((t) => t.name).sort();
-      assert.deepEqual(names, ["evalInBrowser", "status"]);
+      assert.deepEqual(names, ["evalInBrowser", "launchBrowser", "status"]);
       const evalTool = result.tools.find((t) => t.name === "evalInBrowser");
       assert.ok(evalTool.inputSchema, "evalInBrowser must declare inputSchema");
       assert.ok(evalTool.inputSchema.properties.code, "evalInBrowser must accept `code` param");
+      const launchTool = result.tools.find((t) => t.name === "launchBrowser");
+      assert.ok(launchTool, "tools/list must include launchBrowser");
+      assert.ok(launchTool.inputSchema.properties.timeout, "launchBrowser must accept timeout");
     } finally {
       await client.close();
     }

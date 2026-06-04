@@ -266,6 +266,31 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'launchBrowser',
+    description: [
+      'Launch Firefox with the FoxCode extension via web-ext.',
+      'Blocks until the extension connects to the channel (or times out).',
+      'Returns {status: "already-connected"} when an extension client is already attached;',
+      '{status: "already-running"} when a managed Firefox process is alive on the current port;',
+      '{status: "connected", pid, port} on success;',
+      '{status: "timeout"} when the extension does not connect within the timeout.',
+      'Firefox lifecycle is tied to this MCP process — channel shutdown closes the browser.',
+    ].join('\n'),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        timeout: {
+          type: 'number',
+          description: 'Max ms to wait for the extension to connect (default 30000).',
+        },
+        headless: {
+          type: 'boolean',
+          description: 'Run Firefox headless (no UI). Used by acceptance tests.',
+        },
+      },
+    },
+  },
+  {
     name: 'evalInBrowser',
     description: [
       'Execute JavaScript in Firefox browser. Code runs in extension background with async browser API.',

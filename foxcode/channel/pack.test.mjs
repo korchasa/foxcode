@@ -53,4 +53,24 @@ describe('npm pack', () => {
   it('does not declare scoped publishConfig for the unscoped package', () => {
     assert.equal(ownPkg.publishConfig, undefined)
   })
+
+  it('bundles the Firefox extension via prepack', () => {
+    const paths = packJson.files.map((f) => f.path)
+    assert.ok(
+      paths.includes('extension/manifest.json'),
+      `tarball must include extension/manifest.json, got: ${paths.filter((p) => p.startsWith('extension/')).join(', ') || '(none)'}`,
+    )
+    assert.ok(
+      paths.some((p) => p.startsWith('extension/background/')),
+      'tarball must include extension/background/ files',
+    )
+  })
+
+  it('ships the launch/ directory', () => {
+    const paths = packJson.files.map((f) => f.path)
+    assert.ok(
+      paths.includes('launch/discover.mjs'),
+      'tarball must include launch/discover.mjs',
+    )
+  })
 })

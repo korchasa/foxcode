@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 import FoxCodeOpencodePlugin, { __test } from "../index.mjs";
-import { handoffFilePath, userSkillsDir } from "../lib/paths.mjs";
+import { userSkillsDir } from "../lib/paths.mjs";
 import { withTmp, withEnv, captureStderr } from "../lib/test-helpers.mjs";
 
 async function inPluginSandbox(tmp, fn) {
@@ -24,19 +24,20 @@ async function inPluginSandbox(tmp, fn) {
   });
 }
 
-test("bootstrap seeds skills, writes handoff, and emits snippet when mcp absent", async () => {
+test("bootstrap seeds skills and emits snippet when mcp absent, writes no handoff file", async () => {
   await withTmp(async (tmp) => {
-    await inPluginSandbox(tmp, async () => {
+    await inPluginSandbox(tmp, async ({ home }) => {
       const captured = await captureStderr(async () => {
         await __test.bootstrap();
       });
       for (const name of ["foxcode-run-project-profile", "foxcode-run-user-profile"]) {
         assert.ok(existsSync(join(userSkillsDir(), name)), `skill not seeded: ${name}`);
       }
-      const ho = handoffFilePath();
-      assert.ok(existsSync(ho));
-      const handoffContent = readFileSync(ho, "utf8").trim();
-      assert.ok(handoffContent.endsWith("/opencode") || handoffContent.endsWith("\\opencode"));
+      assert.equal(
+        existsSync(join(home, ".foxcode", "opencode-plugin-dir")),
+        false,
+        "handoff file must not be written under the new npx-channel model",
+      );
       assert.match(captured, /Add the snippet below/);
       assert.match(captured, /"mcp"/);
       assert.match(captured, /"foxcode"/);

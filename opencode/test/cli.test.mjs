@@ -73,7 +73,7 @@ test("setup --write-config refuses opencode.json with comments", () => {
   }
 });
 
-test("uninstall removes symlinks and handoff", () => {
+test("uninstall removes seeded symlinks", () => {
   const { tmp, home, xdg, cwd } = sandbox();
   try {
     const env = { HOME: home, XDG_CONFIG_HOME: xdg };
@@ -81,6 +81,7 @@ test("uninstall removes symlinks and handoff", () => {
     const r = run(["uninstall"], env, cwd);
     assert.equal(r.status, 0, r.stderr);
     assert.ok(!existsSync(join(xdg, "opencode", "skills", "foxcode-run-project-profile")));
+    // The handoff file path was retired under the npx-channel model.
     assert.ok(!existsSync(join(home, ".foxcode", "opencode-plugin-dir")));
   } finally {
     rmSync(tmp, { recursive: true, force: true });

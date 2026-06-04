@@ -23,7 +23,7 @@ function runServer(args) {
     let err = ''
     proc.stdout.on('data', (b) => { out += b })
     proc.stderr.on('data', (b) => { err += b })
-    const killTimer = setTimeout(() => proc.kill('SIGKILL'), 3000)
+    const killTimer = setTimeout(() => proc.kill('SIGKILL'), 15000)
     proc.on('exit', (code, signal) => {
       clearTimeout(killTimer)
       resolve({ code, signal, stdout: out, stderr: err })

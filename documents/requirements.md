@@ -149,10 +149,26 @@
   - [ ] After max attempts: `"session_name (disconnected)"` (final state, no more retries)
   - [ ] Background sends reconnect progress in session-update messages to popup
 
+### 3.15 FR-15: Browser Launch via MCP
+- **Description:** Firefox Project-Profile launch is owned by the MCP channel. The channel exposes a `launchBrowser` MCP tool that discovers Firefox + the bundled extension, prepares the Mozilla update cache, spawns `npx web-ext run` as an attached child, writes `.foxcode/web-ext.pid`, and waits for the extension to connect before returning. Firefox lifecycle is tied to the channel: SIGTERM/SIGINT/stdin-EOF on the channel terminates the web-ext process group. Skills collapse to two MCP calls (`status`, `launchBrowser`) — no Python helpers.
+- **Tasks:** [move-browser-launch-to-mcp](tasks/2026/06/move-browser-launch-to-mcp.md)
+- **Scenario:** Agent calls `status`; if `connectedClients == 0` calls `launchBrowser` with default arguments. Channel resolves Firefox + bundled extension, runs the macOS update preparation (purge staged markers + SIGTERM zombie `org.mozilla.updater` rows holding our URL), spawns web-ext with `--start-url http://localhost:PORT#PORT:PASS`. Extension connects via URL hash, the wss "connection" event resolves the pending `launchBrowser` call, agent sees `{status: "connected", pid, port}` and continues.
+- **Acceptance:**
+  - [x] `launchBrowser` tool exposed by the channel; blocks until first WS connection or returns `{status: "timeout"}` when the timeout elapses. Evidence: `foxcode/channel/lib.mjs` TOOL_DEFINITIONS, `foxcode/channel/launch/tool.test.mjs::blocks_until_waitForClient`
+  - [x] `launchBrowser` is idempotent: concurrent calls share the in-flight promise; second call with the extension already attached returns `{status: "already-connected"}` without spawning. Evidence: `foxcode/channel/launch/tool.test.mjs::idempotent_second_call`
+  - [x] Channel shutdown (SIGTERM/SIGINT/stdin-EOF) terminates the managed Firefox process group via `killProcessGroup`. Evidence: `foxcode/channel/server.mjs::shutdown`, `foxcode/channel/launch/spawn.test.mjs::killProcessGroup`
+  - [x] macOS update preparation ported to Node — purges `update.status`/`update.version`/`update.mar`/`Updated.app`/`active-update.xml` and SIGTERMs `org.mozilla.updater` rows referencing our port. Logs counts only, never raw `ps` lines. Evidence: `foxcode/channel/launch/prepare.mjs`, `foxcode/channel/launch/prepare.test.mjs`
+  - [x] Cross-platform Firefox discovery (macOS/Linux/Windows + PATH) ported. Evidence: `foxcode/channel/launch/discover.mjs::findFirefox`, `foxcode/channel/launch/discover.test.mjs::findFirefox`
+  - [x] Bundled extension resolved via `import.meta.url` — no env vars, no handoff files; dev fallback resolves to `foxcode/extension/`, published fallback to `<channel>/extension/`. Evidence: `foxcode/channel/launch/discover.mjs::findExtensionDir`, `foxcode/channel/launch/discover.test.mjs::findExtensionDir`
+  - [x] `foxcode-channel --launch-foreground` CLI flag enters supervised launch mode; SIGTERM/SIGINT triggers shutdown. Replaces `python3 launch_firefox.py --foreground` from `scripts/dev.sh`. Evidence: `foxcode/channel/server.mjs::LAUNCH_FOREGROUND_MODE`, `scripts/dev.sh`
+  - [x] Skill `foxcode/skills/foxcode-run-project-profile/SKILL.md` collapses to two MCP tool calls (`status` + `launchBrowser`). Codex mirror updated. Evidence: `foxcode/skills/foxcode-run-project-profile/SKILL.md`, `.agents/skills/foxcode-run-project-profile/SKILL.md`
+  - [x] Python launcher scripts deleted. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/` directory no longer exists (verified by `ls`)
+
 ## 4. Non-Functional
 
 ### 4.1 NF-1: Easy Install via Claude Code Plugin [critical]
 - **Desc:** Primary install/update path = CC Plugin Marketplace. Plugin auto-configures MCP server; self-contained launch skills handle prerequisites and Firefox setup. User should NOT need to read docs or edit configs manually.
+- **Tasks:** [move-browser-launch-to-mcp](tasks/2026/06/move-browser-launch-to-mcp.md)
 - **Scenario:** User runs `/plugin marketplace add korchasa/foxcode` -> `/plugin install foxcode@korchasa` -> `/foxcode:foxcode-run-project-profile` or `/foxcode:foxcode-run-user-profile` -> skill checks prereqs, locates extension, launches/guides Firefox setup, caches paths in `.foxcode/config.json` -> user launches CC with `--dangerously-load-development-channels plugin:foxcode@korchasa` -> done.
 - **Acceptance:**
   - [x] Legacy `install-prompt.md` removed - plugin is the only install path. Evidence: file deleted
@@ -199,7 +215,7 @@
 
 ### 4.7 NF-7: Easy Install in OpenCode [important]
 - **Description:** Secondary install path = OpenCode plugin npm package (`@korchasa/foxcode-opencode`). User adds one entry to the `plugin` array in `opencode.json`; the package auto-seeds launch skills into `~/.config/opencode/skills/`, writes `~/.foxcode/opencode-plugin-dir` so the existing Python helpers locate the bundled extension, and emits an MCP entry snippet for the user. CLI fallback (`npx -y @korchasa/foxcode-opencode setup [--write-config]`) for one-shot install or CI.
-- **Tasks:** [add-opencode-support](tasks/2026/05/add-opencode-support.md); npx-migration of the OpenCode MCP snippet tracked under [unify-mcp-distribution-via-npx](tasks/2026/06/unify-mcp-distribution-via-npx.md)
+- **Tasks:** [add-opencode-support](tasks/2026/05/add-opencode-support.md); npx-migration of the OpenCode MCP snippet tracked under [unify-mcp-distribution-via-npx](tasks/2026/06/unify-mcp-distribution-via-npx.md); extension-bundling shift tracked under [move-browser-launch-to-mcp](tasks/2026/06/move-browser-launch-to-mcp.md)
 - **Scenario:** User runs `npx -y @korchasa/foxcode-opencode setup --write-config` from a project dir → CLI seeds skills, writes handoff, lazily installs channel deps, patches `opencode.json` → user starts OpenCode → runs `/foxcode-run-project-profile` → `evalInBrowser` round-trips against Firefox. Plugin route (no CLI): user adds `"plugin": ["@korchasa/foxcode-opencode"]` to `opencode.json`, OpenCode auto-installs via Bun, plugin runs on `session.created`, prints MCP snippet to stderr → user pastes snippet → restart → done.
 - **Acceptance:**
   - [x] `opencode/` package layout: `package.json`, `index.mjs` (plugin entry), `lib/` (paths, seed-skills, mcp-snippet, patcher, handoff, exec, lazy-install, prereq, skill-frontmatter), `bin/foxcode-opencode.mjs` (CLI), `prepack.mjs`, `test/`. Evidence: `ls opencode/`, `node --test opencode/lib/*.test.mjs opencode/test/*.test.mjs`
@@ -218,7 +234,7 @@
 
 ### 4.8 NF-8: Project-Scoped Codex Support [important]
 - **Description:** Codex CLI / IDE users can run and validate FoxCode from this repository without Claude Code plugin installation or OpenCode npm setup. Project-scoped MCP configuration starts the shared channel server, and repo-scoped skills expose launch plus release-validation workflows to Codex.
-- **Tasks:** [unify-mcp-distribution-via-npx](tasks/2026/06/unify-mcp-distribution-via-npx.md) (active); superseded: [codex-plugin-marketplace-payload](tasks/2026/05/codex-plugin-marketplace-payload.md), [distribute-channel-via-npm](tasks/2026/05/distribute-channel-via-npm.md)
+- **Tasks:** [unify-mcp-distribution-via-npx](tasks/2026/06/unify-mcp-distribution-via-npx.md) (active); [move-browser-launch-to-mcp](tasks/2026/06/move-browser-launch-to-mcp.md) (active); superseded: [codex-plugin-marketplace-payload](tasks/2026/05/codex-plugin-marketplace-payload.md), [distribute-channel-via-npm](tasks/2026/05/distribute-channel-via-npm.md)
 - **Scenario:** User opens this repository in Codex → Codex trusts project config → `foxcode` MCP server starts from `.codex/config.toml` → user invokes `$foxcode-run-project-profile` → Firefox launches with the extension → `evalInBrowser` round-trips through the browser.
 - **Acceptance:**
   - [x] Project-scoped Codex MCP config declares `foxcode` stdio server via the npm-distributed channel (`command = "npx"`, `args = ["-y", "foxcode-channel@<pinned>"]`). Evidence: `.codex/config.toml:1`
@@ -229,15 +245,15 @@
   - [x] Codex plugin marketplace install path: `codex plugin marketplace add korchasa/foxcode` registers the marketplace and caches the payload under `~/.codex/plugins/cache/korchasa/foxcode/<version>/`. The cached payload now ships only static assets (skills + Firefox extension) — the MCP server is launched via the npm-distributed channel (`npx -y foxcode-channel@<pinned>`) declared in `~/.codex/config.toml`. Evidence: `scripts/codex-plugin-install.test.mjs`, `scripts/codex-plugin-payload.test.mjs`, `scripts/codex-plugin-mcp.test.mjs`.
 
 ### 4.9 NF-9: Self-Contained Plugin Payload [important]
-- **Description:** The Firefox extension lives inside the plugin dir (`foxcode/extension/`) instead of at the repo root, so every distribution channel ships the same self-contained payload. Removes the dependency on the CC marketplace clone for extension discovery and unblocks future Codex marketplace packaging.
-- **Scenario:** CC plugin cache, CC marketplace clone, and OpenCode npm bundle all carry the extension under `<plugin>/extension/`. Skills resolve it via `${CLAUDE_PLUGIN_ROOT}/extension` without walking out of the plugin dir.
+- **Description:** Self-containment now lives in the `foxcode-channel` npm package, NOT in each IDE plugin's payload. The channel tarball bundles the Firefox extension at publish time (via `foxcode/channel/prepack.mjs`); IDE plugin payloads (CC marketplace, Codex marketplace, OpenCode npm) ship only skills + manifest + the MCP snippet pointing at `npx -y foxcode-channel@<pinned>`. The first `npx` invocation pulls down the channel and unlocks both the MCP server AND the extension assets in a single network hop.
+- **Tasks:** [move-browser-launch-to-mcp](tasks/2026/06/move-browser-launch-to-mcp.md)
+- **Scenario:** User installs the CC/Codex/OpenCode plugin payload (skills only, ~12 KB). On first `/foxcode:foxcode-run-project-profile` invocation the channel MCP server is resolved via npx; the channel exposes `launchBrowser`, finds the bundled extension via `import.meta.url`, and starts Firefox.
 - **Acceptance:**
-  - [x] Extension assets live at `foxcode/extension/`. Evidence: `foxcode/extension/manifest.json:1`
-  - [x] `resolve_env.py` derives extension path from `CLAUDE_PLUGIN_ROOT` without `.parent`. Evidence: `foxcode/skills/foxcode-run-project-profile/scripts/resolve_env.py:94`, `foxcode/skills/foxcode-run-project-profile/scripts/test_resolve_env.py:125`
-  - [x] OpenCode prepack copies from `foxcode/extension/` into `bundle/extension/`. Evidence: `opencode/prepack.mjs:65`, `opencode/test/pack.test.mjs:20`
-  - [x] Dev-mode `bundlePaths()` resolves extension under `foxcode/extension/`. Evidence: `opencode/lib/paths.mjs:41`, `opencode/lib/paths.test.mjs:61`
-  - [x] Tier-4 acceptance loads extension from new path. Evidence: `opencode/test/acceptance/ide-task.test.ts:32`
-  - [x] `scripts/check.sh` and `scripts/test.sh` reference the new path. Evidence: `scripts/check.sh:14`, `scripts/test.sh:9`
+  - [x] `foxcode-channel` npm tarball bundles `extension/` via `prepack.mjs`. Evidence: `foxcode/channel/prepack.mjs`, `foxcode/channel/pack.test.mjs::bundles the Firefox extension via prepack`
+  - [x] CC marketplace and Codex marketplace plugin payloads ship NO `extension/` directory. Evidence: `scripts/build-plugin-payload.mjs::RUNTIME_DIRS`, `scripts/codex-plugin-payload.test.mjs::payload does NOT ship channel/ or extension/ under unified-npx distribution`
+  - [x] OpenCode `prepack.mjs` produces a skills-only bundle. Evidence: `opencode/prepack.mjs::main`, `opencode/test/pack.test.mjs::prepack assembles bundle/skills only`
+  - [x] Channel resolves the extension dir via `import.meta.url` — no `CLAUDE_PLUGIN_ROOT`, no `~/.foxcode/opencode-plugin-dir` handoff. Evidence: `foxcode/channel/launch/discover.mjs::findExtensionDir`, `foxcode/channel/launch/discover.test.mjs`
+  - [x] OpenCode plugin no longer writes `~/.foxcode/opencode-plugin-dir`. Evidence: `opencode/lib/setup.mjs` (no `writeHandoff` import), `opencode/lib/setup.test.mjs::runSetup seeds skills…no handoff file`
 
 ## 5. Interfaces
 - **Transport:** Channel Plugin (MCP server inside supported agent) ↔ WebSocket localhost:8787 ↔ Firefox Extension

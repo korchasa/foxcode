@@ -4,17 +4,14 @@
  * Lifecycle: registers a `session.created` hook (the earliest plugin-callable
  * hook documented at https://opencode.ai/docs/plugins/) which:
  *   1. seeds launch-skill symlinks into ~/.config/opencode/skills/
- *   2. writes ~/.foxcode/opencode-plugin-dir so the Python helpers can
- *      locate the bundled extension at skill-launch time
- *   3. lazily installs channel deps (npm ci --omit=dev)
- *   4. emits an MCP-snippet to stderr (once per process) when the user's
+ *   2. emits an MCP-snippet to stderr (once per process) when the user's
  *      opencode.json does not already declare mcp.foxcode
  *
  * The plugin never auto-edits opencode.json; users wanting a one-shot install
  * run the bundled CLI: `npx -y @korchasa/foxcode-opencode setup --write-config`.
  *
- * Bootstrap is registered on the hook (not eagerly at plugin load) so we
- * never run before OpenCode has finished its own initialisation.
+ * The channel runtime AND the Firefox extension are no longer bundled —
+ * everything ships through `npx -y foxcode-channel@<pin>`.
  */
 import { resolveFromModule } from "./lib/paths.mjs";
 import { runSetup } from "./lib/setup.mjs";

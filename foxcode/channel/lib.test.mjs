@@ -173,10 +173,18 @@ describe('createHttpServer', () => {
 })
 
 describe('TOOL_DEFINITIONS', () => {
-  it('has 2 tools (status, evalInBrowser)', () => {
-    assert.equal(TOOL_DEFINITIONS.length, 2)
+  it('exposes status, launchBrowser, evalInBrowser', () => {
+    assert.equal(TOOL_DEFINITIONS.length, 3)
     const names = TOOL_DEFINITIONS.map(t => t.name)
-    assert.deepEqual(names, ['status', 'evalInBrowser'])
+    assert.deepEqual(names, ['status', 'launchBrowser', 'evalInBrowser'])
+  })
+
+  it('launchBrowser exposes optional timeout and headless params', () => {
+    const tool = TOOL_DEFINITIONS.find(t => t.name === 'launchBrowser')
+    assert.ok(tool)
+    assert.equal(tool.inputSchema.required, undefined)
+    assert.ok(tool.inputSchema.properties.timeout)
+    assert.ok(tool.inputSchema.properties.headless)
   })
 
   it('status has no required params', () => {

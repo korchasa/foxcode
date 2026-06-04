@@ -7,4 +7,10 @@ fi
 
 echo "=== FoxCode: dev ==="
 
-python3 foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py --foreground
+# Local dev: prefer the in-tree channel over npx so iteration on launch
+# code reflects immediately. The channel resolves the Firefox extension
+# from ./foxcode/channel/extension/ at publish time; in dev it points at
+# ../extension/ relative to its own module URL — but that source dir is
+# the canonical one, so dev mode just works after prepack has been run
+# once (or via the auto-resolution to ../extension/).
+exec node foxcode/channel/server.mjs --launch-foreground

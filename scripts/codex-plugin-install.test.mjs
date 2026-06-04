@@ -64,7 +64,12 @@ test('isolated codex plugin install', {
   const plugin = JSON.parse(await readFile(path.join(pluginRoot, '.codex-plugin/plugin.json'), 'utf8'));
   assert.equal(plugin.name, 'foxcode');
   await stat(path.join(pluginRoot, 'skills/foxcode-run-project-profile/SKILL.md'));
-  await stat(path.join(pluginRoot, 'extension/manifest.json'));
+  // The Firefox extension is no longer in the Codex plugin payload — it
+  // ships inside the foxcode-channel npm package, fetched on first `npx`
+  // invocation. Assert its absence so we don't silently regress.
+  let extExists = false;
+  try { await stat(path.join(pluginRoot, 'extension/manifest.json')); extExists = true; } catch { /* ENOENT */ }
+  assert.equal(extExists, false, 'extension/ must NOT be in the Codex plugin payload anymore');
   await stat(path.join(pluginRoot, '.mcp.json'));
 
   // Q2: the installed plugin's MCP config surfaces in `codex mcp list`

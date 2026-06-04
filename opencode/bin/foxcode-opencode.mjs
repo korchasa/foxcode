@@ -4,20 +4,18 @@
  * prefer a single command over the plugin auto-bootstrap.
  *
  * Subcommands:
- *   setup [--write-config]   Seed skills, install channel deps lazily,
- *                            write handoff file, print MCP snippet.
+ *   setup [--write-config]   Seed skills and print MCP snippet.
  *                            With --write-config, also patch opencode.json
  *                            (refuses files containing JSONC comments).
- *   uninstall                Remove seeded skill symlinks and the handoff file.
+ *   uninstall                Remove seeded skill symlinks.
  *                            Does NOT auto-remove mcp.foxcode from opencode.json.
  *   doctor                   Diagnostics: prereqs, paths, config state.
  */
 import { join } from "node:path";
 import { existsSync, lstatSync, unlinkSync } from "node:fs";
 
-import { resolveFromModule, bundlePaths, userSkillsDir, handoffFilePath, userOpencodeJson } from "../lib/paths.mjs";
+import { resolveFromModule, bundlePaths, userSkillsDir, userOpencodeJson } from "../lib/paths.mjs";
 import { runSetup } from "../lib/setup.mjs";
-import { readHandoff, clearHandoff } from "../lib/handoff.mjs";
 import { buildMcpSnippet, findConfigWithFoxcode } from "../lib/mcp-snippet.mjs";
 import { checkPrereqs } from "../lib/prereq.mjs";
 
@@ -33,7 +31,6 @@ function printSetupReport(r, writeConfig) {
   for (const [name, action] of Object.entries(r.skills)) {
     console.log(`  skill ${name}: ${action}`);
   }
-  console.log(`  handoff: ${r.handoff}`);
   if (writeConfig) {
     console.log(`  opencode.json (${r.configTarget}): ${r.configAction}`);
   } else if (r.configFound) {
@@ -73,8 +70,6 @@ async function cmdUninstall() {
       }
     }
   }
-  await clearHandoff(handoffFilePath());
-  console.log(`  removed handoff: ${handoffFilePath()}`);
   console.log(
     "\nNote: mcp.foxcode is NOT auto-removed from opencode.json. " +
     "Remove it manually if you want a complete uninstall.",
@@ -88,10 +83,8 @@ async function cmdDoctor() {
   for (const p of prereq.problems) console.log(`  - ${p}`);
   console.log(`Plugin root:    ${PLUGIN_ROOT} (${PATHS.source})`);
   console.log(`Bundle skills:  ${PATHS.skills}`);
-  console.log(`Bundle ext:     ${PATHS.extension}`);
   console.log(`Channel:        resolved via npx (foxcode-channel@<pin>; see opencode.json)`);
   console.log(`User skills:    ${userSkillsDir()}`);
-  console.log(`Handoff file:   ${handoffFilePath()} -> ${(await readHandoff(handoffFilePath())) ?? "(none)"}`);
   const found = await findConfigWithFoxcode([
     join(process.cwd(), "opencode.json"),
     userOpencodeJson(),
@@ -104,7 +97,7 @@ function usage() {
   process.stdout.write(
     "Usage: foxcode-opencode <command>\n" +
     "  setup [--write-config]   Seed skills + emit MCP snippet (or patch opencode.json)\n" +
-    "  uninstall                Remove seeded symlinks and handoff file\n" +
+    "  uninstall                Remove seeded symlinks\n" +
     "  doctor                   Diagnostics\n",
   );
 }

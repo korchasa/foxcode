@@ -46,27 +46,28 @@ test('codex marketplace payload shape', async () => {
   assert.equal(Object.hasOwn(mcp.foxcode, 'env'), false);
 
   await stat(path.join(outDir, 'codex/plugins/foxcode/skills/foxcode-run-project-profile/SKILL.md'));
-  await stat(path.join(outDir, 'codex/plugins/foxcode/extension/manifest.json'));
   await stat(path.join(outDir, 'claude/.claude-plugin/marketplace.json'));
 });
 
-test('payload does NOT ship the channel/ source under npx distribution', async () => {
+test('payload does NOT ship channel/ or extension/ under unified-npx distribution', async () => {
   const outDir = await mkdtemp(path.join(tmpdir(), 'foxcode-payload-'));
   await buildPluginPayload({ repoRoot, outDir });
 
   for (const host of ['codex', 'claude']) {
-    const channelDir = path.join(outDir, host, 'plugins/foxcode/channel');
-    let exists = false;
-    try {
-      await stat(channelDir);
-      exists = true;
-    } catch (e) {
-      if (e.code !== 'ENOENT') throw e;
+    for (const dead of ['channel', 'extension']) {
+      const dir = path.join(outDir, host, 'plugins/foxcode', dead);
+      let exists = false;
+      try {
+        await stat(dir);
+        exists = true;
+      } catch (e) {
+        if (e.code !== 'ENOENT') throw e;
+      }
+      assert.equal(
+        exists,
+        false,
+        `${host} payload still ships ${dead}/ — channel npm package now bundles it`,
+      );
     }
-    assert.equal(
-      exists,
-      false,
-      `${host} payload still copies channel/ — npx distribution makes this dead weight (and stale)`,
-    );
   }
 });

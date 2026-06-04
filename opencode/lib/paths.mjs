@@ -22,29 +22,24 @@ export function resolveFromModule(callerUrl, relative) {
 }
 
 /**
- * Compute the absolute paths to bundled artifacts (extension + skills).
- * In a published package they live under `<pluginRoot>/bundle/`; in dev,
- * sources live under `../foxcode/{extension,skills}` relative to opencode/.
+ * Compute the absolute paths to bundled skills.
+ * In a published package they live under `<pluginRoot>/bundle/skills/`; in
+ * dev, sources live under `../foxcode/skills/` relative to opencode/.
  *
- * The channel runtime is no longer bundled (resolved via npx). The
- * `channel` key is preserved here for callers that still want to display
- * a path for diagnostics — but it points at a directory that no longer
- * exists post-prepack.
+ * The Firefox extension and channel runtime are NOT bundled in the OpenCode
+ * package: the channel is resolved via `npx -y foxcode-channel@<pin>` and
+ * the channel npm package itself ships the extension.
  */
 export function bundlePaths(pluginRoot) {
   const bundleDir = join(pluginRoot, "bundle");
   if (existsSync(bundleDir)) {
     return {
-      extension: join(bundleDir, "extension"),
-      channel: join(bundleDir, "channel"),
       skills: join(bundleDir, "skills"),
       source: "bundle",
     };
   }
   const repoRoot = resolve(pluginRoot, "..");
   return {
-    extension: join(repoRoot, "foxcode", "extension"),
-    channel: join(repoRoot, "foxcode", "channel"),
     skills: join(repoRoot, "foxcode", "skills"),
     source: "dev",
   };
@@ -58,11 +53,6 @@ export function userSkillsDir() {
   const xdg = process.env.XDG_CONFIG_HOME;
   const base = xdg && xdg.length > 0 ? xdg : join(homedir(), ".config");
   return join(base, "opencode", "skills");
-}
-
-/** Path to the plugin-dir handoff file consumed by Python helpers. */
-export function handoffFilePath() {
-  return join(homedir(), ".foxcode", "opencode-plugin-dir");
 }
 
 /** Path to the global opencode.json (canonical user config). */

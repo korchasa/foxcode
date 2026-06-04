@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { resolveFromModule, bundlePaths, userSkillsDir, handoffFilePath, userOpencodeJson } from "./paths.mjs";
+import { resolveFromModule, bundlePaths, userSkillsDir, userOpencodeJson } from "./paths.mjs";
 import { withTmp, withEnv } from "./test-helpers.mjs";
 
 test("resolveFromModule resolves '.' to plugin root when caller is index-adjacent", async () => {
@@ -43,23 +43,23 @@ test("resolveFromModule throws when target dir lacks package.json or index.mjs",
   });
 });
 
-test("bundlePaths returns bundle/* when ./bundle/ exists", async () => {
+test("bundlePaths returns bundle/skills when ./bundle/ exists, no extension/channel", async () => {
   await withTmp(async (tmp) => {
     mkdirSync(join(tmp, "bundle"), { recursive: true });
     const p = bundlePaths(tmp);
     assert.equal(p.source, "bundle");
-    assert.equal(p.extension, join(tmp, "bundle", "extension"));
+    assert.equal(p.skills, join(tmp, "bundle", "skills"));
+    assert.equal(p.extension, undefined, "extension is shipped via the channel npm package");
+    assert.equal(p.channel, undefined, "channel runtime is resolved via npx");
   });
 });
 
-test("bundlePaths falls back to repo-relative paths in dev mode", async () => {
+test("bundlePaths falls back to repo-relative skills path in dev mode", async () => {
   await withTmp(async (tmp) => {
     const pluginRoot = join(tmp, "opencode");
     mkdirSync(pluginRoot, { recursive: true });
     const p = bundlePaths(pluginRoot);
     assert.equal(p.source, "dev");
-    assert.equal(p.extension, join(tmp, "foxcode", "extension"));
-    assert.equal(p.channel, join(tmp, "foxcode", "channel"));
     assert.equal(p.skills, join(tmp, "foxcode", "skills"));
   });
 });
@@ -79,10 +79,6 @@ test("userSkillsDir falls back to ~/.config when XDG_CONFIG_HOME is unset", () =
     if (orig === undefined) delete process.env.XDG_CONFIG_HOME;
     else process.env.XDG_CONFIG_HOME = orig;
   }
-});
-
-test("handoffFilePath returns ~/.foxcode/opencode-plugin-dir", () => {
-  assert.equal(handoffFilePath(), join(homedir(), ".foxcode", "opencode-plugin-dir"));
 });
 
 test("userOpencodeJson respects XDG_CONFIG_HOME", async () => {
