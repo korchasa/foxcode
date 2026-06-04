@@ -25,21 +25,21 @@
 - Project Name: FoxCode
 
 ## Project Vision
-Firefox WebExtension for browser automation via Claude Code. Eval debug popup (on-demand, zero screen footprint) + headless browser API — via MCP server communicating over WebSocket. One-way: CC -> Browser only.
+Firefox WebExtension for browser automation via Claude Code, OpenCode, and Codex. Eval debug popup (on-demand, zero screen footprint) + headless browser API — via MCP server communicating over WebSocket. One-way: Agent -> Browser only.
 
 ## Project tooling Stack
 - **Extension**: JavaScript (ES6+), HTML, CSS - Firefox WebExtension API (Manifest V2)
-- **Channel Plugin**: Node.js (ES modules) - MCP server
+- **Channel Plugin**: Node.js (ES modules) - MCP server (distributed via `foxcode-channel` npm package)
 - **Dependencies**: `@modelcontextprotocol/sdk`, `ws` (WebSocket)
-- **CLI**: Claude Code CLI v2.1.80+ (`@anthropic-ai/claude-code`)
+- **Supported CLIs**: Claude Code CLI v2.1.80+ (`@anthropic-ai/claude-code`), OpenCode (`opencode`), Codex (`codex`)
 - **Platform**: Cross-platform (macOS primary)
 
 ## Architecture
-- **Channel Plugin** (`foxcode/channel/server.mjs`) - MCP server bridging CC ↔ extension via WebSocket on `localhost:8787`
+- **Channel Plugin** (`foxcode/channel/server.mjs`) - MCP server bridging Agent ↔ extension via WebSocket on `localhost:8787`
 - **Popup Eval Console** (`foxcode/extension/popup/`) - On-demand eval debug UI: shows evalInBrowser requests/responses (browser_action popup, zero screen footprint)
 - **Background Script** (`foxcode/extension/background/background.js`) - WebSocket connection management, eval message buffering, badge updates, tool request handling
 - **Content Script** (`foxcode/extension/content/content-script.js`) - DOM access, `api.eval()` in page main world
-- **Flow**: Claude Code -> MCP stdio -> Channel Plugin -> WebSocket -> Background -> Popup (eval log)
+- **Flow**: Agent (Claude Code / OpenCode / Codex) -> MCP stdio -> Channel Plugin -> WebSocket -> Background -> Popup (eval log)
 
 ## Repository Structure
 
@@ -52,27 +52,28 @@ foxcode/
 │   │   └── plugin.json   #   Plugin manifest (name, version, author)
 │   ├── skills/
 │   │   ├── foxcode-run-project-profile/
-│   │   │   ├── SKILL.md  # Run skill — Project Profile (/foxcode:foxcode-run-project-profile)
-│   │   │   └── scripts/  # Python utilities (resolve_env.py, launch_firefox.py)
+│   │   │   └── SKILL.md  # Run skill — Project Profile (/foxcode:foxcode-run-project-profile)
 │   │   └── foxcode-run-user-profile/
 │   │       └── SKILL.md  # Run skill — User Profile (/foxcode:foxcode-run-user-profile)
-│   ├── channel/           #   MCP channel plugin (Node.js)
-│   │   ├── server.mjs    #     MCP server, WebSocket bridge
+│   ├── channel/           #   MCP channel plugin (Node.js, published as foxcode-channel)
+│   │   ├── server.mjs    #     MCP server, WebSocket bridge, launchBrowser orchestration
 │   │   ├── lib.mjs       #     Shared pure functions, tool definitions
 │   │   ├── validator.mjs #     JS code validation for evalInBrowser
+│   │   ├── launch/       #     Firefox lifecycle: discover, prepare, spawn, tool
+│   │   ├── prepack.mjs   #     Pre-pack step: copies ../extension/ into ./extension/
 │   │   └── package.json  #     Dependencies
-│   ├── extension/        #   Firefox WebExtension (Manifest V2) — bundled inside plugin
+│   ├── extension/        #   Firefox WebExtension (Manifest V2) — copied into channel tarball at publish
 │   │   ├── background/   #     Background script, browser-api, dom-helpers
 │   │   ├── popup/        #     Eval debug popup (HTML/CSS/JS)
 │   │   ├── content/      #     Content script (DOM access, api.eval)
 │   │   ├── icons/        #     Extension icon
 │   │   └── manifest.json #     Extension manifest
-│   └── .mcp.json         #   MCP server config (node ${CLAUDE_PLUGIN_ROOT}/channel/server.mjs)
+│   └── .mcp.json         #   MCP server config (npx -y foxcode-channel@<pinned>)
 ├── opencode/             # OpenCode npm package (@korchasa/foxcode-opencode)
-│   ├── index.mjs         #   Plugin entry: session.created hook (seed + handoff + snippet)
+│   ├── index.mjs         #   Plugin entry: session.created hook (seed + snippet)
 │   ├── bin/              #   CLI: foxcode-opencode setup|uninstall|doctor
-│   ├── lib/              #   paths, seed-skills, mcp-snippet, patcher, handoff, exec, ...
-│   ├── prepack.mjs       #   Bundle assembly at npm-pack time (copies ../foxcode/{extension,channel,skills})
+│   ├── lib/              #   paths, seed-skills, mcp-snippet, patcher, exec, foxcode-mcp-entry, prereq, skill-frontmatter, setup
+│   ├── prepack.mjs       #   Bundle assembly at npm-pack time (copies only ../foxcode/skills/; channel + extension resolved via npx foxcode-channel)
 │   └── test/             #   Plugin + CLI + pack integration tests
 ├── plugin-src/           # Marketplace payload scaffolding (input for scripts/build-plugin-payload.mjs)
 │   ├── claude/           #   CC marketplace.json + plugin.json templates

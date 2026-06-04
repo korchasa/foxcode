@@ -8,8 +8,8 @@
  * everything below the IDE is identical to a user's setup —
  *   - real `opencode` / `claude` / `codex` binary
  *   - real channel server spawned by the IDE from its native MCP config
- *   - real Firefox loaded via `web-ext run --headless` with the actual
- *     foxcode WebExtension under `foxcode/extension/`
+ *   - real Firefox launched by the channel's `launchBrowser` MCP tool
+ *     (FR-15), driven from the IDE prompt — no external spawner
  *   - real LLM call (so it costs tokens; gated behind FOXCODE_E2E_IDE=1)
  *
  * Runs via `deno test -A opencode/test/acceptance/ide-task.test.ts`,
@@ -27,9 +27,6 @@ import { defaultRegistry } from "jsr:@korchasa/ai-ide-cli@0.8.2/process-registry
 
 const REPO_ROOT = new URL("../../..", import.meta.url).pathname.replace(/\/$/, "");
 const CHANNEL_SERVER = `${REPO_ROOT}/foxcode/channel/server.mjs`;
-const LAUNCH_SCRIPT =
-  `${REPO_ROOT}/foxcode/skills/foxcode-run-project-profile/scripts/launch_firefox.py`;
-const EXTENSION_DIR = `${REPO_ROOT}/foxcode/extension`;
 const TEST_PASSWORD = "test-pw-ide-fixed";
 // All supported IDEs are always exercised. Run the dedicated command
 // (`scripts/test-ide.sh` or `npm run --prefix opencode test:e2e-ide`) to
@@ -84,37 +81,6 @@ function buildMcpServers(channelPort: number, fakeHome: string) {
   };
 }
 
-async function spawnFirefox(
-  fakeHome: string,
-  cwd: string,
-  port: number,
-): Promise<Deno.ChildProcess> {
-  const cmd = new Deno.Command("python3", {
-    args: [
-      LAUNCH_SCRIPT,
-      "--port", String(port),
-      "--password", TEST_PASSWORD,
-      "--pid-file", `${cwd}/web-ext.pid`,
-      "--profile-dir", `${cwd}/ff-profile`,
-      "--extension-search-paths", EXTENSION_DIR,
-      "--no-default-extension-paths",
-      "--headless",
-    ],
-    env: { ...Deno.env.toObject(), HOME: fakeHome },
-    stdout: "null",
-    stderr: "null",
-  });
-  return cmd.spawn();
-}
-
-async function killFirefox(proc: Deno.ChildProcess): Promise<void> {
-  try { proc.kill("SIGTERM"); } catch {}
-  await Promise.race([
-    proc.status,
-    new Promise((r) => setTimeout(r, 5000)),
-  ]);
-}
-
 for (const runtime of RUNTIMES) {
   Deno.test({
     name: `Tier-4 e2e/${runtime}: IDE drives foxcode evalInBrowser end-to-end`,
@@ -144,28 +110,25 @@ for (const runtime of RUNTIMES) {
           ),
       );
 
-      let firefox: Deno.ChildProcess | null = null;
       try {
-        firefox = await spawnFirefox(fakeHome, cwd, channelPort);
-
         const observed: RuntimeToolUseInfo[] = [];
         const adapter = getRuntimeAdapter(runtime);
         const result = await adapter.invoke({
           processRegistry: defaultRegistry,
           taskPrompt:
-            // Patience clauses needed for Claude — when the IDE spawns the
-            // foxcode MCP server lazily, the Firefox extension may still be
-            // in its reconnect-backoff window (3 s → 30 s, max 10 tries).
-            // Asking the IDE to poll `status` first turns the race into a
-            // deterministic wait.
-            `Step 1: call the foxcode \`status\` tool. If \`connectedClients\` is 0, ` +
-            `wait a few seconds and call \`status\` again, repeating up to 6 times. ` +
-            `Do not give up until at least one call returns \`connectedClients >= 1\`. ` +
-            `\nStep 2: once a client is connected, call the foxcode \`evalInBrowser\` ` +
+            // Firefox is launched by the channel itself via `launchBrowser`
+            // (FR-15). The IDE drives the full sequence end-to-end so the
+            // test mirrors a user's flow without external spawners.
+            `Step 1: call the foxcode \`status\` tool. ` +
+            `\nStep 2: if \`connectedClients\` is 0, call foxcode \`launchBrowser\` ` +
+            `with arguments \`{ "headless": true }\` and wait for it to return. ` +
+            `A successful return value is one of \`{"status":"connected"}\`, ` +
+            `\`{"status":"already-connected"}\`, or \`{"status":"already-running"}\`. ` +
+            `\nStep 3: call the foxcode \`evalInBrowser\` ` +
             `tool with this code: ` +
             `\`await api.navigate("http://127.0.0.1:${fixturePort}/"); ` +
             `return await api.getTitle();\`. ` +
-            `\nStep 3: report ONLY the returned title string in your final answer, nothing else.`,
+            `\nStep 4: report ONLY the returned title string in your final answer, nothing else.`,
           timeoutSeconds: 180,
           maxRetries: 1,
           retryDelaySeconds: 0,
@@ -196,7 +159,9 @@ for (const runtime of RUNTIMES) {
         );
         assertEquals(foxcodeCalls[0].runtime, runtime);
       } finally {
-        if (firefox) await killFirefox(firefox);
+        // Firefox lifecycle is tied to the channel process (FR-15): the IDE
+        // adapter terminates the channel on exit and the channel SIGTERMs
+        // the managed web-ext process group via killProcessGroup.
         try { await fixture.shutdown(); } catch {}
         try {
           await Deno.remove(tmp, { recursive: true });

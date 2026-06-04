@@ -134,9 +134,8 @@ cat ~/.config/opencode/opencode.json
 Expected:
 
 - `mcp.foxcode` is enabled.
-- The server command points to the intended installed channel path.
+- The server command resolves to `npx -y foxcode-channel@<pinned>` (channel + Firefox extension are both pulled from npm — no in-tree channel path, no handoff file under `~/.foxcode/`).
 - `FOXCODE_PROJECT_DIR` uses OpenCode's `{env:PWD}` interpolation.
-- The handoff file points to the intended plugin root when package-based installation is used.
 
 ## Release artifact
 

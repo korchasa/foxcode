@@ -11,9 +11,9 @@ fi
 
 echo "=== FoxCode: Tier-4 skill acceptance (OpenCode command skill) ==="
 
-for bin in opencode node python3 npx; do
+for bin in opencode node npx; do
   if ! command -v "$bin" &>/dev/null; then
-    echo "Error: '$bin' not found on PATH. Skill acceptance requires opencode, node, python3, npx." >&2
+    echo "Error: '$bin' not found on PATH. Skill acceptance requires opencode, node, npx." >&2
     exit 1
   fi
 done
@@ -102,15 +102,19 @@ function toolEvents(name) {
 }
 
 const statusCalls = toolEvents("foxcode_status");
-const bashCalls = toolEvents("bash");
+const launchCalls = toolEvents("foxcode_launchBrowser");
 const evalCalls = toolEvents("foxcode_evalInBrowser");
 if (statusCalls.length < 1) throw new Error("Expected at least one foxcode_status call");
 if (evalCalls.length !== 1) throw new Error(`Expected exactly one foxcode_evalInBrowser call, got ${evalCalls.length}`);
 
-const launched = bashCalls.some((event) => {
-  const command = event.part?.state?.input?.command || "";
-  const output = event.part?.state?.output || "";
-  return command.includes("launch_firefox.py") && /Launched|Already running/.test(output);
+const launched = launchCalls.some((event) => {
+  const raw = event.part?.state?.output || "{}";
+  try {
+    const parsed = JSON.parse(raw);
+    return /^(connected|already-connected|already-running)$/.test(parsed.status || "");
+  } catch {
+    return false;
+  }
 });
 const alreadyConnected = statusCalls.some((event) => {
   const raw = event.part?.state?.output || "{}";
@@ -121,7 +125,7 @@ const alreadyConnected = statusCalls.some((event) => {
   }
 });
 if (!launched && !alreadyConnected) {
-  throw new Error("Expected launch_firefox.py to run or an already connected FoxCode client");
+  throw new Error("Expected foxcode_launchBrowser to succeed or an already connected FoxCode client");
 }
 
 const rawEvalOutput = evalCalls[0].part?.state?.output;

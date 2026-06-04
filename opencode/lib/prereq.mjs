@@ -3,10 +3,11 @@ import { exec } from "./exec.mjs";
 /**
  * Light-weight prerequisite check for the OpenCode integration:
  * - Node.js >= 18 (the channel server requires modern ESM + AbortController)
- * - npm available on PATH (lazy-install needs it)
+ * - npm available on PATH (needed so `npx -y foxcode-channel@<pin>` can resolve the channel)
  *
  * Returns { ok: boolean, problems: string[] }.
- * Firefox is checked by the existing Python `resolve_env.py` at skill-launch time.
+ * Firefox is discovered and launched by the channel itself via the
+ * `launchBrowser` MCP tool (foxcode/channel/launch/discover.mjs).
  */
 export async function checkPrereqs() {
   const problems = [];
