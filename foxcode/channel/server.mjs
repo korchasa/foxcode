@@ -176,7 +176,13 @@ if (httpServer) wss.on('connection', (ws) => {
     try {
       const msg = JSON.parse(String(raw))
       handleExtensionMessage(msg, ws)
-    } catch { /* ignore malformed messages */ }
+    } catch (err) {
+      // Fail-fast logging per AGENTS.md: surface protocol mismatches instead
+      // of dropping messages silently. Log only the head of the payload to
+      // bound stderr noise on accidental binary frames.
+      const head = String(raw).slice(0, 120).replace(/\s+/g, ' ')
+      process.stderr.write(`foxcode: malformed ws message — ${err.message} — ${head}\n`)
+    }
   })
 })
 

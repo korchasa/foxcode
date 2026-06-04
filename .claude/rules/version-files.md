@@ -5,6 +5,10 @@ paths:
   - "foxcode/extension/manifest.json"
   - "foxcode/channel/package.json"
   - "foxcode/channel/package-lock.json"
+  - "foxcode/.mcp.json"
+  - "scripts/build-plugin-payload.mjs"
+  - "opencode/lib/foxcode-mcp-entry.mjs"
+  - "README.md"
 description: Version file handling for FoxCode release metadata.
 ---
 

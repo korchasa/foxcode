@@ -117,11 +117,11 @@ jobs:
           # version downstream IDEs resolve. Must move in lockstep with
           # foxcode/channel/package.json above; release.sh:PIN_FILES is
           # the source of the same list.
-          for pin_file in foxcode/.mcp.json scripts/build-plugin-payload.mjs opencode/lib/foxcode-mcp-entry.mjs; do
+          for pin_file in foxcode/.mcp.json scripts/build-plugin-payload.mjs opencode/lib/foxcode-mcp-entry.mjs README.md; do
             sed -i -E "s/foxcode-channel@[0-9A-Za-z.\\-]+/foxcode-channel@${NEW_VERSION}/g" "$pin_file"
           done
 
-          git add foxcode/extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json opencode/package.json foxcode/.mcp.json scripts/build-plugin-payload.mjs opencode/lib/foxcode-mcp-entry.mjs
+          git add foxcode/extension/manifest.json foxcode/channel/package.json foxcode/channel/package-lock.json foxcode/.claude-plugin/plugin.json opencode/package.json foxcode/.mcp.json scripts/build-plugin-payload.mjs opencode/lib/foxcode-mcp-entry.mjs README.md
           if git diff --cached --quiet; then
             echo "Files already at v${NEW_VERSION}, skipping commit"
           else

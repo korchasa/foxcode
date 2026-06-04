@@ -15,7 +15,7 @@
         "path": "./plugins/foxcode"
       },
       "description": "Firefox browser automation for Codex via FoxCode.",
-      "version": "0.17.0",
+      "version": "0.0.0-template",
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

@@ -19,7 +19,7 @@ import { checkPrereqs } from "./prereq.mjs";
  *   writeConfig  — when true, patch opencode.json with mcp.foxcode entry
  *
  * Outputs:
- *   { prereq, paths, skills, handoff, configAction, configFound }
+ *   { prereq, paths, skills, configAction, configFound }
  *
  * Throws only when prereqs themselves cannot be evaluated. All other
  * branches surface as fields on the report so the caller can decide

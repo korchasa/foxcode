@@ -1,7 +1,7 @@
 {
   "name": "foxcode",
   "description": "Firefox browser UI for Codex sessions with browser automation via evalInBrowser.",
-  "version": "0.17.0",
+  "version": "0.0.0-template",
   "author": {
     "name": "korchasa"
   },

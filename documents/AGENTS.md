@@ -7,7 +7,7 @@
 2. **`README.md`**: Public-facing project overview. Problem, solution, architecture, setup instructions. Keep in sync with SRS/SDS.
 3. **Software Requirements Specification (SRS)** (`documents/requirements.md`): "What" & "Why". Source of truth. Depends on VISION.
 4. **Software Design Specification (SDS)** (`documents/design.md`): "How". Implementation details. Depends on SRS.
-5. **Whiteboards** (`documents/tasks/<YYYY-MM-DD>-<slug>.md`): Temporary plans/notes. One file per task/session.
+5. **Whiteboards** (`documents/tasks/<YYYY>/<MM>/<slug>.md`): Temporary plans/notes. One file per task/session.
 
 ## Rules
 - **STRICT COMPLIANCE**: AGENTS.md, README.md, SRS, SDS.
@@ -77,11 +77,11 @@
 
 ## Whiteboards (`documents/tasks/`)
 
-- One file per task/session: `<YYYY-MM-DD>-<slug>.md` (kebab-case slug, ≤40 chars).
-- Examples: `2026-03-24-add-dark-mode.md`, `2026-03-24-fix-auth-bug.md`.
+- One file per task/session: `<YYYY>/<MM>/<slug>.md` (kebab-case slug, ≤40 chars).
+- Examples: `2026/03/add-dark-mode.md`, `2026/03/fix-auth-bug.md`.
 - Do NOT reuse another session's whiteboard. Create a new file.
 - Issue or plan in GODS format.
-- Directory is gitignored. Files accumulate - this is expected.
+- Files accumulate under year/month subdirs — this is expected.
 
 ### GODS Format
 

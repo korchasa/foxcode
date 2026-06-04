@@ -102,6 +102,45 @@ async function createAuthServer(password) {
   }
 }
 
+describe('graceful shutdown', () => {
+  it('exits when stdin closes (parent agent EOF)', async () => {
+    const proc = spawn(process.execPath, [SERVER], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, FOXCODE_PORT: '0' },
+    })
+    try {
+      // Wait for the server to print its WebSocket banner so we know the
+      // start-up path completed before we tear it down.
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(() => reject(new Error('timeout waiting for ws banner')), 5000)
+        const onData = (b) => {
+          if (/foxcode: ws:\/\/|foxcode: no free port/.test(String(b))) {
+            clearTimeout(t)
+            proc.stderr.off('data', onData)
+            resolve()
+          }
+        }
+        proc.stderr.on('data', onData)
+      })
+      proc.stdin.end()
+      const exitInfo = await new Promise((resolve) => {
+        const killTimer = setTimeout(() => {
+          proc.kill('SIGKILL')
+          resolve({ code: null, signal: 'SIGKILL', timedOut: true })
+        }, 5000)
+        proc.on('exit', (code, signal) => {
+          clearTimeout(killTimer)
+          resolve({ code, signal, timedOut: false })
+        })
+      })
+      assert.equal(exitInfo.timedOut, false, 'server should exit within 5s of stdin close')
+      assert.equal(exitInfo.code, 0, `expected clean exit 0, got code=${exitInfo.code} signal=${exitInfo.signal}`)
+    } finally {
+      if (proc.exitCode === null && proc.signalCode === null) proc.kill('SIGKILL')
+    }
+  })
+})
+
 describe('upgrade-level auth', () => {
   let server
 

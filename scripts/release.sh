@@ -117,6 +117,7 @@ PIN_FILES=(
   foxcode/.mcp.json
   scripts/build-plugin-payload.mjs
   opencode/lib/foxcode-mcp-entry.mjs
+  README.md
 )
 NEW_PIN="foxcode-channel@${NEW_VERSION}"
 for pin_file in "${PIN_FILES[@]}"; do

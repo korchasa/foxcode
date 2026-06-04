@@ -8,6 +8,11 @@
  */
 
 /* global browser, WebSocket */
+/* global createBrowserApi serializeResult parseFoxcodeParams getParamsFromTabs */
+// ^ functions provided by sibling background scripts loaded earlier per
+// foxcode/extension/manifest.json::background.scripts (dom-helpers.js,
+// browser-api.js, serialize.js, url-params.js). Listed here so editors and
+// linters do not flag them as undefined.
 
 const RECONNECT_INTERVAL_MS = 3000
 const MAX_RECONNECT_INTERVAL_MS = 30000
@@ -138,7 +143,12 @@ function connectToServer(port, password, source) {
     try {
       const msg = JSON.parse(event.data)
       handleChannelMessage(msg, port)
-    } catch { /* ignore malformed messages */ }
+    } catch (err) {
+      // Fail-fast logging per AGENTS.md: surface protocol mismatches instead
+      // of dropping silently. Bound noise on accidental binary frames.
+      const head = String(event.data).slice(0, 120).replace(/\s+/g, ' ')
+      console.warn(`foxcode: malformed ws message :${port} — ${err.message} — ${head}`)
+    }
   }
 }
 

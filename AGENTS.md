@@ -74,6 +74,10 @@ foxcode/
 │   ├── lib/              #   paths, seed-skills, mcp-snippet, patcher, handoff, exec, ...
 │   ├── prepack.mjs       #   Bundle assembly at npm-pack time (copies ../foxcode/{extension,channel,skills})
 │   └── test/             #   Plugin + CLI + pack integration tests
+├── plugin-src/           # Marketplace payload scaffolding (input for scripts/build-plugin-payload.mjs)
+│   ├── claude/           #   CC marketplace.json + plugin.json templates
+│   ├── codex/            #   Codex marketplace.json + plugin.json templates
+│   └── shared/           #   Shared README packaged into both payloads
 ├── .agents/skills/       # Codex/Claude repo skills: launch wrappers, QA, usage analysis
 ├── .codex/config.toml    # Project-scoped Codex MCP server entry (foxcode)
 ├── documents/            # Project docs (SRS, SDS, whiteboards)
@@ -136,7 +140,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 1. **`AGENTS.md`**: Project vision, constraints, mandatory rules. READ-ONLY reference.
 2. **SRS** (`documents/requirements.md`): "What" & "Why". Source of truth for requirements.
 3. **SDS** (`documents/design.md`): "How". Architecture and implementation. Depends on SRS.
-4. **Whiteboards** (`documents/tasks/<YYYY-MM-DD>-<slug>.md`): Temporary plans/notes per task.
+4. **Whiteboards** (`documents/tasks/<YYYY>/<MM>/<slug>.md`): Temporary plans/notes per task.
 5. **`README.md`**: Public-facing overview. Installation, usage, quick start. Derived from AGENTS.md + SRS + SDS.
 
 ## Planning Rules
@@ -148,7 +152,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 - **Architectural Validation**: Complex logic changes -> visualize event sequence (sequence diagram/pseudocode).
 - **Variant Analysis**: Non-obvious path -> propose variants with Pros/Cons/Risks per variant + Trade-offs across variants. Quality > quantity. 1 variant OK if path is clear.
 - **User Decision Gate**: Do NOT detail implementation plan until user explicitly selects a variant.
-- **Plan Persistence**: After variant selection, save the detailed plan to `documents/tasks/<YYYY-MM-DD>-<slug>.md` using GODS format. Chat-only plans are lost between sessions.
+- **Plan Persistence**: After variant selection, save the detailed plan to `documents/tasks/<YYYY>/<MM>/<slug>.md` using GODS format. Chat-only plans are lost between sessions.
 - **Proactive Resolution**: Before asking user, exhaust available resources (codebase, docs, web) to find the answer autonomously.
 - **Verify Before Claiming Risk**: During critique/review, check verifiable facts (npm registry, GitHub releases, file existence, API docs) with tools before listing them as risks or open questions.
 - **Verify Config Syntax**: Before using placeholders/variables in config files - check tool documentation for supported syntax. Do NOT write unverified syntax to files.
