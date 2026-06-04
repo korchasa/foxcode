@@ -2,7 +2,7 @@
   "mcpServers": {
     "foxcode": {
       "command": "npx",
-      "args": ["-y", "foxcode-channel@0.19.0"]
+      "args": ["-y", "foxcode-channel@0.20.0"]
     }
   }
 }

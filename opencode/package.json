@@ -1,6 +1,6 @@
 {
   "name": "@korchasa/foxcode-opencode",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "OpenCode plugin: auto-seed FoxCode launch skills, emit MCP entry snippet, ship Firefox extension + channel server",
   "type": "module",
   "main": "index.mjs",

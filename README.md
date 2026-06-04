@@ -42,7 +42,7 @@ Then append to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.foxcode]
 command = "npx"
-args = ["-y", "foxcode-channel@0.18.1"]
+args = ["-y", "foxcode-channel@0.20.0"]
 ```
 
 Verify with `codex mcp get foxcode` and `codex mcp list`. The channel is resolved on first launch from npm and cached by npx; no glob over `~/.codex/plugins/cache/...` is needed.
@@ -66,7 +66,7 @@ Add the MCP server to `~/.config/opencode/opencode.json` (or your project's `ope
   "mcp": {
     "foxcode": {
       "type": "local",
-      "command": ["npx", "-y", "foxcode-channel@0.18.1"],
+      "command": ["npx", "-y", "foxcode-channel@0.20.0"],
       "environment": { "FOXCODE_PROJECT_DIR": "{env:PWD}" },
       "enabled": true
     }
@@ -270,4 +270,4 @@ Default timeout is 30s. If exceeded: `Browser tool request timed out after 30000
    ```json
    {"mcpServers": {"foxcode": {"command": "...", "env": {"FOXCODE_PORT": "8800"}}}}
    ```
-5. **Verify the channel resolves from npm:** `npx -y foxcode-channel@0.18.1 --version` should print the pinned version. A network or registry error here means npx cannot fetch the package — fix DNS/registry before re-running the launch skill.
+5. **Verify the channel resolves from npm:** `npx -y foxcode-channel@0.20.0 --version` should print the pinned version. A network or registry error here means npx cannot fetch the package — fix DNS/registry before re-running the launch skill.
