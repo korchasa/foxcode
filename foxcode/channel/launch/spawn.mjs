@@ -147,7 +147,13 @@ export function handleExistingProcess(pidFile, currentPort) {
 
 /**
  * Spawn `npx web-ext run …` as an attached process-group leader.
- * Stdout/stderr are forwarded to the parent's stderr so MCP stdio stays clean.
+ *
+ * MCP stdio uses fd 1 of the channel for JSON-RPC framing. `web-ext run`
+ * writes a human-readable banner ("Running web extension from …") to its
+ * own stdout on startup, so the child's stdout MUST NOT inherit fd 1 of
+ * the parent — that would corrupt the MCP transport mid-call (codex
+ * closes the transport on the first non-JSON line). Child stdout is
+ * piped and forwarded to the parent's stderr to keep diagnostics visible.
  *
  * @param {object} o see buildWebExtArgs
  * @param {Function} [spawnImpl] override for tests
@@ -157,12 +163,13 @@ export function spawnWebExt(o, spawnImpl = nodeSpawn) {
   const argv = buildWebExtArgs(o)
   const proc = spawnImpl('npx', ['-y', ...argv], {
     detached: process.platform !== 'win32',
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ['ignore', 'pipe', 'inherit'],
     env: process.env,
   })
-  // Detach the child so we can signal its whole group via process.kill(-pid).
-  if (process.platform !== 'win32' && typeof proc.unref === 'function') {
-    // Keep handle but do not block event loop on its survival; channel manages.
+  if (proc.stdout && typeof proc.stdout.on === 'function') {
+    proc.stdout.on('data', (chunk) => {
+      try { process.stderr.write(chunk) } catch { /* stderr closed */ }
+    })
   }
   return proc
 }

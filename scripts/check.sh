@@ -68,9 +68,14 @@ node --test \
 # Spawn the channel as a subprocess and exercise the full RPC path
 # without requiring Firefox or OpenCode itself.
 echo "--- Acceptance (Tier 1+2: MCP + bridge) ---"
+# strict-mcp-host models a codex-style strict NDJSON parser — fails on
+# any non-JSON line on the channel's stdout. Catches regressions that
+# leak child-process stdout onto fd 1 (see
+# documents/tasks/2026/06/launchbrowser-closes-mcp-transport-under-codex-exec.md).
 node --test \
   opencode/test/acceptance/mcp.test.mjs \
-  opencode/test/acceptance/bridge.test.mjs
+  opencode/test/acceptance/bridge.test.mjs \
+  opencode/test/acceptance/strict-mcp-host.test.mjs
 
 # Tier 4 (real IDE × real Firefox) is not run by `check`. It lives in:
 #   scripts/test-ide.sh         — IDEs drive evalInBrowser (LLM tokens, ~50 s)

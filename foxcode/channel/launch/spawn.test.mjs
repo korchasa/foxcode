@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'no
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { spawn } from 'node:child_process'
+import { PassThrough } from 'node:stream'
 import {
   buildWebExtArgs,
   readPidFile,
@@ -11,6 +12,7 @@ import {
   isProcessAlive,
   killProcessGroup,
   handleExistingProcess,
+  spawnWebExt,
 } from './spawn.mjs'
 
 describe('buildWebExtArgs', () => {
@@ -100,6 +102,46 @@ describe('killProcessGroup', () => {
     const pid = child.pid
     await killProcessGroup(pid, { graceMs: 1000 })
     assert.equal(isProcessAlive(pid), false, 'process should be gone after killProcessGroup')
+  })
+})
+
+describe('spawnWebExt stdio', () => {
+  it('never inherits the parent stdout (would corrupt MCP JSON-RPC framing)', () => {
+    let captured
+    const fakeSpawn = (_cmd, _argv, opts) => {
+      captured = opts
+      return { stdout: null, stderr: null, pid: 1, unref() {} }
+    }
+    spawnWebExt({
+      extensionDir: '/ext',
+      firefoxBinary: '/ff',
+      profileDir: '/p',
+      port: 8795,
+      password: 'pw',
+    }, fakeSpawn)
+    assert.ok(Array.isArray(captured.stdio), 'stdio must be explicit array')
+    assert.equal(captured.stdio[0], 'ignore', 'stdin must be ignored')
+    assert.notEqual(captured.stdio[1], 'inherit',
+      'child stdout MUST NOT inherit parent fd 1 (MCP transport)')
+  })
+
+  it('pipes child stdout and forwards it to parent stderr', () => {
+    const child = { stdout: new PassThrough(), pid: 1, unref() {} }
+    const fakeSpawn = () => child
+    const originalWrite = process.stderr.write.bind(process.stderr)
+    let forwarded = ''
+    process.stderr.write = (chunk) => { forwarded += String(chunk); return true }
+    try {
+      spawnWebExt({
+        extensionDir: '/ext', firefoxBinary: '/ff', profileDir: '/p',
+        port: 8795, password: 'pw',
+      }, fakeSpawn)
+      child.stdout.write('Running web extension from /tmp\n')
+      child.stdout.end()
+    } finally {
+      process.stderr.write = originalWrite
+    }
+    assert.match(forwarded, /Running web extension/)
   })
 })
 
