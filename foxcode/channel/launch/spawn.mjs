@@ -55,21 +55,46 @@ export function buildWebExtArgs(o) {
   return argv
 }
 
-export function writePidFile(path, pid, port) {
+/**
+ * Persist the managed-browser PID file.
+ *
+ * Format is up to 3 lines: `browserPid\nport\nownerPid`. The third line
+ * (the spawning server's pid) lets a later `launchBrowser` distinguish a
+ * healthy browser (owner alive) from an orphan left by a hard-crashed owner
+ * (owner dead) — see `handleExistingProcess` (F2). Legacy 2-line files (no
+ * ownerPid) read back as `ownerPid: null` and are treated as healthy.
+ *
+ * @param {string} path
+ * @param {number} pid browser (web-ext leader) pid
+ * @param {number|null} port WebSocket port the browser was started against
+ * @param {number} [ownerPid] pid of the server that spawned the browser
+ */
+export function writePidFile(path, pid, port, ownerPid) {
   mkdirSync(dirname(path), { recursive: true })
-  const body = port == null ? `${pid}\n` : `${pid}\n${port}\n`
+  let body
+  if (ownerPid != null) {
+    body = `${pid}\n${port == null ? '' : port}\n${ownerPid}\n`
+  } else {
+    body = port == null ? `${pid}\n` : `${pid}\n${port}\n`
+  }
   writeFileSync(path, body, 'utf8')
 }
 
+/**
+ * @param {string} path
+ * @returns {{pid: number, port: number|null, ownerPid: number|null}|null}
+ */
 export function readPidFile(path) {
   let raw
   try { raw = readFileSync(path, 'utf8') } catch { return null }
   const lines = raw.trim().split(/\r?\n/)
   const pid = Number(lines[0])
   if (!Number.isFinite(pid) || pid <= 0) return null
-  const port = lines.length > 1 && lines[1].length > 0 ? Number(lines[1]) : null
-  if (port != null && !Number.isFinite(port)) return { pid, port: null }
-  return { pid, port }
+  let port = lines.length > 1 && lines[1].length > 0 ? Number(lines[1]) : null
+  if (port != null && !Number.isFinite(port)) port = null
+  let ownerPid = lines.length > 2 && lines[2].length > 0 ? Number(lines[2]) : null
+  if (ownerPid != null && !Number.isFinite(ownerPid)) ownerPid = null
+  return { pid, port, ownerPid }
 }
 
 export function isProcessAlive(pid) {
@@ -115,34 +140,46 @@ export async function killProcessGroup(pid, opts = {}) {
 }
 
 /**
- * Decide what to do about an existing PID file.
- * - Missing/stale/malformed → null (proceed to spawn).
- * - Live + port matches → {pid, port} (caller skips spawn).
- * - Live + port mismatch → kill, clear PID, null (caller respawns).
+ * Decide what to do about an existing PID file. Returns a verdict; performs
+ * the orphan-reap kill (the ONLY sanctioned kill) when the owner is dead.
+ *
+ * A live browser is NEVER killed for a port mismatch — multi-session-per-folder
+ * relies on reusing one browser across many server ports (the browser learns
+ * each session's port via the folder registry + pong siblings). The old
+ * indiscriminate port-mismatch kill is removed.
+ *
+ * Verdicts:
+ * - missing / malformed / browser pid dead → `{action: 'spawn'}` (PID file
+ *   unlinked) — F3.
+ * - browser alive + owner alive (or legacy `ownerPid: null`) →
+ *   `{action: 'reuse', pid, port}` — reuse the existing browser.
+ * - browser alive + owner DEAD → orphan: `killProcessGroup(browserPid)` +
+ *   unlink, then `{action: 'spawn'}` — F2 reap. Awaits the group death so the
+ *   profile lock is released before the caller spawns a fresh browser.
  *
  * @param {string} pidFile
- * @param {number|null} currentPort
+ * @returns {Promise<{action: 'spawn'} | {action: 'reuse', pid: number, port: number|null}>}
  */
-export function handleExistingProcess(pidFile, currentPort) {
-  if (!existsSync(pidFile)) return null
+export async function handleExistingProcess(pidFile) {
+  if (!existsSync(pidFile)) return { action: 'spawn' }
   const info = readPidFile(pidFile)
   if (!info) {
     try { unlinkSync(pidFile) } catch { /* ignore */ }
-    return null
+    return { action: 'spawn' }
   }
   if (!isProcessAlive(info.pid)) {
     try { unlinkSync(pidFile) } catch { /* ignore */ }
-    return null
+    return { action: 'spawn' }
   }
-  if (currentPort != null && info.port !== currentPort) {
-    // Synchronous kill, then clear.
-    try { process.kill(-info.pid, 'SIGTERM') } catch {
-      try { process.kill(info.pid, 'SIGTERM') } catch { /* ignore */ }
-    }
+  // Browser alive. Owner dead (and known) → confirmed orphan: reap and respawn.
+  // Requiring BOTH browser-alive AND owner-dead bounds the pid-reuse risk (F7):
+  // two unrelated pids would have to collide simultaneously.
+  if (info.ownerPid != null && !isProcessAlive(info.ownerPid)) {
+    await killProcessGroup(info.pid)
     try { unlinkSync(pidFile) } catch { /* ignore */ }
-    return null
+    return { action: 'spawn' }
   }
-  return info
+  return { action: 'reuse', pid: info.pid, port: info.port }
 }
 
 /**

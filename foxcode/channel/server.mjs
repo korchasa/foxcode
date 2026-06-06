@@ -26,6 +26,7 @@ import { prepareFirefoxForLaunch } from './launch/prepare.mjs'
 import {
   spawnWebExt, writePidFile, handleExistingProcess, killProcessGroup,
 } from './launch/spawn.mjs'
+import { register, unregister, listLivePorts } from './launch/registry.mjs'
 import { homedir } from 'node:os'
 
 const pluginMeta = getServerMeta()
@@ -71,6 +72,13 @@ let clientInfo = null
 const { httpServer, port: PORT } = await createHttpServer(explicitPort)
 const wss = new WebSocketServer({ noServer: true })
 const clients = new Set()
+
+// Register this session in the folder-scoped registry so siblings (other
+// same-folder MCP servers) become discoverable to the shared browser. Port 0
+// (ephemeral test bind) and null (no port) are not connectable → skip.
+if (PORT) {
+  try { register(resolveProjectDir(), { port: PORT, pid: process.pid }) } catch { /* fail-soft */ }
+}
 
 if (httpServer) {
   httpServer.on('request', (req, res) => {
@@ -194,6 +202,18 @@ function handleExtensionMessage(msg, ws) {
         paramsSource: msg.paramsSource || null,
         connectedAt: new Date().toISOString(),
       }
+      const projectDir = resolveProjectDir()
+      // Re-register self each tick (idempotent): if a concurrent writer dropped
+      // our entry, it reappears within one ping (F5 eventual consistency).
+      // Then advertise live same-folder sibling ports so the browser connects
+      // to every session without scanning (folder-scoped → no cross-folder bleed).
+      let siblings = []
+      if (PORT) {
+        try {
+          register(projectDir, { port: PORT, pid: process.pid })
+          siblings = listLivePorts(projectDir).filter((p) => p !== PORT)
+        } catch { /* fail-soft: registry must never break the pong path */ }
+      }
       const pong = buildPongMessage({
         name: pluginMeta.name,
         version: pluginMeta.version,
@@ -204,7 +224,8 @@ function handleExtensionMessage(msg, ws) {
         pendingRequests: pendingToolRequests.size,
         nodeVersion: process.version,
         pluginRoot: process.env.CLAUDE_PLUGIN_ROOT,
-        projectDir: resolveProjectDir(),
+        projectDir,
+        siblings,
       })
       if (ws.readyState === 1) ws.send(JSON.stringify(pong))
       break
@@ -239,6 +260,7 @@ const launchHandler = createLaunchHandler({
   handleExisting: handleExistingProcess,
   writePidFile,
   waitForClient,
+  ownerPid: () => process.pid,
   home: homedir(),
 })
 
@@ -316,6 +338,11 @@ mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
 
 function shutdown(reason) {
   process.stderr.write(`foxcode: shutdown (${reason})\n`)
+  // Best-effort registry cleanup on clean exit; a hard crash skips this and
+  // the dead entry is pruned by the next reader's pid-liveness check.
+  if (PORT) {
+    try { unregister(resolveProjectDir(), PORT) } catch { /* fail-soft */ }
+  }
   const managed = launchHandler.getManaged?.()
   if (managed?.pid) {
     process.stderr.write(`foxcode: terminating Firefox process group ${managed.pid}\n`)

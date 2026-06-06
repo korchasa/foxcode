@@ -78,6 +78,11 @@ describe('buildPongMessage', () => {
     assert.equal(msg.projectDir, '/Users/test/www/4ra')
     assert.ok(msg.ts)
   })
+
+  it('passes through sibling ports, defaulting to []', () => {
+    assert.deepEqual(buildPongMessage({}).siblings, [])
+    assert.deepEqual(buildPongMessage({ siblings: [8807, 8808] }).siblings, [8807, 8808])
+  })
 })
 
 describe('portConstants', () => {

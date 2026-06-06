@@ -18,6 +18,11 @@ const RECONNECT_INTERVAL_MS = 3000
 const MAX_RECONNECT_INTERVAL_MS = 30000
 const MAX_RECONNECT_ATTEMPTS = 10
 
+// Re-ping every OPEN session on this cadence so the channel re-advertises its
+// live same-folder siblings. This is how one long-running browser learns
+// sessions that started AFTER it connected (discovery latency ≈ this interval).
+const SESSION_PING_INTERVAL_MS = 5000
+
 const STORAGE_KEY_SESSIONS = 'foxcode_sessions'
 
 /** @type {Map<number, Session>} port → session */
@@ -224,6 +229,18 @@ function handleChannelMessage(msg, sessionPort) {
           version: msg.version,
           pid: msg.pid,
         }
+        // Learn sibling sessions in the same project folder. The channel only
+        // advertises live ports (dead pids pruned server-side), and folder
+        // isolation is guaranteed by the registry being folder-scoped — so we
+        // can safely connect to each advertised port reusing this session's
+        // (machine-global) password.
+        if (Array.isArray(msg.siblings)) {
+          for (const port of msg.siblings) {
+            if (port !== sessionPort && !sessions.has(port)) {
+              connectToServer(port, session.password, 'sibling')
+            }
+          }
+        }
       }
       notifyPopupSessions()
       break
@@ -352,6 +369,17 @@ browser.runtime.onConnect.addListener((port) => {
     popupPort = null
   })
 })
+
+// Periodically re-ping every OPEN session so the channel re-advertises its
+// live siblings, letting the browser pick up sessions that start later
+// (MV2 persistent background — a long-lived interval is fine).
+setInterval(() => {
+  for (const [, s] of sessions) {
+    if (s.ws && s.ws.readyState === WebSocket.OPEN) {
+      s.ws.send(JSON.stringify({ type: 'ping', paramsSource: s.paramsSource }))
+    }
+  }
+}, SESSION_PING_INTERVAL_MS)
 
 // Start connection
 connect()

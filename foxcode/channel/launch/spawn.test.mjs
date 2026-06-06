@@ -59,17 +59,22 @@ describe('PID file', () => {
   beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), 'foxcode-pid-')) })
   afterEach(() => { rmSync(tmp, { recursive: true, force: true }) })
 
-  it('write + read round-trip carries pid and port', () => {
+  it('write + read round-trip carries pid, port and ownerPid (3-line)', () => {
     const p = join(tmp, 'web-ext.pid')
-    writePidFile(p, 12345, 8795)
-    const info = readPidFile(p)
-    assert.deepEqual(info, { pid: 12345, port: 8795 })
+    writePidFile(p, 12345, 8795, 999)
+    assert.deepEqual(readPidFile(p), { pid: 12345, port: 8795, ownerPid: 999 })
   })
 
-  it('write without port leaves port=null', () => {
+  it('legacy 2-line file (no ownerPid) reads ownerPid=null', () => {
+    const p = join(tmp, 'web-ext.pid')
+    writePidFile(p, 12345, 8795)
+    assert.deepEqual(readPidFile(p), { pid: 12345, port: 8795, ownerPid: null })
+  })
+
+  it('write without port leaves port=null and ownerPid=null', () => {
     const p = join(tmp, 'web-ext.pid')
     writePidFile(p, 99, null)
-    assert.deepEqual(readPidFile(p), { pid: 99, port: null })
+    assert.deepEqual(readPidFile(p), { pid: 99, port: null, ownerPid: null })
   })
 
   it('read returns null for missing or malformed file', () => {
@@ -147,43 +152,68 @@ describe('spawnWebExt stdio', () => {
 
 describe('handleExistingProcess', () => {
   let tmp
+  const DEAD_PID = 2_147_483_647
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms))
   beforeEach(() => { tmp = mkdtempSync(join(tmpdir(), 'foxcode-handle-')) })
   afterEach(() => { rmSync(tmp, { recursive: true, force: true }) })
 
-  it('returns null when no PID file exists', () => {
-    assert.equal(handleExistingProcess(join(tmp, 'nope'), 8795), null)
+  it('verdict spawn when no PID file exists', async () => {
+    assert.deepEqual(await handleExistingProcess(join(tmp, 'nope')), { action: 'spawn' })
   })
 
-  it('clears stale PID file (process dead) and returns null', () => {
+  it('clears stale PID file (browser dead) → verdict spawn (F3)', async () => {
     const p = join(tmp, 'pid')
-    writePidFile(p, 2_147_483_647, 8795)
-    assert.equal(handleExistingProcess(p, 8795), null)
+    writePidFile(p, DEAD_PID, 8795, process.pid)
+    assert.deepEqual(await handleExistingProcess(p), { action: 'spawn' })
     assert.equal(existsSync(p), false)
   })
 
-  it('returns {pid, port} when live PID matches requested port', () => {
+  it('verdict reuse when browser + owner are both alive (same port)', async () => {
     const p = join(tmp, 'pid')
-    writePidFile(p, process.pid, 8795)
-    const result = handleExistingProcess(p, 8795)
-    assert.equal(result?.pid, process.pid)
-    assert.equal(result?.port, 8795)
+    writePidFile(p, process.pid, 8795, process.pid)
+    assert.deepEqual(await handleExistingProcess(p), { action: 'reuse', pid: process.pid, port: 8795 })
+    assert.equal(existsSync(p), true, 'pid file kept for reuse')
   })
 
-  it('kills mismatched-port live PID and returns null', async () => {
+  it('verdict reuse for a live browser on a DIFFERENT port — NEVER kills it (multi-session)', async () => {
     if (process.platform === 'win32') return
     const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
       detached: true,
       stdio: 'ignore',
     })
     child.unref()
-    await new Promise((r) => setTimeout(r, 50))
+    await delay(50)
     const p = join(tmp, 'pid')
-    writePidFile(p, child.pid, 8000)
-    const result = handleExistingProcess(p, 9000)
-    assert.equal(result, null)
-    assert.equal(existsSync(p), false)
-    // Process should have been killed.
-    await new Promise((r) => setTimeout(r, 200))
-    assert.equal(isProcessAlive(child.pid), false)
+    // browser alive on a different port; owner (this process) alive.
+    writePidFile(p, child.pid, 8000, process.pid)
+    const v = await handleExistingProcess(p)
+    assert.deepEqual(v, { action: 'reuse', pid: child.pid, port: 8000 })
+    assert.equal(isProcessAlive(child.pid), true, 'a healthy browser must NOT be killed on port mismatch')
+    assert.equal(existsSync(p), true, 'pid file kept for reuse')
+    await killProcessGroup(child.pid)
+  })
+
+  it('verdict reuse for a legacy 2-line pid file (ownerPid null) when browser alive', async () => {
+    const p = join(tmp, 'pid')
+    writePidFile(p, process.pid, 8795)
+    assert.deepEqual(await handleExistingProcess(p), { action: 'reuse', pid: process.pid, port: 8795 })
+  })
+
+  it('reaps an orphan (browser alive, owner dead) → kills group, verdict spawn (F2)', async () => {
+    if (process.platform === 'win32') return
+    const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+      detached: true,
+      stdio: 'ignore',
+    })
+    child.unref()
+    await delay(50)
+    const p = join(tmp, 'pid')
+    // browser alive, owner DEAD → confirmed orphan.
+    writePidFile(p, child.pid, 8795, DEAD_PID)
+    const v = await handleExistingProcess(p)
+    assert.deepEqual(v, { action: 'spawn' })
+    assert.equal(existsSync(p), false, 'orphan pid file cleared after reap')
+    await delay(200)
+    assert.equal(isProcessAlive(child.pid), false, 'orphaned browser group reaped')
   })
 })

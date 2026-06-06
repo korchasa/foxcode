@@ -104,7 +104,7 @@ Expected result: `"Example Domain"`. If you see `"No browser extension connected
 - **Real browser, real context** — your Firefox with existing sessions, cookies, auth, extensions
 - **Single-call scripting** — full JS scenario in one tool call, no round-trip per action
 - **Rich async API** — ~36 helpers for DOM, navigation, tabs, cookies, screenshots, storage, console capture, dialog handling
-- **Multi-session** — multiple agent sessions connect to one browser simultaneously, each on a unique port
+- **Multi-session** — multiple agent sessions connect to one browser simultaneously, each on a unique port; sessions in the *same project folder* share ONE Firefox (a later launch never kills an earlier session's browser)
 - **One MCP server across IDEs** — Claude Code plugin, Codex plugin, and OpenCode all launch the same npm-distributed channel (`npx -y foxcode-channel@<pinned>`); extension auto-connects via URL hash
 
 ## Architecture
@@ -117,7 +117,7 @@ graph LR
   EXT -->|eval via content script| PAGE["Page JS Context"]
 ```
 
-The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension supports multiple simultaneous connections (one per agent session) — auto-connects via URL hash params, or reconnects to saved sessions. No port scanning, no manual settings.
+The MCP server binds to a random port in range 8787–8886 and persists it in `~/.foxcode/port`. The extension supports multiple simultaneous connections (one per agent session) — auto-connects via URL hash params, or reconnects to saved sessions. No port scanning, no manual settings. Multiple sessions in the **same project folder** share one Firefox: each registers its port in a folder-scoped `.foxcode/sessions.json`, the running browser learns sibling ports over the existing WebSocket and connects to all of them, and if the session that launched the browser crashes, the next launch reaps the orphaned Firefox and relaunches.
 
 ## Components
 

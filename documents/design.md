@@ -29,8 +29,9 @@ graph LR
 - **`launch/`** - Firefox launcher (replaces the retired Python helpers):
   - `discover.mjs` — `findFirefox` (per-platform paths + PATH lookup) and `findExtensionDir` (resolves the bundled extension via `import.meta.url`; dev fallback to `<repo>/foxcode/extension/`, published fallback to `<channel>/extension/`).
   - `prepare.mjs` — macOS Firefox update preparation. `purgeStagedUpdates` removes `update.status` / `update.version` / `update.mar` / `Updated.app` / `active-update.xml` under `~/Library/Caches/Mozilla/updates/`. `killStaleFoxcodeUpdaters` SIGTERMs `org.mozilla.updater` rows whose argv references our port. Never blocks launch; logs counts only.
-  - `spawn.mjs` — `buildWebExtArgs` (web-ext run argv + `--pref=app.update.*=false` flags + `--start-url http://localhost:PORT#PORT:PASS`), `spawnWebExt`, PID file read/write/handle, `killProcessGroup` (SIGTERM with grace, SIGKILL fallback). `spawnWebExt` stdio is `['ignore','pipe','inherit']`: child stdout MUST NOT inherit parent fd 1 — that fd is the MCP JSON-RPC transport, and the `Running web extension from …` banner from `web-ext run` would corrupt framing and tear down the channel under `codex exec --experimental-json`. Child stdout is piped and forwarded to the parent's stderr to keep diagnostics visible.
-  - `tool.mjs` — `createLaunchHandler` factory: orchestrates already-connected / already-running checks, prepare → discover → spawn → wait-for-ws-connect → return `{status, pid, port}`. Idempotent (concurrent calls share the in-flight promise). Test-friendly: every collaborator is injected.
+  - `spawn.mjs` — `buildWebExtArgs` (web-ext run argv + `--pref=app.update.*=false` flags + `--start-url http://localhost:PORT#PORT:PASS`), `spawnWebExt`, PID file read/write/handle, `killProcessGroup` (SIGTERM with grace, SIGKILL fallback). PID file `<projectDir>/.foxcode/web-ext.pid` is 3 lines — `browserPid`/`port`/`ownerPid` (the spawning server's pid); legacy 2-line files read `ownerPid:null` = healthy. `handleExistingProcess(pidFile)` (async) returns a verdict, NEVER killing a healthy browser for a port mismatch: `{action:'spawn'}` when the browser pid is dead/missing (PID file cleared); `{action:'reuse',pid,port}` when browser+owner are alive (or legacy null owner); `{action:'spawn'}` after reaping an orphan when browser is alive but `ownerPid` is DEAD (`killProcessGroup(browserPid)` + unlink — the only sanctioned kill). `spawnWebExt` stdio is `['ignore','pipe','inherit']`: child stdout MUST NOT inherit parent fd 1 — that fd is the MCP JSON-RPC transport, and the `Running web extension from …` banner from `web-ext run` would corrupt framing and tear down the channel under `codex exec --experimental-json`. Child stdout is piped and forwarded to the parent's stderr to keep diagnostics visible.
+  - `registry.mjs` — folder-scoped session registry at `<projectDir>/.foxcode/sessions.json` (ports + pids ONLY, no secret). `register({port,pid})` (atomic temp+rename write, prunes dead pids, idempotent self-upsert), `unregister(port)` (best-effort), `readRegistry` (fail-soft → `[]` on missing/corrupt JSON, never throws), `listLivePorts` (dead-pid pruned). Coordination state on disk so recovery survives any crash; concurrent-writer drops self-heal because every server re-registers each pong tick.
+  - `tool.mjs` — `createLaunchHandler` factory: orchestrates already-connected check → existing-PID verdict (`reuse` ⇒ wait for the running browser to discover+connect to this session, no spawn; `spawn` ⇒ continue) → discover → crash-safe launch lock `<projectDir>/.foxcode/launch.lock` (holder pid + mtime, 60 s TTL; dead/stale holder reclaimed, no deadlock; loser waits for the winner's browser via discovery) → spawn → write 3-line PID file → wait-for-ws-connect → return `{status, pid, port}`. Idempotent (concurrent in-process calls share the in-flight promise; cross-process serialized by the lock). Test-friendly: every collaborator is injected.
 - **`prepack.mjs`** - npm pre-pack step: copies `../extension/` into `./extension/` so the published `foxcode-channel` tarball is self-contained. `postpack` script deletes `./extension/` so the source tree stays gitignored.
 - **Capabilities:** `tools` (status, launchBrowser, evalInBrowser)
 - **Port binding:** Auto-binds to first available port in range 8787–8886. Priority: `FOXCODE_PORT` env -> saved port (`~/.foxcode/port`) -> random start with wrap-around. Saved on successful bind. Null-safe: runs without WebSocket if all ports taken (MCP stdio still works)
@@ -70,10 +71,28 @@ graph LR
 ## 5. Logic
 - **Agent automates browser:** agent calls `evalInBrowser` -> channel validates syntax -> sends `EVAL_CODE` via WebSocket -> background executes via `new Function('api',code)(browserApi)` -> API helpers delegate to `executeScript`/`webNavigation`/`cookies`/etc -> result serialized -> returned over MCP. tool_use/tool_result broadcast to popup (if open) and buffered for replay
 - **Page main world eval:** `api.eval(expr)` -> background sends `EVAL_IN_PAGE` message to content script -> content script uses `wrappedJSObject.eval()` -> result returned
-- **WebSocket protocol:** JSON messages with `type` field discriminator (`tool_request`, `tool_response`, `tool_use`, `tool_result`, `pong`). `pong` messages include `protocol_version` (integer) for compatibility checks. Background injects `sessionPort` into eval messages forwarded to popup. Popup messages: `session-update` (connection state), `buffered-messages` (replay on open)
+- **WebSocket protocol:** JSON messages with `type` field discriminator (`tool_request`, `tool_response`, `tool_use`, `tool_result`, `ping`, `pong`). `pong` messages include `protocol_version` (integer) for compatibility checks and `siblings` (array of live same-folder ports from the registry). Background injects `sessionPort` into eval messages forwarded to popup. Popup messages: `session-update` (connection state), `buffered-messages` (replay on open)
+- **Same-folder shared-browser discovery:** one browser must learn EVERY same-folder session's port, but the extension can only learn ports from a tab URL hash or a connected server. So each server publishes `{port,pid}` to the folder-scoped registry on start; the ping→pong path advertises live sibling ports; the extension re-pings every OPEN session every 5 s and connects to advertised siblings reusing the machine-global password. Sequence:
+```mermaid
+sequenceDiagram
+  participant Owner as S_owner :8806
+  participant Reg as .foxcode/sessions.json
+  participant FF as Firefox (one)
+  participant Sb as S_b :8807
+  Owner->>Reg: register{8806}
+  Owner->>FF: launchBrowser → lock → spawn (start-url #8806)
+  FF->>Owner: connect :8806
+  Sb->>Reg: register{8807}
+  Sb->>Sb: launchBrowser → PID alive (owner) → verdict reuse → wait
+  FF->>Owner: ping (5s)
+  Owner->>FF: pong{siblings:[8807]}
+  FF->>Sb: connect :8807 (reuse password)
+  Sb->>Sb: client connected → already-running
+  Note over FF: evalInBrowser from S_owner OR S_b → one browser
+```
 
 ## 6. Non-Functional
-- **Fault Tolerance:** Per-session auto-reconnect with exponential backoff (3s -> 30s max, 10 attempts). Dead sessions removed from Map. Channel server graceful shutdown on parent agent exit (stdin EOF) prevents orphan processes.
+- **Fault Tolerance:** Per-session auto-reconnect with exponential backoff (3s -> 30s max, 10 attempts). Dead sessions removed from Map. Channel server graceful shutdown on parent agent exit (stdin EOF) prevents orphan processes. Multi-session-per-folder coordination is crash-resilient: all state (registry, 3-line PID file, launch lock) lives on disk and recovery is driven by the next `launchBrowser` — not by any live relayer. Owner hard-crash leaves a live orphan browser that the next launch reaps (`browserPid` alive + `ownerPid` dead); concurrent launches are serialized by a TTL'd launch lock that self-heals if its holder dies; corrupt/partial registry reads fail-soft to `[]`. All new diagnostics go to stderr only (fd 1 is the MCP transport).
 - **Sec:** localhost-only WebSocket (`127.0.0.1`), no external traffic
 - **Logs:** Channel outputs to stderr (visible in agent debug logs)
 

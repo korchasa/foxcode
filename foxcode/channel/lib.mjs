@@ -57,7 +57,12 @@ export function buildToolResultMessage(tool, content) {
 
 /**
  * Build a pong response with server telemetry.
- * @param {{name: string, version: string, pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined, projectDir: string|undefined}} env
+ *
+ * `siblings` carries the live ports of OTHER same-folder MCP sessions (from
+ * the folder registry) so the extension can connect to them with the password
+ * it already holds — this is how one browser learns every session's port
+ * without scanning. Defaults to `[]`.
+ * @param {{name: string, version: string, pid: number, port: number, uptime: number, clients: number, pendingRequests: number, nodeVersion: string, pluginRoot: string|undefined, projectDir: string|undefined, siblings?: number[]}} env
  * @returns {object}
  */
 /** Protocol version for WebSocket message format compatibility checks. */
@@ -77,6 +82,7 @@ export function buildPongMessage(env) {
     nodeVersion: env.nodeVersion,
     pluginRoot: env.pluginRoot,
     projectDir: env.projectDir,
+    siblings: env.siblings ?? [],
     ts: Date.now(),
   }
 }
