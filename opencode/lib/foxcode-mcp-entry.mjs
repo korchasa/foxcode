@@ -17,7 +17,7 @@
 // Pinned exactly: no caret, no `latest`. Bumped together with
 // foxcode/channel/package.json. Phase 0 P0.9 promoted 0.18.0 to npm
 // `latest`.
-export const CHANNEL_SPEC = "foxcode-channel@0.20.0";
+export const CHANNEL_SPEC = "foxcode-channel@0.21.0";
 
 export function buildFoxcodeMcpEntry() {
   return {
