@@ -59,10 +59,26 @@ function whichOnPath(name) {
 
 /**
  * Find Firefox binary. Returns absolute path or null.
+ *
+ * The `FOXCODE_FIREFOX_PATH` env var is an explicit override with top priority:
+ * when set to a non-empty value it bypasses searchPaths and platform defaults.
+ * It must point to an executable file — otherwise we throw (fail-fast) rather
+ * than silently falling back to a different browser, which would mask a
+ * misconfigured override.
+ *
  * @param {{searchPaths?: string[], useDefaults?: boolean}} opts
  */
 export function findFirefox(opts = {}) {
   const { searchPaths = [], useDefaults = true } = opts
+  const override = process.env.FOXCODE_FIREFOX_PATH
+  if (override) {
+    if (!isExecutable(override)) {
+      throw new Error(
+        `FOXCODE_FIREFOX_PATH is set to "${override}" but it is not an executable file`,
+      )
+    }
+    return override
+  }
   for (const p of searchPaths) {
     if (isExecutable(p)) return p
   }

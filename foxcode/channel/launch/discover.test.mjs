@@ -78,3 +78,53 @@ describe('findFirefox', () => {
     assert.ok(KNOWN_FIREFOX_PATHS.darwin[0].includes('Firefox.app'))
   })
 })
+
+describe('findFirefox — FOXCODE_FIREFOX_PATH override', () => {
+  let tmp
+  let saved
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'foxcode-ffenv-'))
+    saved = process.env.FOXCODE_FIREFOX_PATH
+    delete process.env.FOXCODE_FIREFOX_PATH
+  })
+  afterEach(() => {
+    rmSync(tmp, { recursive: true, force: true })
+    if (saved === undefined) delete process.env.FOXCODE_FIREFOX_PATH
+    else process.env.FOXCODE_FIREFOX_PATH = saved
+  })
+
+  it('returns the override binary, taking priority over search paths and defaults', () => {
+    const override = join(tmp, 'moirai-firefox')
+    writeFileSync(override, '#!/bin/sh\nexit 0\n')
+    chmodSync(override, 0o755)
+    const other = join(tmp, 'other-firefox')
+    writeFileSync(other, '#!/bin/sh\nexit 0\n')
+    chmodSync(other, 0o755)
+    process.env.FOXCODE_FIREFOX_PATH = override
+    // searchPaths and defaults must be ignored when the override is set.
+    const found = findFirefox({ searchPaths: [other], useDefaults: true })
+    assert.equal(found, override)
+  })
+
+  it('throws fail-fast when the override is set but not executable', () => {
+    const bad = join(tmp, 'not-executable')
+    writeFileSync(bad, 'data')
+    chmodSync(bad, 0o644)
+    process.env.FOXCODE_FIREFOX_PATH = bad
+    assert.throws(() => findFirefox(), /FOXCODE_FIREFOX_PATH/)
+  })
+
+  it('throws fail-fast when the override points to a missing file', () => {
+    process.env.FOXCODE_FIREFOX_PATH = join(tmp, 'does-not-exist')
+    assert.throws(() => findFirefox(), /FOXCODE_FIREFOX_PATH/)
+  })
+
+  it('falls through to normal discovery when the override is empty', () => {
+    process.env.FOXCODE_FIREFOX_PATH = ''
+    const ff = join(tmp, 'fake-firefox')
+    writeFileSync(ff, '#!/bin/sh\nexit 0\n')
+    chmodSync(ff, 0o755)
+    const found = findFirefox({ searchPaths: [ff], useDefaults: false })
+    assert.equal(found, ff)
+  })
+})
