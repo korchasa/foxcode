@@ -34,7 +34,7 @@ const LOCK_TTL_MS = 60_000
  * @param {() => string} deps.password
  * @param {(home: string, port: number|null) => {purged: string[], killed: number[]}} deps.prepare
  * @param {() => string} deps.findExtensionDir
- * @param {() => string|null} deps.findFirefox
+ * @param {(projectDir: string) => string|null} deps.findFirefox
  * @param {(opts: object) => {pid: number, child: object}} deps.spawn
  * @param {(pidFile: string) => Promise<{action: string, pid?: number, port?: number|null}>} deps.handleExisting
  * @param {(path: string, pid: number, port: number|null, ownerPid: number) => void} deps.writePidFile
@@ -156,7 +156,7 @@ export function createLaunchHandler(deps) {
     }
 
     const extensionDir = deps.findExtensionDir()
-    const firefoxBinary = deps.findFirefox()
+    const firefoxBinary = deps.findFirefox(deps.projectDir())
     if (!firefoxBinary) {
       return { status: 'error', reason: 'Firefox binary not found. Install Firefox.' }
     }

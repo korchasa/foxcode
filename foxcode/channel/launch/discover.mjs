@@ -5,10 +5,12 @@
  * with two simplifications:
  *  - Extension is bundled into the npm package; resolution is import.meta.url
  *    based — no CLAUDE_PLUGIN_ROOT, no OpenCode handoff file.
- *  - No on-disk config cache (.foxcode/config.json). Discovery is cheap.
+ *  - No on-disk config cache for discovery. The only field read back from
+ *    `<projectDir>/.foxcode/config.json` is the optional `firefox` binary
+ *    override (see findFirefox); everything else is computed fresh.
  */
 
-import { existsSync, statSync, accessSync, constants } from 'node:fs'
+import { existsSync, statSync, accessSync, readFileSync, constants } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { delimiter } from 'node:path'
@@ -58,26 +60,71 @@ function whichOnPath(name) {
 }
 
 /**
+ * Read the optional per-project Firefox binary override from
+ * `<projectDir>/.foxcode/config.json` (`firefox` field). Returns the configured
+ * path string, or null when there is no project dir, no config file, or no
+ * `firefox` field. A corrupt config file is a hard error (fail-fast) — it is an
+ * explicit, fixable mistake, not a reason to silently guess.
+ *
+ * @param {string|null|undefined} projectDir
+ * @returns {string|null}
+ */
+export function readProjectFirefoxOverride(projectDir) {
+  if (!projectDir) return null
+  const configPath = join(projectDir, '.foxcode', 'config.json')
+  let raw
+  try {
+    raw = readFileSync(configPath, 'utf8')
+  } catch {
+    return null // no per-project config — not an override
+  }
+  let parsed
+  try {
+    parsed = JSON.parse(raw)
+  } catch (err) {
+    throw new Error(`FoxCode project config ${configPath} is not valid JSON: ${err.message}`)
+  }
+  const firefox = parsed?.firefox
+  if (firefox == null || firefox === '') return null
+  if (typeof firefox !== 'string') {
+    throw new Error(`FoxCode project config ${configPath}: "firefox" must be a string path`)
+  }
+  return firefox
+}
+
+/**
  * Find Firefox binary. Returns absolute path or null.
  *
- * The `FOXCODE_FIREFOX_PATH` env var is an explicit override with top priority:
- * when set to a non-empty value it bypasses searchPaths and platform defaults.
- * It must point to an executable file — otherwise we throw (fail-fast) rather
- * than silently falling back to a different browser, which would mask a
- * misconfigured override.
+ * Override precedence (first match wins):
+ *  1. `FOXCODE_FIREFOX_PATH` env var — explicit, global escape hatch. Must point
+ *     to an executable file, else we throw (fail-fast): a hand-set override that
+ *     is wrong should surface loudly, never silently fall back.
+ *  2. Per-project `firefox` field in `<projectDir>/.foxcode/config.json`. Often
+ *     legacy auto-populated data, so it is lenient: an executable path is used,
+ *     a non-executable one is warned about on stderr and skipped (discovery
+ *     continues) rather than breaking launch across every project at once.
+ *  3. Caller-supplied searchPaths, then platform defaults / PATH lookup.
  *
- * @param {{searchPaths?: string[], useDefaults?: boolean}} opts
+ * @param {{searchPaths?: string[], useDefaults?: boolean, projectDir?: string|null}} opts
  */
 export function findFirefox(opts = {}) {
-  const { searchPaths = [], useDefaults = true } = opts
-  const override = process.env.FOXCODE_FIREFOX_PATH
-  if (override) {
-    if (!isExecutable(override)) {
+  const { searchPaths = [], useDefaults = true, projectDir = null } = opts
+  const envOverride = process.env.FOXCODE_FIREFOX_PATH
+  if (envOverride) {
+    if (!isExecutable(envOverride)) {
       throw new Error(
-        `FOXCODE_FIREFOX_PATH is set to "${override}" but it is not an executable file`,
+        `FOXCODE_FIREFOX_PATH is set to "${envOverride}" but it is not an executable file`,
       )
     }
-    return override
+    return envOverride
+  }
+  const projectOverride = readProjectFirefoxOverride(projectDir)
+  if (projectOverride) {
+    if (isExecutable(projectOverride)) return projectOverride
+    process.stderr.write(
+      `foxcode: ignoring non-executable firefox override "${projectOverride}" ` +
+        `from ${join(projectDir, '.foxcode', 'config.json')}; falling back to discovery\n`,
+    )
   }
   for (const p of searchPaths) {
     if (isExecutable(p)) return p

@@ -252,7 +252,7 @@ const launchHandler = createLaunchHandler({
   password: () => PASSWORD,
   prepare: (home, port) => prepareFirefoxForLaunch(home, port),
   findExtensionDir: () => findExtensionDir(),
-  findFirefox: () => findFirefox(),
+  findFirefox: (projectDir) => findFirefox({ projectDir }),
   spawn: (opts) => {
     const child = spawnWebExt(opts)
     return { child, pid: child.pid }
