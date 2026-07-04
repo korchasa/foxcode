@@ -175,6 +175,13 @@ test('strict MCP host: launchBrowser does not corrupt JSON-RPC framing', async (
         `unexpected launchBrowser status: ${launchPayload.status}`,
       )
 
+      // Single-call contract: every launchBrowser reply embeds status-style
+      // telemetry under `server` so agents never need a separate status call.
+      assert.ok(launchPayload.server, 'launchBrowser reply must embed server telemetry')
+      assert.ok(launchPayload.server.uptime > 0, 'server telemetry must carry uptime')
+      assert.equal(launchPayload.server.connectedClients, 0, 'fake npx never connects an extension')
+      assert.ok(launchPayload.server.projectDir, 'server telemetry must carry projectDir')
+
       // Critical invariant: zero non-JSON lines reached the strict host.
       // A regression to inherit-stdout (or any direct console.log from
       // server code) breaks this.

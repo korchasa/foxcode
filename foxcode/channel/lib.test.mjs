@@ -8,6 +8,7 @@ import {
   passwordStorage,
   getServerMeta,
   resolveProjectDir,
+  buildLaunchReply,
 } from './lib.mjs'
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
@@ -198,6 +199,20 @@ describe('TOOL_DEFINITIONS', () => {
     assert.equal(tool.inputSchema.required, undefined)
   })
 
+  it('launchBrowser description documents the server telemetry field and single-call usage', () => {
+    const tool = TOOL_DEFINITIONS.find(t => t.name === 'launchBrowser')
+    assert.match(
+      tool.description,
+      /server/,
+      'launchBrowser description must document the nested server telemetry field',
+    )
+    assert.match(
+      tool.description,
+      /[Ii]dempotent/,
+      'launchBrowser description must state the tool is idempotent (no prior status call needed)',
+    )
+  })
+
   it('status description names extensionDir as a returned field', () => {
     const tool = TOOL_DEFINITIONS.find(t => t.name === 'status')
     assert.match(
@@ -221,6 +236,35 @@ describe('TOOL_DEFINITIONS', () => {
     assert.deepEqual(tool.inputSchema.required, ['code'])
     assert.ok(tool.inputSchema.properties.code)
     assert.ok(tool.inputSchema.properties.timeout)
+  })
+})
+
+describe('buildLaunchReply', () => {
+  const server = { port: 8795, connectedClients: 1, projectDir: '/p', serverVersion: '1.2.3' }
+
+  it('nests telemetry under server and preserves launch-result fields', () => {
+    const reply = buildLaunchReply({ status: 'connected', pid: 42, port: 8795 }, server)
+    assert.equal(reply.status, 'connected')
+    assert.equal(reply.pid, 42)
+    assert.equal(reply.port, 8795)
+    assert.deepEqual(reply.server, server)
+  })
+
+  it('never lets telemetry clobber launch-result keys (port stays the launch port)', () => {
+    const reply = buildLaunchReply(
+      { status: 'already-running', port: 8800 },
+      { ...server, port: 8795, status: 'bogus' },
+    )
+    assert.equal(reply.status, 'already-running')
+    assert.equal(reply.port, 8800)
+    assert.equal(reply.server.port, 8795)
+  })
+
+  it('attaches telemetry to error results too', () => {
+    const reply = buildLaunchReply({ status: 'error', reason: 'no Firefox' }, server)
+    assert.equal(reply.status, 'error')
+    assert.equal(reply.reason, 'no Firefox')
+    assert.equal(reply.server.connectedClients, 1)
   })
 })
 

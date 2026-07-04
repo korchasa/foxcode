@@ -88,6 +88,16 @@ export function buildPongMessage(env) {
 }
 
 /**
+ * Compose the launchBrowser MCP reply: launch-result fields at the top level,
+ * server telemetry nested under `server` so the two namespaces can never
+ * collide (both have `port`/`status`-like fields). Makes launchBrowser
+ * self-sufficient — the agent no longer needs a separate `status` call.
+ */
+export function buildLaunchReply(result, server) {
+  return { ...result, server }
+}
+
+/**
  * Port range for WebSocket server auto-binding.
  * Server picks a random start within range to avoid collisions,
  * then wraps around. Persists last used port in ~/.foxcode/port.
@@ -275,11 +285,17 @@ export const TOOL_DEFINITIONS = [
     name: 'launchBrowser',
     description: [
       'Launch Firefox with the FoxCode extension via web-ext.',
+      'Idempotent single call — no prior `status` call needed: when an extension client is',
+      'already attached it returns {status: "already-connected"} instantly without spawning,',
+      'and concurrent calls (same process or parallel sessions in the same folder) never',
+      'start a second browser.',
       'Blocks until the extension connects to the channel (or times out).',
       'Returns {status: "already-connected"} when an extension client is already attached;',
       '{status: "already-running"} when a managed Firefox process is alive on the current port;',
       '{status: "connected", pid, port} on success;',
       '{status: "timeout"} when the extension does not connect within the timeout.',
+      'Every reply also carries a nested `server` object with the same telemetry as the',
+      '`status` tool (port, password, projectDir, extensionDir, uptime, connectedClients, …).',
       'Firefox lifecycle is tied to this MCP process — channel shutdown closes the browser.',
     ].join('\n'),
     inputSchema: {

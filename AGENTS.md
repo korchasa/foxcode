@@ -94,7 +94,7 @@ Install plugin: `/plugin marketplace add korchasa/foxcode` -> `/plugin install f
 ### Project Profile (`/foxcode:foxcode-run-project-profile`)
 - Isolated Firefox instance launched via `web-ext run` with project-local profile (`.foxcode/firefox-profile/`)
 - Connection URL: `http://localhost:PORT#PORT:PASSWORD` — info page (no secrets in HTML) + hash for extension auto-detect -> instant connection, no scanning
-- Self-contained skill: checks prerequisites (Node.js ≥18, Firefox), locates extension, caches paths in `.foxcode/config.json`, launches Firefox, verifies connectivity via `status`
+- Self-contained skill: ONE MCP call (`launchBrowser`, idempotent — no prior `status`); channel locates Firefox + extension, launches, waits for connect; reply embeds `status` telemetry under `server`
 - Re-launch: run `/foxcode:foxcode-run-project-profile` again
 
 ### User Profile (`/foxcode:foxcode-run-user-profile`)

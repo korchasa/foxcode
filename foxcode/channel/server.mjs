@@ -17,7 +17,7 @@ import { WebSocketServer } from 'ws'
 import {
   nextId, buildToolUseMessage, buildToolResultMessage, TOOL_DEFINITIONS,
   buildPongMessage, createHttpServer, buildConnectionPage,
-  passwordStorage, getServerMeta, resolveProjectDir,
+  passwordStorage, getServerMeta, resolveProjectDir, buildLaunchReply,
 } from './lib.mjs'
 import { validateCode } from './validator.mjs'
 import { createLaunchHandler } from './launch/tool.mjs'
@@ -285,34 +285,44 @@ mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOL_DEFINITIONS,
 }))
 
+/**
+ * Server telemetry snapshot: the `status` tool reply, also embedded into every
+ * `launchBrowser` reply under `server` (see lib.mjs::buildLaunchReply).
+ */
+function buildStatusPayload() {
+  return {
+    port: PORT,
+    password: PASSWORD,
+    projectDir: resolveProjectDir(),
+    extensionDir: findExtensionDir(),
+    uptime: process.uptime(),
+    connectedClients: clients.size,
+    pendingRequests: pendingToolRequests.size,
+    nodeVersion: process.version,
+    serverVersion: pluginMeta.version,
+    pid: process.pid,
+    pluginRoot: process.env.CLAUDE_PLUGIN_ROOT || null,
+    launchMode: process.env.CLAUDE_PLUGIN_ROOT ? 'plugin' : 'dev',
+    client: clientInfo,
+  }
+}
+
 mcp.setRequestHandler(CallToolRequestSchema, async (req) => {
   const args = (req.params.arguments ?? {})
   try {
     switch (req.params.name) {
       case 'status': {
-        const status = {
-          port: PORT,
-          password: PASSWORD,
-          projectDir: resolveProjectDir(),
-          extensionDir: findExtensionDir(),
-          uptime: process.uptime(),
-          connectedClients: clients.size,
-          pendingRequests: pendingToolRequests.size,
-          nodeVersion: process.version,
-          serverVersion: pluginMeta.version,
-          pid: process.pid,
-          pluginRoot: process.env.CLAUDE_PLUGIN_ROOT || null,
-          launchMode: process.env.CLAUDE_PLUGIN_ROOT ? 'plugin' : 'dev',
-          client: clientInfo,
-        }
-        return { content: [{ type: 'text', text: JSON.stringify(status) }] }
+        return { content: [{ type: 'text', text: JSON.stringify(buildStatusPayload()) }] }
       }
       case 'launchBrowser': {
         const result = await launchHandler({
           timeout: typeof args.timeout === 'number' ? args.timeout : undefined,
           headless: !!args.headless,
         })
-        return { content: [{ type: 'text', text: JSON.stringify(result) }] }
+        // Telemetry is sampled AFTER the launch settles so connectedClients
+        // reflects the fresh connection.
+        const reply = buildLaunchReply(result, buildStatusPayload())
+        return { content: [{ type: 'text', text: JSON.stringify(reply) }] }
       }
       case 'evalInBrowser': {
         const { valid, error } = validateCode(args.code)
